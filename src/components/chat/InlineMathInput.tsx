@@ -365,7 +365,10 @@ const InlineMathInput = forwardRef<
             ref={(el) => { textSpanRefs.current[seg.id] = el; }}
             id={seg.id}
             onInput={handleTextInput}
-            onFocus={() => setFocusedMath(null)}
+            onFocus={() => {
+              setFocusedMath(null);
+              lastActiveMathId.current = null;
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
