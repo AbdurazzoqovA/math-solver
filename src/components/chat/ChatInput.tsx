@@ -180,7 +180,7 @@ export default function ChatInput({
               <Loader2 className="w-6 h-6 text-primary-600 dark:text-primary-400 animate-spin" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Extracting text…</h3>
-            <p className="text-muted-foreground mt-0.5 text-xs font-medium">Analyzing your document</p>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">Analyzing your documents</p>
           </div>
         )}
 

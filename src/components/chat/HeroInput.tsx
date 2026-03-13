@@ -189,7 +189,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
               <Loader2 className="w-8 h-8 text-primary-600 dark:text-primary-400 animate-spin" />
             </div>
             <h3 className="text-lg font-bold text-foreground">Extracting text…</h3>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">Analyzing your document with AI</p>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">Analyzing your documents with AI</p>
           </div>
         )}
 
