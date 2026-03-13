@@ -1,0 +1,109 @@
+"use client";
+
+import { useState } from "react";
+import { Video, BookOpen, Plus, ArrowUpRight, History, Sparkles, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
+export default function Sidebar() {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  return (
+    <aside className={`h-full bg-transparent flex flex-col py-6 shrink-0 transition-all duration-300 ease-in-out z-20 relative ${isExpanded ? 'w-64' : 'w-20'}`}>
+      <div className="flex flex-col h-full bg-card/60 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl mx-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] overflow-hidden">
+        
+        {/* Top Header Area: Toggle + Logo */}
+        <div className="flex items-center h-16 w-full mt-2 px-2 relative">
+          
+          {/* Fixed-Width Toggle Container ensures icon NEVER moves */}
+          <div className="w-10 shrink-0 flex items-center justify-center z-10 relative">
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors"
+              title={isExpanded ? "Close Sidebar" : "Open Sidebar"}
+            >
+              {isExpanded ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {/* Logo Container (slides/fades in next to it) */}
+          <div className={`flex items-center gap-3 transition-all duration-300 absolute left-14 ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'}`}>
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center font-bold shadow-lg shadow-primary-500/25 shrink-0`}>
+              <span className="leading-none text-xl drop-shadow-sm">√</span>
+            </div>
+            <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 whitespace-nowrap">
+              MathSolver
+            </span>
+          </div>
+        </div>
+
+        {/* New Chat Button */}
+        <div className={`mt-2 mb-4 transition-all duration-300 flex ${isExpanded ? 'px-4' : 'justify-center w-full'}`}>
+          <button 
+            className={`flex items-center justify-center gap-3 bg-white dark:bg-zinc-800 text-foreground transition-all shadow-sm border border-black/5 dark:border-white/5 group hover:shadow-md hover:border-black/10 dark:hover:border-white/10 ${isExpanded ? 'w-full px-4 py-3 rounded-2xl hover:bg-black/[0.02] dark:hover:bg-white/[0.02]' : 'w-11 h-11 rounded-[1.25rem] shadow-[0_2px_10px_rgb(0,0,0,0.06)]'}`} 
+            title="New Chat"
+          >
+            <Plus className={`w-5 h-5 group-hover:scale-110 transition-transform ${isExpanded ? 'text-primary-600 dark:text-primary-400' : 'text-blue-600 dark:text-blue-400'}`} />
+            {isExpanded && <span className="font-medium text-sm">New Chat</span>}
+          </button>
+        </div>
+
+        {/* Main Nav */}
+        <nav className="flex-1 px-3 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+          <button className={`w-full flex items-center gap-3 p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'}`} title="Video Library">
+            <Video className="w-5 h-5 group-hover:text-primary-500 transition-colors shrink-0" />
+            {isExpanded && <span className="font-medium text-sm truncate">Video Library</span>}
+          </button>
+          
+          <button className={`w-full flex items-center gap-3 p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'}`} title="Practice Tests">
+            <BookOpen className="w-5 h-5 group-hover:text-primary-500 transition-colors shrink-0" />
+            {isExpanded && <span className="font-medium text-sm truncate">Practice Tests</span>}
+          </button>
+
+          {/* Recent Chats Section */}
+          <div className={`pt-6 pb-2 transition-opacity duration-300 ${isExpanded ? 'opacity-100 px-4' : 'opacity-0 h-0 overflow-hidden pt-0'}`}>
+            <div className="flex items-center text-xs font-semibold text-muted-foreground/70 uppercase tracking-widest mb-3">
+              <History className="w-3 h-3 mr-2" />
+              Recent
+            </div>
+            <div className="space-y-1">
+              <button className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors truncate">
+                Calculus derivatives
+              </button>
+              <button className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors truncate">
+                Quadratic pattern 1=3
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        {/* Bottom Area */}
+        <div className="p-3 mt-auto">
+          {/* Collapse state minimal upgrade */}
+          {!isExpanded && (
+            <button className="w-full flex items-center justify-center p-3 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 font-bold rounded-xl transition-colors" title="Upgrade to Pro">
+              <ArrowUpRight className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Expanded state upgrade card */}
+          {isExpanded && (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-primary-50 to-primary-100/50 dark:from-primary-900/40 dark:to-zinc-900/50 p-5 border border-primary-100 dark:border-primary-800/30">
+              <div className="absolute top-0 right-0 p-3 opacity-20">
+                <Sparkles className="w-12 h-12 text-primary-500" />
+              </div>
+              <div className="relative z-10">
+                <span className="inline-block px-2.5 py-1 mb-3 text-[10px] uppercase tracking-widest font-bold bg-primary-600 text-white rounded-md shadow-sm">
+                  Pro
+                </span>
+                <h4 className="font-bold text-[15px] mb-1 text-foreground leading-tight">Unlock Unlimited Matrix</h4>
+                <p className="text-xs text-muted-foreground mb-4 leading-relaxed pr-4">Solve complex problems instantly.</p>
+                <button className="w-full py-2.5 bg-white dark:bg-zinc-800 text-primary-600 dark:text-primary-400 rounded-xl text-sm font-semibold shadow-sm hover:shadow-md transition-all">
+                  Upgrade Now
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}
