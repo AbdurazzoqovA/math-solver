@@ -19,6 +19,8 @@ export const metadata: Metadata = {
 
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { UIProvider } from "@/context/UIContext";
+import DraggableCalculator from "@/components/chat/DraggableCalculator";
 
 export default function RootLayout({
   children,
@@ -28,20 +30,25 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
-        {/* Atmospheric Background */}
-        <div className="fixed inset-0 bg-[#fafafa] dark:bg-[#0a0a0a] -z-10" />
-        <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary-400/10 blur-[120px] pointer-events-none -z-10" />
-        <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10" />
+        <UIProvider>
+          {/* Global Tools */}
+          <DraggableCalculator />
 
-        <div className="flex h-screen overflow-hidden relative">
-          <Sidebar />
-          <div className="flex flex-col flex-1 overflow-hidden relative">
-            <Header />
-            <main className="flex-1 overflow-y-auto relative z-0 h-full">
-              {children}
-            </main>
+          {/* Atmospheric Background */}
+          <div className="fixed inset-0 bg-[#fafafa] dark:bg-[#0a0a0a] -z-10" />
+          <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary-400/10 blur-[120px] pointer-events-none -z-10" />
+          <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10" />
+
+          <div className="flex h-screen overflow-hidden relative">
+            <Sidebar />
+            <div className="flex flex-col flex-1 overflow-hidden relative">
+              <Header />
+              <main className="flex-1 overflow-y-auto relative z-0 h-full">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </UIProvider>
       </body>
     </html>
   );
