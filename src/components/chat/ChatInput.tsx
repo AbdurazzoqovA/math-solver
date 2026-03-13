@@ -1,10 +1,20 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Calculator, ArrowUpCircle, ImagePlus } from "lucide-react";
+import { Calculator, ArrowUpCircle, ImagePlus, Loader2 } from "lucide-react";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import MathKeyboard from "./MathKeyboard";
 import { useUI } from "@/context/UIContext";
+
+const ACCEPTED_FILE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+  "image/webp",
+  "application/pdf",
+];
 
 export default function ChatInput({
   onSubmit,
@@ -15,7 +25,9 @@ export default function ChatInput({
 }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
   const { isCalculatorOpen, toggleCalculator } = useUI();
 
@@ -62,10 +74,55 @@ export default function ChatInput({
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    // TODO: Implement actual file upload logic to backend or UI state here
-    console.log("File intercepted:", file.name, file.type);
-    alert(`File intercepted: ${file.name}. (Upload logic to be wired up)`);
+  const handleFileUpload = async (file: File) => {
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      alert("Unsupported file type. Please upload an image (JPEG, PNG, GIF, BMP, TIFF, WebP) or PDF.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large. Maximum size is 10 MB.");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Read file as base64
+      const base64 = await fileToBase64(file);
+
+      // Send to our server-side OCR route
+      const response = await fetch("/api/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mimeType: file.type }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to extract text from file.");
+      }
+
+      const { text } = await response.json();
+
+      if (text && text.trim()) {
+        // Insert the extracted text as plain text (not a math chip)
+        if (inputRef.current) {
+          inputRef.current.insertPlainText(text.trim());
+        }
+      } else {
+        alert("No text could be extracted from this file. Please try a clearer image.");
+      }
+    } catch (error) {
+      console.error("OCR upload error:", error);
+      alert(error instanceof Error ? error.message : "Failed to process the uploaded file.");
+    } finally {
+      setIsUploading(false);
+      // Reset file input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleMathInsert = (latex: string) => {
@@ -88,6 +145,18 @@ export default function ChatInput({
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileUpload(file);
+        }}
+      />
+
       <div
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -110,12 +179,22 @@ export default function ChatInput({
           </div>
         )}
 
-        {/* Visible Upload Banner (matches HeroInput) */}
+        {/* Upload Loading Overlay */}
+        {isUploading && (
+          <div className="absolute inset-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-3xl">
+            <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-2">
+              <Loader2 className="w-6 h-6 text-primary-600 dark:text-primary-400 animate-spin" />
+            </div>
+            <h3 className="text-sm font-bold text-foreground">Extracting text…</h3>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">Analyzing your document</p>
+          </div>
+        )}
+
+        {/* Visible Upload Banner */}
         <div
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
-            // Optional: Trigger file picker here
-            alert('File picker will open here');
+            if (!isUploading) fileInputRef.current?.click();
           }}
           className="w-full border-b border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.01] p-3 flex items-center justify-center gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
         >
@@ -225,4 +304,19 @@ function SigmaIcon({ className }: { className?: string }) {
       <path d="M18 7V4H6l6 8-6 8h12v-3" />
     </svg>
   );
+}
+
+/** Convert a File to a base64 string (without the data:... prefix) */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the "data:...;base64," prefix
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }

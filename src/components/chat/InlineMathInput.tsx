@@ -22,6 +22,7 @@ export interface InlineMathInputHandle {
   insertMathChip: () => void;
   insertLatexInFocused: (latex: string) => void;
   smartInsert: (latex: string) => void;
+  insertPlainText: (text: string) => void;
   getValue: () => string;
   hasFocusedMath: () => boolean;
   hasMathChips: () => boolean;
@@ -302,6 +303,21 @@ const InlineMathInput = forwardRef<
     }
   }, [segs]);
 
+  const insertPlainText = useCallback((text: string) => {
+    // Find the last text segment and insert plain text into it
+    const targetId = lastTextId.current;
+    const el = textSpanRefs.current[targetId];
+    if (el) {
+      // Append to existing content
+      const existing = el.textContent || '';
+      el.textContent = existing ? existing + ' ' + text : text;
+      textValues.current[targetId] = el.textContent;
+      setHasContent(true);
+      el.focus();
+      placeCursorAtEnd(el);
+    }
+  }, []);
+
   const focus = useCallback(() => {
     const el = textSpanRefs.current[lastTextId.current];
     if (el) { el.focus(); placeCursorAtEnd(el); }
@@ -324,6 +340,7 @@ const InlineMathInput = forwardRef<
        if (lastActiveMathId.current) chipHandles.current[lastActiveMathId.current]?.insertLatex(l);
     },
     smartInsert,
+    insertPlainText,
     getValue,
     hasFocusedMath,
     hasMathChips,

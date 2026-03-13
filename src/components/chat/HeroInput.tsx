@@ -1,15 +1,27 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowUpCircle, ImagePlus, Calculator } from "lucide-react";
+import { ArrowUpCircle, ImagePlus, Calculator, Loader2 } from "lucide-react";
 import MathKeyboard from "./MathKeyboard";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import { useUI } from "@/context/UIContext";
 
+const ACCEPTED_FILE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+  "image/webp",
+  "application/pdf",
+];
+
 export default function HeroInput({ onSubmit }: { onSubmit: (val: string) => void }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
   const { isCalculatorOpen, toggleCalculator, registerInsertCallback, unregisterInsertCallback } = useUI();
@@ -87,10 +99,55 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string) => voi
     }
   };
 
-  const handleFileUpload = (file: File) => {
-    // TODO: Implement actual file upload logic to backend or UI state here
-    console.log("File intercepted:", file.name, file.type);
-    alert(`File intercepted: ${file.name}. (Upload logic to be wired up)`);
+  const handleFileUpload = async (file: File) => {
+    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+      alert("Unsupported file type. Please upload an image (JPEG, PNG, GIF, BMP, TIFF, WebP) or PDF.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large. Maximum size is 10 MB.");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Read file as base64
+      const base64 = await fileToBase64(file);
+
+      // Send to our server-side OCR route
+      const response = await fetch("/api/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mimeType: file.type }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to extract text from file.");
+      }
+
+      const { text } = await response.json();
+
+      if (text && text.trim()) {
+        // Insert the extracted text as plain text (not a math chip)
+        if (inputRef.current) {
+          inputRef.current.insertPlainText(text.trim());
+        }
+      } else {
+        alert("No text could be extracted from this file. Please try a clearer image.");
+      }
+    } catch (error) {
+      console.error("OCR upload error:", error);
+      alert(error instanceof Error ? error.message : "Failed to process the uploaded file.");
+    } finally {
+      setIsUploading(false);
+      // Reset file input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   return (
@@ -102,6 +159,18 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string) => voi
       onDrop={handleDrop}
       onPaste={handlePaste}
     >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFileUpload(file);
+        }}
+      />
+
       <div className={`bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-200 text-left relative ${
         isDragging 
           ? "border-2 border-primary-500 scale-[1.02] shadow-[0_8px_40px_rgb(59,130,246,0.15)] ring-4 ring-primary-500/20" 
@@ -118,8 +187,23 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string) => voi
             <p className="text-primary-600/80 dark:text-primary-400/80 mt-1 font-medium">Image or PDF</p>
           </div>
         )}
+
+        {/* Upload Loading Overlay */}
+        {isUploading && (
+          <div className="absolute inset-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-3xl">
+            <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-4">
+              <Loader2 className="w-8 h-8 text-primary-600 dark:text-primary-400 animate-spin" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Extracting text…</h3>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">Analyzing your document with AI</p>
+          </div>
+        )}
+
         <div 
           onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (!isUploading) fileInputRef.current?.click();
+          }}
           className="w-full border-b border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.01] p-4 flex items-center justify-center gap-4 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-xl bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center group-hover:scale-105 transition-all">
@@ -221,4 +305,19 @@ function SigmaIcon({ className }: { className?: string }) {
       <path d="M18 7V4H6l6 8-6 8h12v-3" />
     </svg>
   );
+}
+
+/** Convert a File to a base64 string (without the data:... prefix) */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the "data:...;base64," prefix
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
