@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
@@ -46,17 +48,15 @@
   --radius: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #020617;
-    --fg: #f8fafc;
-    --muted: #0f172a;
-    --muted-fg: #94a3b8;
-    --border: #1e293b;
-    --card: #0f172a;
-    --card-fg: #f8fafc;
-    --sidebar: #020617;
-  }
+.dark {
+  --bg: #020617;
+  --fg: #f8fafc;
+  --muted: #0f172a;
+  --muted-fg: #94a3b8;
+  --border: #1e293b;
+  --card: #0f172a;
+  --card-fg: #f8fafc;
+  --sidebar: #020617;
 }
 
 @layer base {

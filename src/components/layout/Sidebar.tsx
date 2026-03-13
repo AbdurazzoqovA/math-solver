@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Video, BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2 } from "lucide-react";
+import { useChatContext } from "@/context/ChatContext";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { chats, activeChatId, createNewChat, switchChat, deleteChat } = useChatContext();
+
+  // Sort chats by most recently updated
+  const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <aside className={`h-full bg-transparent flex flex-col py-6 shrink-0 transition-all duration-300 ease-in-out z-20 relative ${isExpanded ? 'w-64' : 'w-20'}`}>
@@ -38,6 +43,7 @@ export default function Sidebar() {
         {/* New Chat Button */}
         <div className={`mt-2 mb-4 transition-all duration-300 flex ${isExpanded ? 'px-4' : 'justify-center w-full'}`}>
           <button 
+            onClick={createNewChat}
             className={`flex items-center justify-center gap-3 bg-white dark:bg-zinc-800 text-foreground transition-all shadow-sm border border-black/5 dark:border-white/5 group hover:shadow-md hover:border-black/10 dark:hover:border-white/10 ${isExpanded ? 'w-full px-4 py-3 rounded-2xl hover:bg-black/[0.02] dark:hover:bg-white/[0.02]' : 'w-11 h-11 rounded-[1.25rem] shadow-[0_2px_10px_rgb(0,0,0,0.06)]'}`} 
             title="New Chat"
           >
@@ -48,11 +54,6 @@ export default function Sidebar() {
 
         {/* Main Nav */}
         <nav className="flex-1 px-3 py-2 space-y-2 overflow-y-auto custom-scrollbar">
-          <button className={`w-full flex items-center gap-3 p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'}`} title="Video Library">
-            <Video className="w-5 h-5 group-hover:text-primary-500 transition-colors shrink-0" />
-            {isExpanded && <span className="font-medium text-sm truncate">Video Library</span>}
-          </button>
-          
           <button className={`w-full flex items-center gap-3 p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'}`} title="Practice Tests">
             <BookOpen className="w-5 h-5 group-hover:text-primary-500 transition-colors shrink-0" />
             {isExpanded && <span className="font-medium text-sm truncate">Practice Tests</span>}
@@ -65,12 +66,34 @@ export default function Sidebar() {
               Recent
             </div>
             <div className="space-y-1">
-              <button className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors truncate">
-                Calculus derivatives
-              </button>
-              <button className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors truncate">
-                Quadratic pattern 1=3
-              </button>
+              {sortedChats.length === 0 && (
+                <p className="text-xs text-muted-foreground/50 italic px-3 py-2">No chats yet</p>
+              )}
+              {sortedChats.map((chat) => (
+                <div key={chat.id} className="group/chat relative">
+                  <button
+                    onClick={() => switchChat(chat.id)}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors truncate pr-9 ${
+                      chat.id === activeChatId
+                        ? "text-foreground bg-primary-500/10 font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                    title={chat.title}
+                  >
+                    {chat.title}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteChat(chat.id);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground/50 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 opacity-0 group-hover/chat:opacity-100 transition-all"
+                    title="Delete chat"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </nav>

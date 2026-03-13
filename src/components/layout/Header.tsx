@@ -1,6 +1,17 @@
-import { Sun } from "lucide-react";
+"use client";
+
+import { Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export default function Header() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <header className="h-20 w-full flex items-center justify-between px-8 z-10 shrink-0 absolute top-0 left-0 right-0 pointer-events-none">
       
@@ -13,8 +24,16 @@ export default function Header() {
       
       <div className="flex items-center gap-4 ml-auto pointer-events-auto">
         <div className="flex items-center gap-2 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md p-1.5 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
-          <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-white dark:hover:bg-zinc-800 rounded-full transition-all" aria-label="Toggle theme">
-            <Sun className="w-4 h-4" />
+          <button 
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-white dark:hover:bg-zinc-800 rounded-full transition-all" 
+            aria-label="Toggle theme"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {mounted ? (
+              theme === "dark" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" /> // placeholder before mount
+            )}
           </button>
         </div>
       </div>

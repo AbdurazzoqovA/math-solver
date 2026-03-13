@@ -1,115 +1,32 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import EmptyState from "./EmptyState";
 import ChatInput from "./ChatInput";
-import MessageList, { Message } from "./MessageList";
+import MessageList from "./MessageList";
+import { useChatContext } from "@/context/ChatContext";
 
 export default function ChatArea() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { messages, isLoading, sendMessage, activeChatId } = useChatContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   };
 
+  // Scroll to top when switching chats (including New Chat → empty state)
+  useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0 });
+  }, [activeChatId]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = async (content: string, images?: { url: string; ocrText: string }[]) => {
-    // Check if we have text or any images
-    if ((!content.trim() && (!images || images.length === 0)) || isLoading) return;
-
-    // The display message might just be a generic prompt if the user only uploaded an image
-    const displayContent = content.trim() || "Solve the above math problem.";
-
-    const newUserMsg: Message = { 
-      id: Date.now().toString(), 
-      role: "user", 
-      content: displayContent,
-      images: images && images.length > 0 ? images : undefined
-    };
-    
-    setMessages((prev) => [...prev, newUserMsg]);
-    setIsLoading(true);
-
-    try {
-      // Build the prompt for the AI. Inject the OCR text so the AI sees it,
-      // but the user only sees the clean displayContent.
-      const apiMessages = [...messages, newUserMsg].map(m => {
-        let finalContent = m.content;
-        if (m.images && m.images.length > 0) {
-           const combinedOcr = m.images.map(img => img.ocrText).join("\n\n---\n\n");
-           finalContent = m.content === "Solve the above math problem." 
-            ? combinedOcr 
-            : `${m.content}\n\nProblem context:\n${combinedOcr}`;
-        }
-        return {
-          role: m.role,
-          content: finalContent
-        };
-      });
-
-      const response = await fetch('/api/solve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch response');
-      }
-
-      if (!response.body) {
-        throw new Error('No body returned from API');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let streamedContent = "";
-
-      const assistantMessageId = (Date.now() + 1).toString();
-      const newAstMsg: Message = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: ""
-      };
-
-      setMessages((prev) => [...prev, newAstMsg]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const textChunks = decoder.decode(value, { stream: true });
-        streamedContent += textChunks;
-
-        setMessages((prev) =>
-          prev.map((m) => m.id === assistantMessageId ? { ...m, content: streamedContent } : m)
-        );
-      }
-
-    } catch (error) {
-      console.error("Error solving math problem:", error);
-      // Optional: Add a subtle error message to the chat
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: "Sorry, I encountered an error while solving that problem. Please try again."
-        }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col h-full w-full relative">
-      <div className="flex-1 overflow-y-auto w-full relative z-0">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto w-full relative z-0">
         {messages.length === 0 ? (
           <div className="w-full min-h-full flex flex-col">
             <EmptyState onStartChat={sendMessage} />
