@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import EmptyState from "./EmptyState";
 import ChatInput from "./ChatInput";
 import MessageList, { Message } from "./MessageList";
@@ -8,6 +8,15 @@ import MessageList, { Message } from "./MessageList";
 export default function ChatArea() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -40,14 +49,14 @@ export default function ChatArea() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let streamedContent = "";
-      
+
       const assistantMessageId = (Date.now() + 1).toString();
-      const newAstMsg: Message = { 
-        id: assistantMessageId, 
-        role: "assistant", 
-        content: "" 
+      const newAstMsg: Message = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: ""
       };
-      
+
       setMessages((prev) => [...prev, newAstMsg]);
 
       while (true) {
@@ -56,8 +65,8 @@ export default function ChatArea() {
 
         const textChunks = decoder.decode(value, { stream: true });
         streamedContent += textChunks;
-        
-        setMessages((prev) => 
+
+        setMessages((prev) =>
           prev.map((m) => m.id === assistantMessageId ? { ...m, content: streamedContent } : m)
         );
       }
@@ -66,11 +75,11 @@ export default function ChatArea() {
       console.error("Error solving math problem:", error);
       // Optional: Add a subtle error message to the chat
       setMessages((prev) => [
-        ...prev, 
-        { 
-          id: (Date.now() + 1).toString(), 
-          role: "assistant", 
-          content: "Sorry, I encountered an error while solving that problem. Please try again." 
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "Sorry, I encountered an error while solving that problem. Please try again."
         }
       ]);
     } finally {
@@ -88,6 +97,7 @@ export default function ChatArea() {
         ) : (
           <div className="w-full max-w-4xl xl:max-w-5xl mx-auto px-4 md:px-8 py-24 pb-72">
             <MessageList messages={messages} isLoading={isLoading} />
+            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
