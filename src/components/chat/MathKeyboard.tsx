@@ -5,8 +5,8 @@ import { useState } from "react";
 // ─── Pinned Symbols (Always visible on top) ──────────────────────────
 const pinnedSymbols = [
   { display: "⬚/⬚", latex: "\\frac{#0}{#0}", desc: "Fraction" },
-  { display: "x□", latex: "^{#0}", desc: "Superscript" },
-  { display: "x₍₎", latex: "_{#0}", desc: "Subscript" },
+  { display: "x□", latex: "x^{#0}", desc: "Superscript" },
+  { display: "x₍₎", latex: "x_{#0}", desc: "Subscript" },
   { display: "√⬚", latex: "\\sqrt{#0}", desc: "Square root" },
   { display: "∛⬚", latex: "\\sqrt[3]{#0}", desc: "Cube root" },
   { display: "log₍₎", latex: "\\log_{#0}", desc: "Log base" },
@@ -29,8 +29,8 @@ const categories = [
       { display: "!", latex: "!", desc: "Factorial" },
       { display: "log", latex: "\\log(", desc: "Log" },
       { display: "ln", latex: "\\ln(", desc: "Natural log" },
-      { display: "x²", latex: "^2", desc: "Squared" },
-      { display: "x⁻¹", latex: "^{-1}", desc: "Inverse" },
+      { display: "x²", latex: "x^2", desc: "Squared" },
+      { display: "x⁻¹", latex: "x^{-1}", desc: "Inverse" },
       { display: "(ⁿₖ)", latex: "\\binom{#0}{#0}", desc: "Binomial" },
       { display: "π", latex: "\\pi", desc: "Pi" },
       { display: "→", latex: "\\rightarrow", desc: "Arrow" },
@@ -228,6 +228,7 @@ export default function MathKeyboard({
         {pinnedSymbols.map((sym, i) => (
           <button
             key={`pinned-${i}`}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => onInsert(sym.latex)}
             title={sym.desc}
             className="h-11 flex items-center justify-center rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-zinc-800/60 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-200 dark:hover:border-primary-500/30 text-foreground text-base font-medium transition-all active:scale-95 hover:shadow-sm"
@@ -242,6 +243,7 @@ export default function MathKeyboard({
         {activeCategory.symbols.map((sym, i) => (
           <button
             key={`${activeCategory.id}-${i}`}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => onInsert(sym.latex)}
             title={sym.desc}
             className="h-11 flex items-center justify-center rounded-lg border border-black/5 dark:border-white/5 bg-white dark:bg-zinc-800/60 hover:bg-primary-50 dark:hover:bg-primary-500/10 hover:border-primary-200 dark:hover:border-primary-500/30 text-foreground text-base font-medium transition-all active:scale-95 hover:shadow-sm"

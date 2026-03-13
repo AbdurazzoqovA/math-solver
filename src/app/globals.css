@@ -78,3 +78,11 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-indigo-600 dark:from-primary-400 dark:to-indigo-400;
   }
 }
+
+/* ── MathLive: hide built-in toolbar buttons (we use our own keyboard) ── */
+math-field::part(virtual-keyboard-toggle),
+math-field::part(menu-toggle) {
+  display: none !important;
+  width: 0 !important;
+  pointer-events: none !important;
+}
