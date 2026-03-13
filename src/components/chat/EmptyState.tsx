@@ -3,7 +3,7 @@
 import HeroInput from "./HeroInput";
 import SeoSections from "./SeoSections";
 
-export default function EmptyState({ onStartChat }: { onStartChat: (message: string) => void }) {
+export default function EmptyState({ onStartChat }: { onStartChat: (message: string, images?: { url: string; ocrText: string }[]) => void }) {
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -19,8 +19,10 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
         </div>
 
         <HeroInput 
-          onSubmit={(val) => {
-            if (val.trim()) onStartChat(val);
+          onSubmit={(val, images) => {
+            if (val.trim() || (images && images.length > 0)) {
+              onStartChat(val, images);
+            }
           }} 
         />
       </div>

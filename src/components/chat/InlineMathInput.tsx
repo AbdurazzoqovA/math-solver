@@ -189,7 +189,7 @@ const InlineMathInput = forwardRef<
     onSubmit?: () => void;
   }
 >(({ placeholder, className = "", onSubmit }, ref) => {
-  const [segs, setSegs] = useState<SegDef[]>(() => [{ type: "text", id: uid() }]);
+  const [segs, setSegs] = useState<SegDef[]>(() => [{ type: "text", id: "initial-text" }]);
   const [focusedMath, setFocusedMath] = useState<string | null>(null);
   const lastActiveMathId = useRef<string | null>(null);
   const [hasContent, setHasContent] = useState(false);

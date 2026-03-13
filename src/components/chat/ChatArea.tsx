@@ -18,19 +18,39 @@ export default function ChatArea() {
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
+  const sendMessage = async (content: string, images?: { url: string; ocrText: string }[]) => {
+    // Check if we have text or any images
+    if ((!content.trim() && (!images || images.length === 0)) || isLoading) return;
 
-    const newUserMsg: Message = { id: Date.now().toString(), role: "user", content };
+    // The display message might just be a generic prompt if the user only uploaded an image
+    const displayContent = content.trim() || "Solve the above math problem.";
+
+    const newUserMsg: Message = { 
+      id: Date.now().toString(), 
+      role: "user", 
+      content: displayContent,
+      images: images && images.length > 0 ? images : undefined
+    };
+    
     setMessages((prev) => [...prev, newUserMsg]);
     setIsLoading(true);
 
     try {
-      // Send the entire conversation history (including the new message)
-      const apiMessages = [...messages, newUserMsg].map(m => ({
-        role: m.role,
-        content: m.content
-      }));
+      // Build the prompt for the AI. Inject the OCR text so the AI sees it,
+      // but the user only sees the clean displayContent.
+      const apiMessages = [...messages, newUserMsg].map(m => {
+        let finalContent = m.content;
+        if (m.images && m.images.length > 0) {
+           const combinedOcr = m.images.map(img => img.ocrText).join("\n\n---\n\n");
+           finalContent = m.content === "Solve the above math problem." 
+            ? combinedOcr 
+            : `${m.content}\n\nProblem context:\n${combinedOcr}`;
+        }
+        return {
+          role: m.role,
+          content: finalContent
+        };
+      });
 
       const response = await fetch('/api/solve', {
         method: 'POST',

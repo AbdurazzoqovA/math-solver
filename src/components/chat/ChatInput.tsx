@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Calculator, ArrowUpCircle, ImagePlus, Loader2 } from "lucide-react";
+import { Calculator, ArrowUpCircle, ImagePlus, Loader2, X } from "lucide-react";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import MathKeyboard from "./MathKeyboard";
 import { useUI } from "@/context/UIContext";
@@ -20,12 +20,13 @@ export default function ChatInput({
   onSubmit,
   disabled
 }: {
-  onSubmit?: (val: string) => void;
+  onSubmit?: (val: string, images?: { url: string; ocrText: string }[]) => void;
   disabled?: boolean;
 }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<{ url: string; ocrText: string }[]>([]);
   const inputRef = useRef<InlineMathInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -61,64 +62,57 @@ export default function ChatInput({
     dragCounter.current = 0;
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      handleFileUpload(file);
+      handleFileUpload(Array.from(e.dataTransfer.files));
     }
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     if (e.clipboardData.files && e.clipboardData.files.length > 0) {
       e.preventDefault();
-      const file = e.clipboardData.files[0];
-      handleFileUpload(file);
+      handleFileUpload(Array.from(e.clipboardData.files));
     }
   };
 
-  const handleFileUpload = async (file: File) => {
-    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      alert("Unsupported file type. Please upload an image (JPEG, PNG, GIF, BMP, TIFF, WebP) or PDF.");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("File is too large. Maximum size is 10 MB.");
+  const handleFileUpload = async (files: File[]) => {
+    const validFiles = files.filter(f => ACCEPTED_FILE_TYPES.includes(f.type) && f.size <= 10 * 1024 * 1024);
+    if (validFiles.length === 0) {
+      alert("No valid files to upload. Check file types (Images/PDFs) and size (max 10MB).");
       return;
     }
 
     setIsUploading(true);
 
     try {
-      // Read file as base64
-      const base64 = await fileToBase64(file);
+      const results = await Promise.all(validFiles.map(async file => {
+        const base64 = await fileToBase64(file);
+        const response = await fetch("/api/ocr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ base64, mimeType: file.type }),
+        });
 
-      // Send to our server-side OCR route
-      const response = await fetch("/api/ocr", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64, mimeType: file.type }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to extract text from file.");
-      }
-
-      const { text } = await response.json();
-
-      if (text && text.trim()) {
-        // Insert the extracted text as plain text (not a math chip)
-        if (inputRef.current) {
-          inputRef.current.insertPlainText(text.trim());
+        if (!response.ok) {
+          throw new Error("Failed to extract text from file.");
         }
+
+        const { text } = await response.json();
+        if (text && text.trim()) {
+           return { url: "data:" + file.type + ";base64," + base64, ocrText: text.trim() };
+        }
+        return null;
+      }));
+
+      const newImages = results.filter(Boolean) as {url: string, ocrText: string}[];
+      if (newImages.length > 0) {
+        setUploadedImages(prev => [...prev, ...newImages]);
       } else {
-        alert("No text could be extracted from this file. Please try a clearer image.");
+        alert("No text could be extracted from these files. Please try clearer images.");
       }
     } catch (error) {
       console.error("OCR upload error:", error);
-      alert(error instanceof Error ? error.message : "Failed to process the uploaded file.");
+      alert(error instanceof Error ? error.message : "Failed to process the uploaded files.");
     } finally {
       setIsUploading(false);
-      // Reset file input so the same file can be re-selected
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -149,11 +143,11 @@ export default function ChatInput({
       <input
         ref={fileInputRef}
         type="file"
+        multiple
         accept="image/*,.pdf"
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFileUpload(file);
+          if (e.target.files) handleFileUpload(Array.from(e.target.files));
         }}
       />
 
@@ -209,15 +203,44 @@ export default function ChatInput({
         </div>
 
         <div className="p-2 flex flex-col">
+          {/* Uploaded Image Thumbnail UI */}
+          {uploadedImages.length > 0 && (
+            <div className="px-3 pt-2 pb-1 flex flex-row gap-2 overflow-x-auto max-w-full">
+              {uploadedImages.map((img, idx) => (
+                <div key={idx} className="relative self-start group/img shrink-0">
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setUploadedImages(prev => prev.filter((_, i) => i !== idx));
+                    }}
+                    className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-800 text-white rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity z-10 shadow-md hover:bg-zinc-700"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={img.url} 
+                    alt={`Uploaded ${idx + 1}`} 
+                    className="h-14 w-auto flex-none rounded-md border border-black/10 dark:border-white/10 object-contain bg-white dark:bg-zinc-800"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Inline rich input */}
           <InlineMathInput
             ref={inputRef}
             placeholder="Ask a math question or click Σ to insert a formula…"
             onSubmit={() => {
               if (!disabled && inputRef.current && onSubmit) {
-                onSubmit(inputRef.current.getValue());
-                inputRef.current.clear();
-                setKeyboardOpen(false);
+                const val = inputRef.current.getValue();
+                if (val.trim() || uploadedImages.length > 0) {
+                  onSubmit(val, uploadedImages.length > 0 ? uploadedImages : undefined);
+                  inputRef.current.clear();
+                  setKeyboardOpen(false);
+                  setUploadedImages([]);
+                }
               }
             }}
           />
@@ -254,9 +277,13 @@ export default function ChatInput({
             <button
               onClick={() => {
                 if (!disabled && inputRef.current && onSubmit) {
-                  onSubmit(inputRef.current.getValue());
-                  inputRef.current.clear();
-                  setKeyboardOpen(false);
+                  const val = inputRef.current.getValue();
+                  if (val.trim() || uploadedImages.length > 0) {
+                    onSubmit(val, uploadedImages.length > 0 ? uploadedImages : undefined);
+                    inputRef.current.clear();
+                    setKeyboardOpen(false);
+                    setUploadedImages([]);
+                  }
                 }
               }}
               disabled={disabled}

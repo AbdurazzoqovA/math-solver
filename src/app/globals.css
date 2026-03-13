@@ -79,6 +79,19 @@
   }
 }
 
+/* ── Custom Math Display Styling ── */
+.math-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1.25rem 0;
+}
+
+/* Ensure Katex display blocks take full width to center correctly */
+.katex-display {
+  margin: 0 !important;
+  display: block;
+}
+
 /* ── MathLive: hide built-in toolbar buttons (we use our own keyboard) ── */
 math-field::part(virtual-keyboard-toggle),
 math-field::part(menu-toggle) {

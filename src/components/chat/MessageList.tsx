@@ -9,6 +9,7 @@ export type Message = {
   role: 'user' | 'assistant';
   content: string;
   isCorrect?: boolean;
+  images?: { url: string; ocrText: string }[]; // Replace singular imageUrl / ocrText
 };
 
 // Pre-process LaTeX delimiters from OpenAI's default \( \) and \[ \] to remark-math's required $ and $$
@@ -39,7 +40,21 @@ export default function MessageList({
                   <Edit2 className="w-4 h-4" />
                 </button>
               </div>
-              <div className="bg-primary-600 text-white px-5 py-4 rounded-3xl rounded-tr-sm shadow-sm leading-relaxed relative">
+              <div className="bg-primary-600 text-white px-5 py-4 rounded-3xl rounded-tr-sm shadow-sm leading-relaxed relative flex flex-col items-end">
+                {message.images && message.images.length > 0 && (
+                  <div className="mb-3 flex flex-row gap-2 overflow-x-auto pb-2 w-full justify-end max-w-full">
+                    {message.images.map((img, index) => (
+                      <div key={index} className="relative group/img cursor-pointer shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={img.url} 
+                          alt={`Uploaded problem ${index + 1}`} 
+                          className="max-w-[200px] sm:max-w-[280px] rounded-xl shadow-md border-2 border-primary-500/30 object-contain max-h-[160px] bg-white dark:bg-zinc-800" 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="prose md:prose-lg max-w-none text-white leading-relaxed prose-p:m-0 prose-math:text-white dark:prose-math:text-white">
                   <ReactMarkdown 
                     remarkPlugins={[remarkMath]}
@@ -65,7 +80,7 @@ export default function MessageList({
                 )}
                 
                 {/* Advanced Markdown Rendering */}
-                <div className="prose md:prose-lg dark:prose-invert max-w-none text-foreground leading-relaxed prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400">
+                <div className="prose md:prose-lg max-w-none text-foreground leading-loose text-[1.1rem] dark:prose-invert prose-p:my-5 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400 [&_.math-display]:my-8 [&_.math-display]:text-xl md:[&_.math-display]:text-2xl [&_.math-display]:tracking-wider [&>hr]:my-12 [&>hr]:border-t-2 [&>hr]:border-black/5 dark:[&>hr]:border-white/5 [&>hr]:w-[calc(100%+2rem)] [&>hr]:-ml-4">
                   <ReactMarkdown 
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
