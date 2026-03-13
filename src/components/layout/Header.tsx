@@ -1,4 +1,4 @@
-import { Sun, LogIn } from "lucide-react";
+import { Sun } from "lucide-react";
 
 export default function Header() {
   return (
@@ -15,10 +15,6 @@ export default function Header() {
         <div className="flex items-center gap-2 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md p-1.5 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
           <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-white dark:hover:bg-zinc-800 rounded-full transition-all" aria-label="Toggle theme">
             <Sun className="w-4 h-4" />
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-full text-sm font-medium transition-colors shadow-sm ml-1">
-            <span>Sign In</span>
-            <LogIn className="w-4 h-4" />
           </button>
         </div>
       </div>

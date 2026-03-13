@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Video, BookOpen, Plus, ArrowUpRight, History, Sparkles, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Video, BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -75,34 +75,7 @@ export default function Sidebar() {
           </div>
         </nav>
 
-        {/* Bottom Area */}
-        <div className="p-3 mt-auto">
-          {/* Collapse state minimal upgrade */}
-          {!isExpanded && (
-            <button className="w-full flex items-center justify-center p-3 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 font-bold rounded-xl transition-colors" title="Upgrade to Pro">
-              <ArrowUpRight className="w-5 h-5" />
-            </button>
-          )}
 
-          {/* Expanded state upgrade card */}
-          {isExpanded && (
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-primary-50 to-primary-100/50 dark:from-primary-900/40 dark:to-zinc-900/50 p-5 border border-primary-100 dark:border-primary-800/30">
-              <div className="absolute top-0 right-0 p-3 opacity-20">
-                <Sparkles className="w-12 h-12 text-primary-500" />
-              </div>
-              <div className="relative z-10">
-                <span className="inline-block px-2.5 py-1 mb-3 text-[10px] uppercase tracking-widest font-bold bg-primary-600 text-white rounded-md shadow-sm">
-                  Pro
-                </span>
-                <h4 className="font-bold text-[15px] mb-1 text-foreground leading-tight">Unlock Unlimited Matrix</h4>
-                <p className="text-xs text-muted-foreground mb-4 leading-relaxed pr-4">Solve complex problems instantly.</p>
-                <button className="w-full py-2.5 bg-white dark:bg-zinc-800 text-primary-600 dark:text-primary-400 rounded-xl text-sm font-semibold shadow-sm hover:shadow-md transition-all">
-                  Upgrade Now
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </aside>
   );
