@@ -6,9 +6,11 @@ import MathKeyboard from "./MathKeyboard";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import { useUI } from "@/context/UIContext";
 
-export default function HeroInput({ onSubmit }: { onSubmit: () => void }) {
+export default function HeroInput({ onSubmit }: { onSubmit: (val: string) => void }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
+  const dragCounter = useRef(0);
 
   const { isCalculatorOpen, toggleCalculator, registerInsertCallback, unregisterInsertCallback } = useUI();
 
@@ -35,18 +37,87 @@ export default function HeroInput({ onSubmit }: { onSubmit: () => void }) {
       setTimeout(() => {
         if (!inputRef.current) return;
         if (!inputRef.current.hasFocusedMath()) {
-          // Only create a new chip if we aren't already editing one
           inputRef.current.insertMathChip();
         }
       }, 80);
     }
   };
 
-  return (
-    <div className="w-full max-w-3xl mx-auto mt-6 relative z-10">
-      <div className="bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 dark:border-white/5 overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary-500/30 focus-within:shadow-[0_8px_40px_rgb(0,0,0,0.08)] text-left">
+  // --- Drag & Drop / Paste Handlers ---
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
 
-        {/* Upload Zone */}
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      handleFileUpload(file);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      e.preventDefault();
+      const file = e.clipboardData.files[0];
+      handleFileUpload(file);
+    }
+  };
+
+  const handleFileUpload = (file: File) => {
+    // TODO: Implement actual file upload logic to backend or UI state here
+    console.log("File intercepted:", file.name, file.type);
+    alert(`File intercepted: ${file.name}. (Upload logic to be wired up)`);
+  };
+
+  return (
+    <div 
+      className="w-full max-w-3xl mx-auto mt-6 relative z-10"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onPaste={handlePaste}
+    >
+      <div className={`bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-200 text-left relative ${
+        isDragging 
+          ? "border-2 border-primary-500 scale-[1.02] shadow-[0_8px_40px_rgb(59,130,246,0.15)] ring-4 ring-primary-500/20" 
+          : "border border-black/5 dark:border-white/5 focus-within:ring-2 focus-within:ring-primary-500/30 focus-within:shadow-[0_8px_40px_rgb(0,0,0,0.08)]"
+      }`}>
+
+        {/* Drag Overlay State */}
+        {isDragging && (
+          <div className="absolute inset-0 z-50 bg-primary-50/90 dark:bg-primary-950/90 backdrop-blur-sm flex flex-col items-center justify-center border-2 border-dashed border-primary-500 rounded-3xl m-1 pointer-events-none">
+            <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-4 animate-bounce">
+              <ImagePlus className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+            </div>
+            <h3 className="text-xl font-bold text-primary-700 dark:text-primary-300">Drop your problem here</h3>
+            <p className="text-primary-600/80 dark:text-primary-400/80 mt-1 font-medium">Image or PDF</p>
+          </div>
+        )}
         <div 
           onMouseDown={(e) => e.preventDefault()}
           className="w-full border-b border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.01] p-4 flex items-center justify-center gap-4 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
@@ -66,7 +137,12 @@ export default function HeroInput({ onSubmit }: { onSubmit: () => void }) {
           <InlineMathInput
             ref={inputRef}
             placeholder="Type your math problem, or click Σ Math to insert a formula…"
-            onSubmit={onSubmit}
+            onSubmit={() => {
+              if (inputRef.current) {
+                onSubmit(inputRef.current.getValue());
+                inputRef.current.clear();
+              }
+            }}
           />
 
           {/* Toolbar */}
@@ -103,7 +179,12 @@ export default function HeroInput({ onSubmit }: { onSubmit: () => void }) {
 
             {/* Submit */}
             <button
-              onClick={onSubmit}
+              onClick={() => {
+                if (inputRef.current) {
+                  onSubmit(inputRef.current.getValue());
+                  inputRef.current.clear();
+                }
+              }}
               className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white flex items-center justify-center shadow-lg shadow-primary-500/25 transition-all outline-none scale-95 hover:scale-100 active:scale-95"
             >
               <ArrowUpCircle className="w-7 h-7" />

@@ -11,7 +11,23 @@ export type Message = {
   isCorrect?: boolean;
 };
 
-export default function MessageList({ messages }: { messages: Message[] }) {
+// Pre-process LaTeX delimiters from OpenAI's default \( \) and \[ \] to remark-math's required $ and $$
+const preprocessLaTeX = (content: string) => {
+  let processed = content;
+  // Replace block math \[ ... \] with $$ ... $$
+  processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
+  // Replace inline math \( ... \) with $ ... $
+  processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
+  return processed;
+};
+
+export default function MessageList({ 
+  messages, 
+  isLoading 
+}: { 
+  messages: Message[];
+  isLoading?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-12">
       {messages.map((message) => (
@@ -23,8 +39,15 @@ export default function MessageList({ messages }: { messages: Message[] }) {
                   <Edit2 className="w-4 h-4" />
                 </button>
               </div>
-              <div className="bg-primary-600 text-white px-5 py-3.5 rounded-3xl rounded-tr-sm shadow-sm text-[15px] leading-relaxed relative">
-                {message.content}
+              <div className="bg-primary-600 text-white px-5 py-4 rounded-3xl rounded-tr-sm shadow-sm leading-relaxed relative">
+                <div className="prose md:prose-lg max-w-none text-white leading-relaxed prose-p:m-0 prose-math:text-white dark:prose-math:text-white">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
+                  >
+                    {preprocessLaTeX(message.content)}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           ) : (
@@ -42,12 +65,12 @@ export default function MessageList({ messages }: { messages: Message[] }) {
                 )}
                 
                 {/* Advanced Markdown Rendering */}
-                <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-foreground leading-relaxed prose-p:leading-7 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400">
+                <div className="prose md:prose-lg dark:prose-invert max-w-none text-foreground leading-relaxed prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400">
                   <ReactMarkdown 
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
-                    {message.content}
+                    {preprocessLaTeX(message.content)}
                   </ReactMarkdown>
                 </div>
 
@@ -92,6 +115,20 @@ export default function MessageList({ messages }: { messages: Message[] }) {
           )}
         </div>
       ))}
+
+      {/* Loading Skeleton */}
+      {isLoading && messages[messages.length - 1]?.role === 'user' && (
+        <div className="group w-full flex gap-4 md:gap-6 max-w-full animate-pulse">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-200 to-primary-300 dark:from-primary-900/50 dark:to-primary-800/50 shrink-0 flex items-center justify-center text-white mt-1 shadow-sm">
+             <span className="font-bold text-lg opacity-50">√</span>
+          </div>
+          <div className="flex-1 w-full max-w-[calc(100%-3rem)] md:max-w-[calc(100%-4rem)] pt-2 space-y-3">
+            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-3/4"></div>
+            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-1/2"></div>
+            <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-5/6"></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

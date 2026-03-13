@@ -3,7 +3,7 @@
 import HeroInput from "./HeroInput";
 import SeoSections from "./SeoSections";
 
-export default function EmptyState({ onStartChat }: { onStartChat: () => void }) {
+export default function EmptyState({ onStartChat }: { onStartChat: (message: string) => void }) {
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -18,7 +18,11 @@ export default function EmptyState({ onStartChat }: { onStartChat: () => void })
           </p>
         </div>
 
-        <HeroInput onSubmit={onStartChat} />
+        <HeroInput 
+          onSubmit={(val) => {
+            if (val.trim()) onStartChat(val);
+          }} 
+        />
       </div>
 
       {/* Content below the fold */}
