@@ -29,7 +29,7 @@ export default function ChatArea() {
     <div className="flex flex-col h-full w-full relative">
       <div className="flex-1 overflow-y-auto w-full relative z-0">
         {messages.length === 0 ? (
-          <div className="w-full min-h-full flex flex-col justify-center py-10 md:py-20">
+          <div className="w-full min-h-full flex flex-col">
             <EmptyState onStartChat={handleStartChat} />
           </div>
         ) : (

@@ -49,14 +49,14 @@ export default function HeroInput({ onSubmit }: { onSubmit: () => void }) {
         {/* Upload Zone */}
         <div 
           onMouseDown={(e) => e.preventDefault()}
-          className="w-full border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] p-6 flex flex-col items-center justify-center gap-3 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer group"
+          className="w-full border-b border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.01] p-4 flex items-center justify-center gap-4 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors cursor-pointer group"
         >
-          <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center group-hover:scale-110 group-hover:shadow-md transition-all">
-            <ImagePlus className="w-6 h-6 text-primary-500" />
+          <div className="w-9 h-9 rounded-xl bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center group-hover:scale-105 transition-all">
+            <ImagePlus className="w-4.5 h-4.5 text-primary-500" />
           </div>
-          <p className="text-base font-medium text-muted-foreground mt-1">
+          <p className="text-sm font-medium text-muted-foreground">
             Drag &amp; drop or{" "}
-            <span className="text-primary-600 dark:text-primary-400">click to upload</span>{" "}
+            <span className="text-primary-600 dark:text-primary-400">upload</span>{" "}
             an image or PDF
           </p>
         </div>
