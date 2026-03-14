@@ -2,6 +2,7 @@
 
 import HeroInput from "./HeroInput";
 import SeoSections from "./SeoSections";
+import Image from "next/image";
 
 export default function EmptyState({ onStartChat }: { onStartChat: (message: string, images?: { url: string; ocrText: string }[]) => void }) {
   return (
@@ -9,7 +10,16 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
       
       {/* Hero Section - Perfectly centered in the viewport */}
       <div className="min-h-screen flex flex-col items-center justify-center w-full pb-32">
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 flex flex-col items-center">
+          <div className="w-16 h-16 mb-4 flex items-center justify-center">
+            <Image 
+              src="/icons8-math-80.png" 
+              alt="MathSolver Logo" 
+              width={64} 
+              height={64} 
+              className="object-contain drop-shadow-md"
+            />
+          </div>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-foreground mb-4 bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">
             MathSolver
           </h1>

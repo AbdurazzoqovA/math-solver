@@ -103,21 +103,21 @@ export async function POST(req: Request) {
               }
             }
           }
-          
+
           // Flush whatever is left in the buffer
           if (buffer.trim() && buffer.startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
-             try {
-                const data = JSON.parse(buffer.trim().slice(6));
-                const content = data.choices?.[0]?.delta?.content;
-                if (content) {
-                  controller.enqueue(new TextEncoder().encode(content));
-                }
-              } catch (e) { }
+            try {
+              const data = JSON.parse(buffer.trim().slice(6));
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) {
+                controller.enqueue(new TextEncoder().encode(content));
+              }
+            } catch (e) { }
           }
         } catch (e) {
-             console.error('Error reading stream', e);
+          console.error('Error reading stream', e);
         } finally {
-            controller.close();
+          controller.close();
         }
       }
     });

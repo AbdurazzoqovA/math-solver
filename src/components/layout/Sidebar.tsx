@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useChatContext } from "@/context/ChatContext";
+import Image from "next/image";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -38,8 +39,14 @@ export default function Sidebar() {
 
           {/* Logo Container (slides/fades in next to it) */}
           <div className={`flex items-center gap-3 transition-all duration-300 absolute left-14 ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'}`}>
-            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center font-bold shadow-lg shadow-primary-500/25 shrink-0`}>
-              <span className="leading-none text-xl drop-shadow-sm">√</span>
+            <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+              <Image 
+                src="/icons8-math-40.png" 
+                alt="MathSolver Logo" 
+                width={36} 
+                height={36} 
+                className="object-contain"
+              />
             </div>
             <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 whitespace-nowrap">
               MathSolver

@@ -6,6 +6,7 @@ import 'katex/dist/katex.min.css';
 import { useUI, Question } from "@/context/UIContext";
 import { useChatContext } from "@/context/ChatContext";
 import { useState } from "react";
+import Image from "next/image";
 
 export type Message = {
   id: string;
@@ -29,10 +30,10 @@ const preprocessLaTeX = (content: string) => {
   return processed;
 };
 
-export default function MessageList({ 
-  messages, 
-  isLoading 
-}: { 
+export default function MessageList({
+  messages,
+  isLoading
+}: {
   messages: Message[];
   isLoading?: boolean;
 }) {
@@ -70,7 +71,7 @@ export default function MessageList({
         <div key={message.id} className="group w-full">
           {message.role === 'user' ? (
             <div className="flex justify-end ml-auto max-w-[85%] relative">
-               <div className="absolute top-2 -left-12 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 -left-12 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button className="p-1.5 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors" title="Edit message">
                   <Edit2 className="w-4 h-4" />
                 </button>
@@ -81,17 +82,17 @@ export default function MessageList({
                     {message.images.map((img, index) => (
                       <div key={index} className="relative group/img cursor-pointer shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={img.url} 
-                          alt={`Uploaded problem ${index + 1}`} 
-                          className="max-w-[200px] sm:max-w-[280px] rounded-xl shadow-md border-2 border-primary-500/30 object-contain max-h-[160px] bg-white dark:bg-zinc-800" 
+                        <img
+                          src={img.url}
+                          alt={`Uploaded problem ${index + 1}`}
+                          className="max-w-[200px] sm:max-w-[280px] rounded-xl shadow-md border-2 border-primary-500/30 object-contain max-h-[160px] bg-white dark:bg-zinc-800"
                         />
                       </div>
                     ))}
                   </div>
                 )}
                 <div className="prose md:prose-lg max-w-none text-white leading-relaxed prose-p:m-0 prose-math:text-white dark:prose-math:text-white">
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
@@ -102,21 +103,27 @@ export default function MessageList({
             </div>
           ) : (
             <div className="flex gap-4 md:gap-6 max-w-full">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 shrink-0 flex items-center justify-center text-white mt-1 shadow-md shadow-primary-500/20">
-                <span className="font-bold text-lg drop-shadow-sm">√</span>
+              <div className="w-8 h-8 shrink-0 flex items-center justify-center mt-1">
+                <Image
+                  src="/icons8-math-40.png"
+                  alt="Assistant"
+                  width={32}
+                  height={32}
+                  className="object-contain drop-shadow-sm"
+                />
               </div>
               <div className="flex-1 w-full max-w-[calc(100%-3rem)] md:max-w-[calc(100%-4rem)] overflow-hidden pt-1">
-                
+
                 {message.isCorrect && (
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium text-sm mb-4">
                     <CheckCircle2 className="w-4 h-4" />
                     Correct Approach
                   </div>
                 )}
-                
+
                 {/* Advanced Markdown Rendering */}
                 <div className="prose md:prose-lg max-w-none text-foreground leading-loose text-[1.1rem] dark:prose-invert prose-p:my-5 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400 [&_.math-display]:my-8 [&_.math-display]:text-xl md:[&_.math-display]:text-2xl [&_.math-display]:tracking-wider [&>hr]:my-12 [&>hr]:border-t-2 [&>hr]:border-black/5 dark:[&>hr]:border-white/5 [&>hr]:w-[calc(100%+2rem)] [&>hr]:-ml-4">
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
@@ -144,7 +151,7 @@ export default function MessageList({
                       </div>
                     </button>
                   ) : (
-                    <button 
+                    <button
                       onClick={() => handlePracticeClick(message.id, message.content)}
                       disabled={loadingMessageId === message.id}
                       className="group flex items-center justify-between w-full p-3 sm:px-4 sm:py-3.5 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 transition-all hover:bg-black/5 dark:hover:bg-white/5 text-left disabled:opacity-50 disabled:pointer-events-none"
@@ -158,7 +165,7 @@ export default function MessageList({
                         </span>
                       </div>
                       <div className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center text-foreground group-hover:scale-[1.03] transition-transform">
-                         {loadingMessageId === message.id ? (
+                        {loadingMessageId === message.id ? (
                           <Loader2 className="w-[18px] h-[18px] sm:w-5 sm:h-5 stroke-[2.5] animate-spin" />
                         ) : (
                           <FileText className="w-[18px] h-[18px] sm:w-5 sm:h-5 stroke-[2.5]" />
@@ -177,8 +184,14 @@ export default function MessageList({
       {/* Loading Skeleton */}
       {isLoading && messages[messages.length - 1]?.role === 'user' && (
         <div className="group w-full flex gap-4 md:gap-6 max-w-full animate-pulse">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-200 to-primary-300 dark:from-primary-900/50 dark:to-primary-800/50 shrink-0 flex items-center justify-center text-white mt-1 shadow-sm">
-             <span className="font-bold text-lg opacity-50">√</span>
+          <div className="w-8 h-8 shrink-0 flex items-center justify-center mt-1 opacity-50">
+            <Image
+              src="/icons8-math-40.png"
+              alt="Loading..."
+              width={32}
+              height={32}
+              className="object-contain grayscale"
+            />
           </div>
           <div className="flex-1 w-full max-w-[calc(100%-3rem)] md:max-w-[calc(100%-4rem)] pt-2 space-y-3">
             <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-full w-3/4"></div>
