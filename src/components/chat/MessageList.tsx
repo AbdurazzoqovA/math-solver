@@ -129,7 +129,7 @@ export default function MessageList({
                   {message.practiceTest ? (
                     <button
                       onClick={() => handleOpenSavedPractice(message.practiceTest!)}
-                      className="group flex items-center justify-between w-full max-w-2xl p-4 sm:p-5 rounded-[20px] border border-[#A6C8FF] dark:border-blue-900/40 bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-[0_4px_16px_-4px_rgba(37,99,235,0.08)] dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 text-left"
+                      className="group flex items-center justify-between w-full p-4 sm:p-5 rounded-[20px] border border-[#A6C8FF] dark:border-blue-900/40 bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-[0_4px_16px_-4px_rgba(37,99,235,0.08)] dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 text-left"
                     >
                       <div className="flex flex-col gap-1 pr-4">
                         <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -147,14 +147,23 @@ export default function MessageList({
                     <button 
                       onClick={() => handlePracticeClick(message.id, message.content)}
                       disabled={loadingMessageId === message.id}
-                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-foreground shadow-sm hover:shadow hover:-translate-y-px active:translate-y-0 active:shadow-sm disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+                      className="group flex items-center justify-between w-full p-4 sm:p-5 rounded-[20px] border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 transition-all hover:bg-black/5 dark:hover:bg-white/5 text-left disabled:opacity-50 disabled:pointer-events-none"
                     >
-                      {loadingMessageId === message.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <FileText className="w-3.5 h-3.5" />
-                      )}
-                      Take a Practice Test
+                      <div className="flex flex-col gap-1 pr-4">
+                        <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 transition-colors">
+                          {loadingMessageId === message.id ? 'Generating Practice Test...' : 'Take a Practice Test'}
+                        </span>
+                        <span className="text-[13px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                          {loadingMessageId === message.id ? 'Analyzing solver context to build questions' : 'Generate 4 multiple-choice questions based on this answer'}
+                        </span>
+                      </div>
+                      <div className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center text-foreground group-hover:scale-[1.03] transition-transform">
+                         {loadingMessageId === message.id ? (
+                          <Loader2 className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[2.5] animate-spin" />
+                        ) : (
+                          <FileText className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[2.5]" />
+                        )}
+                      </div>
                     </button>
                   )}
                 </div>
