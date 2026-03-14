@@ -51,7 +51,7 @@ export default function MessageList({
       const data = await res.json();
       if (data.questions) {
         savePracticeToMessage(messageId, { title: data.title || content, questions: data.questions });
-        openPracticePanel(data.title || content, data.questions);
+        openPracticePanel(data.title || content, data.questions, messageId);
       }
     } catch (error) {
       console.error("Failed to fetch practice questions:", error);
@@ -60,8 +60,8 @@ export default function MessageList({
     }
   };
 
-  const handleOpenSavedPractice = (practiceTest: { title: string; questions: Question[] }) => {
-    openPracticePanel(practiceTest.title, practiceTest.questions);
+  const handleOpenSavedPractice = (messageId: string, practiceTest: { title: string; questions: Question[] }) => {
+    openPracticePanel(practiceTest.title, practiceTest.questions, messageId);
   };
 
   return (
@@ -128,7 +128,7 @@ export default function MessageList({
                 <div className="mt-8 pt-4 flex">
                   {message.practiceTest ? (
                     <button
-                      onClick={() => handleOpenSavedPractice(message.practiceTest!)}
+                      onClick={() => handleOpenSavedPractice(message.id, message.practiceTest!)}
                       className="group flex items-center justify-between w-full p-3 sm:px-4 sm:py-3.5 rounded-2xl border border-[#A6C8FF] dark:border-blue-900/40 bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-[0_4px_16px_-4px_rgba(37,99,235,0.08)] dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 text-left"
                     >
                       <div className="flex flex-col gap-0.5 pr-3">

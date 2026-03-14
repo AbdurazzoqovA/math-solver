@@ -2,11 +2,16 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
 
+export type Step = {
+  title: string;
+  explanation: string;
+};
+
 export type Question = {
   question: string;
   options: string[];
   correctAnswerIndex: number;
-  steps: string;
+  steps?: string | Step[];
 };
 
 type UIContextType = {
@@ -16,8 +21,10 @@ type UIContextType = {
   
   isPracticePanelOpen: boolean;
   practiceTopic: string | null;
+  practiceMessageId: string | null;
   practiceQuestions: Question[];
-  openPracticePanel: (topic: string, questions: Question[]) => void;
+  setPracticeQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
+  openPracticePanel: (topic: string, questions: Question[], messageId?: string) => void;
   closePracticePanel: () => void;
   
   // Callback management for tools like calculator to insert values into active inputs
@@ -32,6 +39,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
   const [isPracticePanelOpen, setIsPracticePanelOpen] = useState(false);
   const [practiceTopic, setPracticeTopic] = useState<string | null>(null);
+  const [practiceMessageId, setPracticeMessageId] = useState<string | null>(null);
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
 
   const callbacks = useRef<Record<string, (val: string) => void>>({});
@@ -40,8 +48,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setCalculatorOpen((prev) => !prev);
   }, []);
 
-  const openPracticePanel = useCallback((topic: string, questions: Question[]) => {
+  const openPracticePanel = useCallback((topic: string, questions: Question[], messageId?: string) => {
     setPracticeTopic(topic);
+    setPracticeMessageId(messageId || null);
     setPracticeQuestions(questions);
     setIsPracticePanelOpen(true);
   }, []);
@@ -50,6 +59,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setIsPracticePanelOpen(false);
     setTimeout(() => {
       setPracticeTopic(null);
+      setPracticeMessageId(null);
       setPracticeQuestions([]);
     }, 300); // clear after animation
   }, []);
@@ -74,7 +84,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       toggleCalculator,
       isPracticePanelOpen,
       practiceTopic,
+      practiceMessageId,
       practiceQuestions,
+      setPracticeQuestions,
       openPracticePanel,
       closePracticePanel,
       registerInsertCallback,
