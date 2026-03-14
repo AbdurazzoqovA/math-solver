@@ -19,11 +19,11 @@ export const metadata: Metadata = {
 };
 
 import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
 import { UIProvider } from "@/context/UIContext";
 import { ChatProvider } from "@/context/ChatContext";
 import DraggableCalculator from "@/components/chat/DraggableCalculator";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import SplitLayoutWrapper from "@/components/layout/SplitLayoutWrapper";
 
 export default function RootLayout({
   children,
@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <UIProvider>
@@ -47,10 +47,13 @@ export default function RootLayout({
             <div className="flex h-screen overflow-hidden relative">
               <Sidebar />
               <div className="flex flex-col flex-1 overflow-hidden relative">
-                <Header />
-                <main className="flex-1 overflow-y-auto relative z-0 h-full">
-                  {children}
-                </main>
+                <SplitLayoutWrapper>
+                  <div className="flex-1 flex flex-col h-full w-full relative">
+                    <main className="flex-1 overflow-y-auto relative z-0 h-full w-full">
+                      {children}
+                    </main>
+                  </div>
+                </SplitLayoutWrapper>
               </div>
             </div>
           </ChatProvider>

@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useChatContext } from "@/context/ChatContext";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
   const { chats, activeChatId, createNewChat, switchChat, deleteChat } = useChatContext();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sort chats by most recently updated
   const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -98,6 +105,21 @@ export default function Sidebar() {
           </div>
         </nav>
 
+        {/* Bottom Actions */}
+        <div className="p-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2">
+          <button 
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className={`w-full flex items-center p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4 gap-3' : 'justify-center'}`}
+            title="Toggle Theme"
+          >
+            {mounted ? (
+              theme === "dark" ? <Moon className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" /> : <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />
+            ) : (
+              <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />
+            )}
+            {isExpanded && <span className="font-medium text-sm truncate">Theme</span>}
+          </button>
+        </div>
 
       </div>
     </aside>
