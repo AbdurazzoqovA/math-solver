@@ -99,3 +99,9 @@ math-field::part(menu-toggle) {
   width: 0 !important;
   pointer-events: none !important;
 }
+
+/* ── Force first child in assistant prose to have no top margin ── */
+.assistant-prose > *:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}

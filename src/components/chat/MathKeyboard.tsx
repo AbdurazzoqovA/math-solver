@@ -224,7 +224,7 @@ export default function MathKeyboard({
       </div>
 
       {/* Pinned Top Row (Always visible) */}
-      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5 pb-3 border-b border-black/5 dark:border-white/5 mb-1">
+      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5 pb-3 border-b border-black/5 dark:border-white/5 mb-1 max-h-[120px] sm:max-h-none overflow-y-auto">
         {pinnedSymbols.map((sym, i) => (
           <button
             key={`pinned-${i}`}
@@ -239,7 +239,7 @@ export default function MathKeyboard({
       </div>
 
       {/* Tab-Specific Symbol Grid */}
-      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
+      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-1.5 max-h-[160px] sm:max-h-none overflow-y-auto">
         {activeCategory.symbols.map((sym, i) => (
           <button
             key={`${activeCategory.id}-${i}`}

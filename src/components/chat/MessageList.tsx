@@ -71,7 +71,7 @@ export default function MessageList({
         <div key={message.id} className="group w-full">
           {message.role === 'user' ? (
             <div className="flex justify-end ml-auto max-w-[85%] relative">
-              <div className="absolute top-2 -left-12 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-2 -left-12 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-70 transition-opacity">
                 <button className="p-1.5 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors" title="Edit message">
                   <Edit2 className="w-4 h-4" />
                 </button>
@@ -102,8 +102,8 @@ export default function MessageList({
               </div>
             </div>
           ) : (
-            <div className="flex gap-4 md:gap-6 max-w-full">
-              <div className="w-8 h-8 shrink-0 flex items-center justify-center mt-1">
+            <div className="flex gap-4 md:gap-6 max-w-full items-start">
+              <div className="w-8 h-8 shrink-0 flex items-center justify-center mt-1.5">
                 <Image
                   src="/icons8-math-40.png"
                   alt="Assistant"
@@ -112,17 +112,17 @@ export default function MessageList({
                   className="object-contain drop-shadow-sm"
                 />
               </div>
-              <div className="flex-1 w-full max-w-[calc(100%-3rem)] md:max-w-[calc(100%-4rem)] overflow-hidden pt-1">
+              <div className="flex-1 w-full max-w-[calc(100%-3rem)] md:max-w-[calc(100%-4rem)] overflow-hidden">
 
                 {message.isCorrect && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium text-sm mb-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium text-sm mb-4 mt-1.5">
                     <CheckCircle2 className="w-4 h-4" />
                     Correct Approach
                   </div>
                 )}
 
                 {/* Advanced Markdown Rendering */}
-                <div className="prose md:prose-lg max-w-none text-foreground leading-loose text-[1.1rem] dark:prose-invert prose-p:my-5 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400 [&_.math-display]:my-8 [&_.math-display]:text-xl md:[&_.math-display]:text-2xl [&_.math-display]:tracking-wider [&>hr]:my-12 [&>hr]:border-t-2 [&>hr]:border-black/5 dark:[&>hr]:border-white/5 [&>hr]:w-[calc(100%+2rem)] [&>hr]:-ml-4">
+                <div className="assistant-prose prose md:prose-lg max-w-none text-foreground leading-loose text-[1.1rem] dark:prose-invert prose-p:mb-4 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400 [&_.math-display]:my-8 [&_.math-display]:text-xl md:[&_.math-display]:text-2xl [&_.math-display]:tracking-wider [&>hr]:my-12 [&>hr]:border-t-2 [&>hr]:border-black/5 dark:[&>hr]:border-white/5 [&>hr]:w-[calc(100%+2rem)] [&>hr]:-ml-4">
                   <ReactMarkdown
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}

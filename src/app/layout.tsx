@@ -14,11 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MathSolver - Your Personal AI Math Assistant",
-  description: "Get instant step-by-step solutions to your math problems with our AI Math Solver.",
+  title: "Math Solver - Free AI Math Solver with Step-by-Step Solutions | MathSolver",
+  description: "Solve any math problem instantly with MathSolver, the free AI math solver. Get step-by-step solutions for algebra, calculus, geometry, and more. Upload a photo or type your equation.",
 };
 
 import Sidebar from "@/components/layout/Sidebar";
+import Header from "@/components/layout/Header";
 import { UIProvider } from "@/context/UIContext";
 import { ChatProvider } from "@/context/ChatContext";
 import DraggableCalculator from "@/components/chat/DraggableCalculator";
@@ -47,6 +48,10 @@ export default function RootLayout({
             <div className="flex h-screen overflow-hidden relative">
               <Sidebar />
               <div className="flex flex-col flex-1 overflow-hidden relative">
+                {/* Mobile header with hamburger */}
+                <div className="md:hidden">
+                  <Header />
+                </div>
                 <SplitLayoutWrapper>
                   <div className="flex-1 flex flex-col h-full w-full relative">
                     <main className="flex-1 overflow-y-auto relative z-0 h-full w-full">

@@ -1,68 +1,67 @@
-import { Calculator, Video, BookOpen, LineChart } from "lucide-react";
+import { Calculator, Camera, BookOpen, LineChart, Zap, MessageCircle } from "lucide-react";
 
 export default function SeoSections() {
   return (
     <div className="w-full px-4 relative z-10 mt-8 mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
       
-      {/* Block 1: Intro */}
+      {/* Block 1: What makes MathSolver different */}
       <div className="flex justify-center">
         <div className="bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm w-full max-w-5xl rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
           <h2 className="text-center text-2xl sm:text-3xl font-medium dark:text-gray-200 text-foreground">
-            MathSolver Math Solver and AI Calculator
+            Solve Any Math Problem in Seconds
           </h2>
           <div className="flex text-gray-500 dark:text-zinc-400 flex-col gap-4 mt-5 leading-relaxed">
-            <p>MathSolver is your all-in-one math solver and AI tutor, serving as an AI math calculator that solves algebra, calculus, chemistry, and physics problems, making it the ultimate homework helper and AI math solver.</p>
-            <p>MathSolver is the first to provide on-demand, AI-powered video explanations with engaging animations and diagrams for any homework question, making it the most interactive homework helper and math solver. Our problem-solving tools engage students from elementary school, high school, and college.</p>
-            <p>Our advanced AI math technology has served millions of unique students worldwide. Gain confidence in your math-solving skills through on-demand step-by-step solutions, video explanations, and graphs that simplify the most complex math and STEM problems. With MathSolver as your AI math homework helper, you'll not only receive accurate solutions but also gain a deeper understanding of difficult concepts.</p>
+            <p>Struggling with a tough equation? MathSolver is a free online math solver that turns complex problems into clear, step-by-step answers. Just type your equation, paste a word problem, or snap a photo of your homework and our AI does the rest.</p>
+            <p>From basic algebra and geometry to advanced calculus and statistics, MathSolver doesn&apos;t just give you the final answer. It shows you exactly how to get there, explaining every step along the way so you can learn the method and apply it on your own next time.</p>
           </div>
         </div>
       </div>
 
-      {/* Block 2: Advanced Tools */}
+      {/* Block 2: Core Features */}
       <div className="flex justify-center mt-16">
         <div className="w-full max-w-5xl">
           <h2 className="text-center text-2xl sm:text-3xl font-medium dark:text-gray-200 text-foreground">
-            Advanced AI Powered Math Tools
+            Everything You Need to Solve Math
           </h2>
           <div className="mt-7 grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <div className="gap-2 flex flex-col bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm hover:-translate-y-1 transition-transform">
               <div className="flex flex-row gap-2 justify-center items-center flex-wrap">
                 <Calculator className="w-[30px] h-[30px] text-blue-500" strokeWidth={2} />
-                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">Step-by-step Solutions</h3>
+                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">Step-by-Step Solutions</h3>
               </div>
               <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm lg:text-base mt-2">
-                Break down complex problems into clear, digestible steps with MathSolver's step-by-step solutions. MathSolver's math solving technology walks you through the problem from start to finish, explaining key concepts and calculations along the way. Unlike a basic math calculator, MathSolver functions as your personal math tutor and math solver, providing explanations that are easy to understand at any skill level. Whether you're tackling basic algebra, geometry, or advanced calculus, our detailed solutions help you grasp the underlying concepts, not just arrive at the final answer.
+                No more guessing where you went wrong. MathSolver shows each calculation as a separate, numbered step with a plain-language explanation. You&apos;ll see exactly which formula was applied and why, whether it&apos;s factoring a quadratic, computing a derivative, or simplifying a fraction.
               </p>
             </div>
 
             <div className="gap-2 flex flex-col bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm hover:-translate-y-1 transition-transform">
               <div className="flex flex-row gap-2 justify-center items-center flex-wrap">
-                <Video className="w-[30px] h-[30px] text-blue-500" strokeWidth={2} />
-                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">AI Video Explanations</h3>
+                <Camera className="w-[30px] h-[30px] text-blue-500" strokeWidth={2} />
+                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">Photo Math Solver</h3>
               </div>
               <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm lg:text-base mt-2">
-                Take homework help to the next level with MathSolver's cutting-edge AI math solving technology that creates custom educational videos for your question. Video explanations include engaging diagrams, animations, and a comprehensive voiceover. Unlike any other math solver, MathSolver videos can understand diagrams and steps from your problem and bring them to life in video form.
+                Take a picture of any handwritten or printed problem and drop it into MathSolver. Our image recognition reads the equation, converts it to text, and solves it on the spot. Perfect for quickly working through textbook exercises or checking your handwritten work.
               </p>
             </div>
 
             <div className="gap-2 flex flex-col bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm hover:-translate-y-1 transition-transform">
               <div className="flex flex-row gap-2 justify-center items-center flex-wrap">
                 <BookOpen className="w-[30px] h-[30px] text-blue-500" strokeWidth={2} />
-                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">Custom Interactive Quizzes</h3>
+                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">Practice Quizzes</h3>
               </div>
               <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm lg:text-base mt-2">
-                Test your understanding through creating interactive practice questions with MathSolver. Create quizzes for any topic - algebra, calculus, physics, chemistry, statistics, the possibilities are endless. Whether you're preparing for an exam or reinforcing concepts, MathSolver's personalized quizzes adapt to your learning pace and provide targeted practice where you need it most.
+                Reading solutions is one thing, but testing yourself is where real learning happens. Generate a custom quiz on any topic and difficulty level to check whether you truly understand the material before exam day.
               </p>
             </div>
 
             <div className="gap-2 flex flex-col bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm hover:-translate-y-1 transition-transform">
               <div className="flex flex-row gap-2 items-center justify-center flex-wrap">
                 <LineChart className="w-[30px] h-[30px] text-blue-500" strokeWidth={2} />
-                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">MathSolver Graphing Software</h3>
+                <h3 className="font-normal text-xl text-center dark:text-gray-200 text-foreground">Graphing Calculator</h3>
               </div>
               <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm lg:text-base mt-2">
-                Visualize complex algebraic and geometric relationships instantly using MathSolver's robust graphing software. Enter multiple equations to discover intercepts, map out functions, and explore behavior dynamically. MathSolver allows you to visually break down and interact with problems that are exceedingly difficult to process linearly.
+                Plot functions, find intersections, and see how equations behave, all inside your browser. MathSolver&apos;s graphing tool lets you overlay multiple functions on one set of axes so you can compare, analyze, and understand relationships visually.
               </p>
             </div>
 
@@ -70,26 +69,57 @@ export default function SeoSections() {
         </div>
       </div>
 
-      {/* Block 3: Personalized Tutor */}
+      {/* Block 3: How It Works */}
       <div className="flex justify-center mt-16">
-        <div className="bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm w-full max-w-5xl rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
+        <div className="w-full max-w-5xl">
           <h2 className="text-center text-2xl sm:text-3xl font-medium dark:text-gray-200 text-foreground">
-            Your Own Personalized Tutor
+            How the Math Solver Works
           </h2>
-          <div className="flex text-gray-500 dark:text-zinc-400 flex-col gap-4 mt-5 leading-relaxed">
-            <p>Upload homework in any format - text, photos, or PDFs - and get instant explanations from a 24/7 AI math tutor. MathSolver's AI technology understands your questions and adapts to your learning style. Ask follow-up questions at any point in your conversation, dive deeper into specific concepts, and create interactive quizzes to test your understanding.</p>
+          <div className="mt-7 grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <div className="flex flex-col items-center text-center bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-blue-500" strokeWidth={2} />
+              </div>
+              <h3 className="font-normal text-lg dark:text-gray-200 text-foreground mb-2">1. Enter Your Problem</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm">
+                Type an equation, describe a word problem in plain English, or upload a photo. Whatever is easiest for you.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+                <Calculator className="w-6 h-6 text-blue-500" strokeWidth={2} />
+              </div>
+              <h3 className="font-normal text-lg dark:text-gray-200 text-foreground mb-2">2. Get a Step-by-Step Solution</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm">
+                Our AI analyzes the problem, solves it, and returns each step with a clear explanation so you understand the &quot;why&quot;, not just the &quot;what&quot;.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center text-center bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+                <MessageCircle className="w-6 h-6 text-blue-500" strokeWidth={2} />
+              </div>
+              <h3 className="font-normal text-lg dark:text-gray-200 text-foreground mb-2">3. Ask Follow-Ups</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed text-sm">
+                Didn&apos;t catch a step? Ask a follow-up question right in the chat. MathSolver remembers the context and explains further, like having a tutor on call.
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {/* Block 4: Built by Students */}
+      {/* Block 4: Subjects Covered */}
       <div className="flex justify-center mt-16">
         <div className="bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm w-full max-w-5xl rounded-xl p-6 border border-black/5 dark:border-white/5 shadow-sm">
           <h2 className="text-center text-2xl sm:text-3xl font-medium dark:text-gray-200 text-foreground">
-            MathSolver AI Math Solver - Built by Students, for Students
+            Subjects MathSolver Can Help With
           </h2>
           <div className="flex text-gray-500 dark:text-zinc-400 flex-col gap-4 mt-5 leading-relaxed">
-            <p>MathSolver was created by software engineers who personally experienced the challenges of learning complex math concepts. Our mission is to create an AI math solver that empowers students to learn more effectively and efficiently through innovative AI-powered tools. With features like step-by-step explanations, personalized AI videos, and interactive quizzes, MathSolver helps make learning math easier and more engaging. Join a global community of students and boost your confidence in mastering tricky math and STEM topics.</p>
+            <p>MathSolver covers every major math topic: arithmetic, pre-algebra, algebra I &amp; II, geometry, trigonometry, precalculus, calculus (AP AB/BC and beyond), differential equations, linear algebra, probability, and statistics. It also handles common STEM crossover questions in physics and chemistry.</p>
+            <p>No matter how specific the problem is, whether it&apos;s a system of three equations, a polar-to-rectangular conversion, or a hypothesis test, MathSolver can break it down and walk you through the solution.</p>
           </div>
         </div>
       </div>
@@ -103,23 +133,33 @@ export default function SeoSections() {
           <div className="mt-8 flex flex-col gap-12">
             
             <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">What kind of math solver is MathSolver?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">It’s a Math Solver that uses AI to provide accurate step-by-step solutions. It is also a homework helper and walks students through difficult topics.</p>
+              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">What is MathSolver?</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">MathSolver is a free AI-powered math solver that delivers step-by-step solutions for algebra, calculus, geometry, trigonometry, statistics, and more. Simply type an equation or upload a photo of your math problem to get an instant, detailed breakdown.</p>
             </div>
             
             <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Can MathSolver solve math problems with just a photo?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Yes, MathSolver is an Math Solver App and Site that will solve math problems simply by dragging and dropping photos into the Ai Calculator</p>
+              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Can MathSolver solve math from a photo?</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Yes. Upload a picture of any handwritten or printed problem and MathSolver will read it, extract the equation, and return a full step-by-step solution automatically.</p>
             </div>
             
             <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">What types of problems can MathSolver solve?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">MathSolver can solve various types of mathematics problems including algebra, calculus, statistics, geometry, and word problems. MathSolver can also solve problems relating to physics, accounting, and chemistry.</p>
+              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">What subjects does MathSolver cover?</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">It covers arithmetic, pre-algebra, algebra, geometry, trigonometry, precalculus, calculus, linear algebra, differential equations, statistics, probability, plus physics and chemistry questions.</p>
             </div>
             
             <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Can I use MathSolver on a mobile device?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Yes, MathSolver works beautifully on mobile web browsers, providing you with a 24/7 math solver just from your pocket!</p>
+              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Is MathSolver completely free?</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Yes. You can solve unlimited problems, view every step-by-step explanation, and generate practice quizzes, all at no cost, with no account required.</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">How accurate is the AI math solver?</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">MathSolver uses advanced AI models trained on millions of math problems. While it handles most problems with high accuracy, we always recommend double-checking critical calculations, especially for exams or professional work.</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Does MathSolver work on mobile?</h3>
+              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Absolutely. MathSolver runs in any modern browser on phones and tablets with no app install needed. The full math solver experience, including photo upload, works exactly the same on mobile.</p>
             </div>
 
           </div>

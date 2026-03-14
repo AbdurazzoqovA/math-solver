@@ -220,7 +220,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
                     e.preventDefault();
                     setUploadedImages(prev => prev.filter((_, i) => i !== idx));
                   }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 text-white rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity z-10 shadow-md hover:bg-zinc-700"
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 text-white rounded-full flex items-center justify-center opacity-0 group-hover/img:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity z-10 shadow-md hover:bg-zinc-700"
                 >
                   <X className="w-3 h-3" />
                 </button>

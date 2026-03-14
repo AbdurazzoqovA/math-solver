@@ -19,6 +19,9 @@ type UIContextType = {
   setCalculatorOpen: (open: boolean) => void;
   toggleCalculator: () => void;
   
+  isMobileSidebarOpen: boolean;
+  setMobileSidebarOpen: (open: boolean) => void;
+
   isPracticePanelOpen: boolean;
   practiceTopic: string | null;
   practiceMessageId: string | null;
@@ -37,6 +40,7 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
+  const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isPracticePanelOpen, setIsPracticePanelOpen] = useState(false);
   const [practiceTopic, setPracticeTopic] = useState<string | null>(null);
   const [practiceMessageId, setPracticeMessageId] = useState<string | null>(null);
@@ -82,6 +86,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       isCalculatorOpen, 
       setCalculatorOpen, 
       toggleCalculator,
+      isMobileSidebarOpen,
+      setMobileSidebarOpen,
       isPracticePanelOpen,
       practiceTopic,
       practiceMessageId,

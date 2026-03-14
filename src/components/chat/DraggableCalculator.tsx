@@ -73,12 +73,12 @@ export default function DraggableCalculator() {
   return (
     <motion.div
       drag
-      dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }}
+      dragConstraints={{ left: -150, right: 150, top: -200, bottom: 400 }}
       dragMomentum={false}
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      className="fixed z-[999] top-20 left-10 w-64 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+      className="fixed z-[999] top-20 w-64 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col left-1/2 -translate-x-1/2 md:left-10 md:translate-x-0"
     >
       {/* Draggable Header */}
       <div className="flex items-center justify-between p-3 border-b border-black/5 dark:border-white/5 cursor-move" title="Drag to move">
