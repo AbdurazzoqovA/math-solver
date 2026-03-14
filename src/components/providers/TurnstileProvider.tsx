@@ -54,7 +54,7 @@ declare global {
 
 const SCRIPT_URL =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__turnstileOnLoad";
-const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAACq7hrgBzgdgW1Z7";
 const SCRIPT_LOAD_TIMEOUT_MS = 10_000;
 
 export default function TurnstileProvider({
@@ -131,7 +131,7 @@ export default function TurnstileProvider({
     try {
       const id = window.turnstile.render(containerRef.current, {
         sitekey: SITE_KEY,
-        size: "invisible",
+        size: "normal", // Must be normal/flexible to allow interaction-only popup
         appearance: "interaction-only",
         retry: "auto",
         "retry-interval": 5000,
@@ -172,9 +172,10 @@ export default function TurnstileProvider({
 
     const token = tokenRef.current;
 
-    // Reset the widget to generate a fresh token for the next request
-    // (Turnstile tokens are single-use)
-    if (widgetIdRef.current && window.turnstile) {
+    // Only reset if we actually have a token to consume.
+    // This prevents concurrent API calls from triggering overlapping resets,
+    // which causes the 'Cannot read properties of undefined (reading payload)' crash.
+    if (token && widgetIdRef.current && window.turnstile) {
       try {
         // Clear current token immediately so concurrent calls don't reuse it
         tokenRef.current = null;
