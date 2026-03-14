@@ -16,6 +16,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Math Solver - Free AI Math Solver with Step-by-Step Solutions | MathSolver",
   description: "Solve any math problem instantly with MathSolver, the free AI math solver. Get step-by-step solutions for algebra, calculus, geometry, and more. Upload a photo or type your equation.",
+  openGraph: {
+    title: "Math Solver - Free AI Math Solver with Step-by-Step Solutions",
+    description: "Solve any math problem instantly with MathSolver, the free AI math solver. Get step-by-step solutions for algebra, calculus, geometry, and more.",
+    images: ["/math-solver-og.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Math Solver - Free AI Math Solver with Step-by-Step Solutions",
+    description: "Solve any math problem instantly with MathSolver, the free AI math solver. Get step-by-step solutions for algebra, calculus, geometry, and more.",
+    images: ["/math-solver-og.png"],
+  },
 };
 
 import Sidebar from "@/components/layout/Sidebar";

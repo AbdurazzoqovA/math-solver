@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useChatContext } from "@/context/ChatContext";
 import { useUI } from "@/context/UIContext";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -165,6 +166,11 @@ export default function Sidebar() {
           )}
           {isExpanded && <span className="font-medium text-sm truncate">Theme</span>}
         </button>
+
+        <div className={`flex flex-col gap-1 mt-2 text-xs text-muted-foreground/60 transition-all duration-300 ${isExpanded ? 'px-4 opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+          <Link href="/privacy" className="hover:text-foreground transition-colors py-1 truncate">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-foreground transition-colors py-1 truncate">Terms of Service</Link>
+        </div>
       </div>
 
     </div>

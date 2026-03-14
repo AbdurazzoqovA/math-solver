@@ -3,6 +3,7 @@
 import HeroInput from "./HeroInput";
 import SeoSections from "./SeoSections";
 import Script from "next/script";
+import Link from "next/link";
 
 export default function EmptyState({ onStartChat }: { onStartChat: (message: string, images?: { url: string; ocrText: string }[]) => void }) {
   return (
@@ -39,9 +40,9 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
             <span>&middot;</span>
             <a href="#" className="hover:text-foreground transition-colors">Blog</a>
             <span>&middot;</span>
-            <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <span>&middot;</span>
-            <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             <span>&middot;</span>
             <a href="#" className="hover:text-foreground transition-colors">Contact</a>
           </div>
