@@ -36,6 +36,7 @@ import { ChatProvider } from "@/context/ChatContext";
 import DraggableCalculator from "@/components/chat/DraggableCalculator";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import SplitLayoutWrapper from "@/components/layout/SplitLayoutWrapper";
+import Script from "next/script";
 
 export default function RootLayout({
   children,
@@ -44,6 +45,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-YG1NPYM8BS"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-YG1NPYM8BS');
+          `}
+        </Script>
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <UIProvider>
