@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/captcha';
 
 const STEPS_PROMPT = `You are MathSolver, an expert AI math tutor. 
 Generate a step-by-step explanation for the provided multiple-choice math question.
@@ -23,7 +24,20 @@ CRITICAL JSON RULES:
 
 export async function POST(req: Request) {
   try {
-    const { question, options, correctAnswerIndex } = await req.json();
+    // ── Captcha / rate-limit gate ──
+    const validation = await validateRequest(req);
+    if (!validation.allowed) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.status }
+      );
+    }
+
+    const { question, options, correctAnswerIndex } = validation.body as {
+      question?: string;
+      options?: string[];
+      correctAnswerIndex?: number;
+    };
 
     if (!question || !options || typeof correctAnswerIndex !== 'number') {
       return NextResponse.json(

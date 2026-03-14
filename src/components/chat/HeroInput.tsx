@@ -5,6 +5,7 @@ import { ArrowUpCircle, ImagePlus, Calculator, Loader2, X } from "lucide-react";
 import MathKeyboard from "./MathKeyboard";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import { useUI } from "@/context/UIContext";
+import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
 const ACCEPTED_FILE_TYPES = [
   "image/jpeg",
@@ -26,6 +27,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
   const dragCounter = useRef(0);
 
   const { isCalculatorOpen, toggleCalculator, registerInsertCallback, unregisterInsertCallback } = useUI();
+  const { getToken } = useTurnstile();
 
   // Register insert callback so the floating calculator can inject values
   useEffect(() => {
@@ -110,10 +112,11 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
     try {
       const results = await Promise.all(validFiles.map(async file => {
         const base64 = await fileToBase64(file);
+        const captchaToken = getToken();
         const response = await fetch("/api/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64, mimeType: file.type }),
+          body: JSON.stringify({ base64, mimeType: file.type, captchaToken }),
         });
 
         if (!response.ok) {

@@ -31,13 +31,13 @@ export default function Sidebar() {
   const handleChatSwitch = (chatId: string) => {
     switchChat(chatId);
     setMobileSidebarOpen(false);
-    if (isOnPracticeTests) router.push("/");
+    if (pathname !== "/") router.push("/");
   };
 
   const handleNewChat = () => {
     createNewChat();
     setMobileSidebarOpen(false);
-    if (isOnPracticeTests) router.push("/");
+    if (pathname !== "/") router.push("/");
   };
 
   const handlePracticeTestsClick = () => {

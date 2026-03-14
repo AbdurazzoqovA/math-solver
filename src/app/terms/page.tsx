@@ -4,6 +4,9 @@ import { ArrowLeft } from "lucide-react";
 export const metadata = {
   title: "Terms of Service | MathSolver",
   description: "Terms of Service for MathSolver. Please read these terms carefully before using our services.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsOfServicePage() {

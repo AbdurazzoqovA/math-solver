@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://math-solver.io"),
   title: "Math Solver - Free AI Math Solver with Step-by-Step Solutions | MathSolver",
   description: "Solve any math problem instantly with MathSolver, the free AI math solver. Get step-by-step solutions for algebra, calculus, geometry, and more. Upload a photo or type your equation.",
   openGraph: {
@@ -36,6 +37,7 @@ import { ChatProvider } from "@/context/ChatContext";
 import DraggableCalculator from "@/components/chat/DraggableCalculator";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import SplitLayoutWrapper from "@/components/layout/SplitLayoutWrapper";
+import TurnstileProvider from "@/components/providers/TurnstileProvider";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -61,6 +63,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TurnstileProvider>
           <UIProvider>
             <ChatProvider>
             {/* Global Tools */}
@@ -89,6 +92,7 @@ export default function RootLayout({
             </div>
           </ChatProvider>
         </UIProvider>
+          </TurnstileProvider>
       </ThemeProvider>
       </body>
     </html>

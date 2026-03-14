@@ -5,6 +5,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { useUI, Question } from "@/context/UIContext";
 import { useChatContext } from "@/context/ChatContext";
+import { useTurnstile } from "@/components/providers/TurnstileProvider";
 import { useState } from "react";
 import Image from "next/image";
 
@@ -39,15 +40,17 @@ export default function MessageList({
 }) {
   const { openPracticePanel } = useUI();
   const { savePracticeToMessage } = useChatContext();
+  const { getToken } = useTurnstile();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
 
   const handlePracticeClick = async (messageId: string, content: string) => {
     setLoadingMessageId(messageId);
     try {
+      const captchaToken = getToken();
       const res = await fetch("/api/practice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: content }),
+        body: JSON.stringify({ topic: content, captchaToken }),
       });
       const data = await res.json();
       if (data.questions) {

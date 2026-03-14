@@ -4,6 +4,9 @@ import { ArrowLeft } from "lucide-react";
 export const metadata = {
   title: "Privacy Policy | MathSolver",
   description: "Privacy Policy for MathSolver. Learn how we collect, use, and protect your data.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPolicyPage() {

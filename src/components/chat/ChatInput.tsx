@@ -5,6 +5,7 @@ import { Calculator, ArrowUpCircle, ImagePlus, Loader2, X } from "lucide-react";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import MathKeyboard from "./MathKeyboard";
 import { useUI } from "@/context/UIContext";
+import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
 const ACCEPTED_FILE_TYPES = [
   "image/jpeg",
@@ -31,6 +32,7 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
   const { isCalculatorOpen, toggleCalculator } = useUI();
+  const { getToken } = useTurnstile();
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -85,10 +87,11 @@ export default function ChatInput({
     try {
       const results = await Promise.all(validFiles.map(async file => {
         const base64 = await fileToBase64(file);
+        const captchaToken = getToken();
         const response = await fetch("/api/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64, mimeType: file.type }),
+          body: JSON.stringify({ base64, mimeType: file.type, captchaToken }),
         });
 
         if (!response.ok) {

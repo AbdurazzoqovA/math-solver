@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/captcha';
 
 const ACCEPTED_TYPES = [
   'image/jpeg',
@@ -14,7 +15,16 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(req: Request) {
   try {
-    const { base64, mimeType } = await req.json();
+    // ── Captcha / rate-limit gate ──
+    const validation = await validateRequest(req);
+    if (!validation.allowed) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.status }
+      );
+    }
+
+    const { base64, mimeType } = validation.body as { base64?: string; mimeType?: string };
 
     if (!base64 || !mimeType) {
       return NextResponse.json(

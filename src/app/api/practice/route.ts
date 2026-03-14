@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/captcha';
 
 const PRACTICE_PROMPT = `You are MathSolver, an expert AI math tutor. 
 Generate exactly 4 multiple-choice practice questions based on the provided math topic or problem.
@@ -28,7 +29,16 @@ CRITICAL JSON RULES:
 
 export async function POST(req: Request) {
   try {
-    const { topic } = await req.json();
+    // ── Captcha / rate-limit gate ──
+    const validation = await validateRequest(req);
+    if (!validation.allowed) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.status }
+      );
+    }
+
+    const { topic } = validation.body as { topic?: string };
 
     if (!topic || typeof topic !== 'string') {
       return NextResponse.json(

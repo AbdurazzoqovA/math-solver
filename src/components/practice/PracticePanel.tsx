@@ -8,10 +8,12 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useChatContext } from "@/context/ChatContext";
+import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
 export default function PracticePanel() {
   const { isPracticePanelOpen, closePracticePanel, practiceTopic, practiceMessageId, practiceQuestions, setPracticeQuestions } = useUI();
   const { savePracticeToMessage } = useChatContext();
+  const { getToken } = useTurnstile();
   
   const questions = practiceQuestions;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -122,13 +124,15 @@ export default function PracticePanel() {
     setIsGeneratingSteps(prev => ({ ...prev, [currentIndex]: true }));
     
     try {
+      const captchaToken = getToken();
       const response = await fetch('/api/practice/steps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: currentQ.question,
           options: currentQ.options,
-          correctAnswerIndex: currentQ.correctAnswerIndex
+          correctAnswerIndex: currentQ.correctAnswerIndex,
+          captchaToken
         })
       });
 

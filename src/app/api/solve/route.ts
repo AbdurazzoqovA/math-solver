@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/captcha';
 
 // System prompt defining the AI's persona and formatting rules
 const MATH_TUTOR_PROMPT = `You are MathSolver, an expert AI math tutor. Your goal is to provide clear, visually distinct, and step-by-step solutions to mathematical problems. Start directly with the steps.
@@ -17,7 +18,16 @@ CRITICAL FORMATTING RULES:
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    // ── Captcha / rate-limit gate ──
+    const validation = await validateRequest(req);
+    if (!validation.allowed) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: validation.status }
+      );
+    }
+
+    const { messages } = validation.body as { messages?: unknown };
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(

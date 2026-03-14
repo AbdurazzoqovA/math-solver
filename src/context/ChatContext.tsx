@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Message } from "@/components/chat/MessageList";
+import { useTurnstile } from "@/components/providers/TurnstileProvider";
 import { Question } from "@/context/UIContext";
 
 // ── Types ──────────────────────────────────────────────
@@ -61,6 +62,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const { getToken } = useTurnstile();
 
   // Keep a ref so the streaming callback can always read the latest chats
   const chatsRef = useRef(chats);
@@ -186,10 +188,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           return { role: m.role, content: finalContent };
         });
 
+        const captchaToken = getToken();
         const response = await fetch("/api/solve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages }),
+          body: JSON.stringify({ messages: apiMessages, captchaToken }),
         });
 
         if (!response.ok) throw new Error("Failed to fetch response");
