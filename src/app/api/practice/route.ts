@@ -17,12 +17,15 @@ Each object must follow this strict schema:
         "Option 4 using $...$"
       ],
       "correctAnswerIndex": <integer between 0 and 3>,
-      "steps": "A detailed, step-by-step markdown explanation. Break down the solution clearly. Use **Step 1:**, **Step 2:**, etc. Use LaTeX for math. IMPORTANT: You MUST escape all newlines in this string as \\n or double backslashes \\\\n so the JSON remains valid."
+      "steps": "A detailed, step-by-step markdown explanation. Break down the solution clearly. Use **Step 1:**, **Step 2:**, etc."
     }
   ]
 }
 
-Ensure the questions are challenging but fair, testing the underlying concepts of the provided topic.`;
+CRITICAL JSON RULES:
+1. You MUST double-escape ALL LaTeX backslashes. For example, write \\\\cdot instead of \\cdot, \\\\frac instead of \\frac, \\\\neq instead of \\neq, etc. This is essential for the output to be valid JSON.
+2. For line breaks in the "steps" string, use double-escaped newlines: \\\\n
+3. Do not include raw unescaped newlines in your string properties.`;
 
 export async function POST(req: Request) {
   try {
@@ -92,14 +95,15 @@ export async function POST(req: Request) {
         }
         return NextResponse.json(parsed);
       } catch (innerErr) {
-        // 3. Fallback: if the AI included unescaped newlines inside the "steps" string,
-        // we can try a basic sanitization. We replace literal newlines with escaped ones,
-        // but this breaks structural JSON newlines. A better approach for unescaped control
-        // characters in JSON strings is to strip them.
+        // 3. Fallback: if the AI included unescaped newlines or unescaped LaTeX backslashes (like \cdot)
         console.warn('First pass JSON.parse failed, attempting sanitization:', innerErr);
         
+        let sanitized = cleanContent;
         // Replace unescaped newlines and carriage returns with spaces to keep JSON valid
-        const sanitized = cleanContent.replace(/[\u0000-\u001F]+/g, " ");
+        sanitized = sanitized.replace(/[\u0000-\u001F]+/g, " ");
+        // Attempt to double-escape single backslashes used for LaTeX commands that aren't valid JSON escapes.
+        // E.g., \c (for \cdot) becomes \\c. This catches characters not in [" \ / b f n r t u]
+        sanitized = sanitized.replace(/\\([^"\\\/bfnrtu])/g, '\\\\$1');
         
         const parsed = JSON.parse(sanitized);
         if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length !== 4) {

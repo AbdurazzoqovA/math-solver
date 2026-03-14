@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Message } from "@/components/chat/MessageList";
+import { Question } from "@/context/UIContext";
 
 // ── Types ──────────────────────────────────────────────
 export type Chat = {
@@ -21,6 +22,7 @@ type ChatContextType = {
   switchChat: (id: string) => void;
   deleteChat: (id: string) => void;
   sendMessage: (content: string, images?: { url: string; ocrText: string }[]) => Promise<void>;
+  savePracticeToMessage: (messageId: string, practiceTest: { title: string; questions: Question[] }) => void;
 };
 
 // ── Constants ──────────────────────────────────────────
@@ -109,6 +111,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
     [activeChatId]
   );
+
+  const savePracticeToMessage = useCallback((messageId: string, practiceTest: { title: string; questions: Question[] }) => {
+    setChats(prev => prev.map(c => {
+      // Check if this chat contains the message we want to update
+      const hasMessage = c.messages.some(m => m.id === messageId);
+      if (!hasMessage) return c;
+
+      // Update the Specific message inside this chat
+      return {
+        ...c,
+        updatedAt: Date.now(),
+        messages: c.messages.map(m => 
+          m.id === messageId ? { ...m, practiceTest } : m
+        )
+      };
+    }));
+  }, []);
 
   const sendMessage = useCallback(
     async (content: string, images?: { url: string; ocrText: string }[]) => {
@@ -258,6 +277,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         switchChat,
         deleteChat,
         sendMessage,
+        savePracticeToMessage,
       }}
     >
       {children}

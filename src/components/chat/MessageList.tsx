@@ -1,9 +1,10 @@
-import { CheckCircle2, Edit2, FileText, Loader2 } from "lucide-react";
+import { CheckCircle2, Edit2, FileText, Loader2, ClipboardList } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { useUI } from "@/context/UIContext";
+import { useUI, Question } from "@/context/UIContext";
+import { useChatContext } from "@/context/ChatContext";
 import { useState } from "react";
 
 export type Message = {
@@ -12,6 +13,10 @@ export type Message = {
   content: string;
   isCorrect?: boolean;
   images?: { url: string; ocrText: string }[]; // Replace singular imageUrl / ocrText
+  practiceTest?: {
+    title: string;
+    questions: Question[];
+  };
 };
 
 // Pre-process LaTeX delimiters from OpenAI's default \( \) and \[ \] to remark-math's required $ and $$
@@ -32,6 +37,7 @@ export default function MessageList({
   isLoading?: boolean;
 }) {
   const { openPracticePanel } = useUI();
+  const { savePracticeToMessage } = useChatContext();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
 
   const handlePracticeClick = async (messageId: string, content: string) => {
@@ -44,6 +50,7 @@ export default function MessageList({
       });
       const data = await res.json();
       if (data.questions) {
+        savePracticeToMessage(messageId, { title: data.title || content, questions: data.questions });
         openPracticePanel(data.title || content, data.questions);
       }
     } catch (error) {
@@ -51,6 +58,10 @@ export default function MessageList({
     } finally {
       setLoadingMessageId(null);
     }
+  };
+
+  const handleOpenSavedPractice = (practiceTest: { title: string; questions: Question[] }) => {
+    openPracticePanel(practiceTest.title, practiceTest.questions);
   };
 
   return (
@@ -113,20 +124,39 @@ export default function MessageList({
                   </ReactMarkdown>
                 </div>
 
-                {/* Call To Action */}
+                {/* Call To Action or Saved Practice Test */}
                 <div className="mt-8 pt-4 flex">
-                  <button 
-                    onClick={() => handlePracticeClick(message.id, message.content)}
-                    disabled={loadingMessageId === message.id}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-foreground shadow-sm hover:shadow hover:-translate-y-px active:translate-y-0 active:shadow-sm disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
-                  >
-                    {loadingMessageId === message.id ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <FileText className="w-3.5 h-3.5" />
-                    )}
-                    Take a Practice Test
-                  </button>
+                  {message.practiceTest ? (
+                    <button
+                      onClick={() => handleOpenSavedPractice(message.practiceTest!)}
+                      className="group flex items-center justify-between w-full max-w-2xl p-4 sm:p-5 rounded-[20px] border border-[#A6C8FF] dark:border-blue-900/40 bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-[0_4px_16px_-4px_rgba(37,99,235,0.08)] dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 text-left"
+                    >
+                      <div className="flex flex-col gap-1 pr-4">
+                        <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {message.practiceTest.title}
+                        </span>
+                        <span className="text-[13px] sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                          {message.practiceTest.questions.length} questions
+                        </span>
+                      </div>
+                      <div className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#E8F8F0] dark:bg-emerald-500/10 flex items-center justify-center text-[#10B981] dark:text-emerald-500 group-hover:scale-[1.03] transition-transform">
+                        <ClipboardList className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[2.5]" />
+                      </div>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handlePracticeClick(message.id, message.content)}
+                      disabled={loadingMessageId === message.id}
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-foreground shadow-sm hover:shadow hover:-translate-y-px active:translate-y-0 active:shadow-sm disabled:opacity-50 disabled:pointer-events-none transition-all duration-200"
+                    >
+                      {loadingMessageId === message.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <FileText className="w-3.5 h-3.5" />
+                      )}
+                      Take a Practice Test
+                    </button>
+                  )}
                 </div>
 
               </div>
