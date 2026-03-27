@@ -73,9 +73,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const stored = loadChatsFromStorage();
     if (stored.length > 0) {
       setChats(stored);
-      // Auto-select the most recently updated chat
-      const sorted = [...stored].sort((a, b) => b.updatedAt - a.updatedAt);
-      setActiveChatId(sorted[0].id);
     }
     setHydrated(true);
   }, []);
