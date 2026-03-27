@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Calculator, ArrowUpCircle, ImagePlus, Loader2, X } from "lucide-react";
+import { Calculator, ArrowUpCircle, ImagePlus, Loader2, X, Pen } from "lucide-react";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import MathKeyboard from "./MathKeyboard";
+import DrawingCanvas from "./DrawingCanvas";
 import { useUI } from "@/context/UIContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
@@ -28,6 +29,7 @@ export default function ChatInput({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<{ url: string; ocrText: string }[]>([]);
+  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -75,7 +77,7 @@ export default function ChatInput({
     }
   };
 
-  const handleFileUpload = async (files: File[]) => {
+  const handleFileUpload = async (files: File[], source?: string) => {
     const validFiles = files.filter(f => ACCEPTED_FILE_TYPES.includes(f.type) && f.size <= 10 * 1024 * 1024);
     if (validFiles.length === 0) {
       alert("No valid files to upload. Check file types (Images/PDFs) and size (max 10MB).");
@@ -91,7 +93,7 @@ export default function ChatInput({
         const response = await fetch("/api/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64, mimeType: file.type, captchaToken }),
+          body: JSON.stringify({ base64, mimeType: file.type, captchaToken, source }),
         });
 
         if (!response.ok) {
@@ -265,6 +267,15 @@ export default function ChatInput({
               </button>
 
               <button
+                onClick={() => setIsDrawingModalOpen(true)}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex items-center justify-center p-2 rounded-xl transition-colors group text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                title="Draw Problem"
+              >
+                <Pen className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
+              </button>
+
+              <button
                 onClick={handleMathButtonClick}
                 onMouseDown={(e) => e.preventDefault()}
                 className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-xl transition-colors group ${keyboardOpen
@@ -313,6 +324,16 @@ export default function ChatInput({
           MathSolver can make mistakes. Please verify important calculations.
         </p>
       </div>
+
+      {isDrawingModalOpen && (
+        <DrawingCanvas 
+          onCancel={() => setIsDrawingModalOpen(false)}
+          onConfirm={(file) => {
+            setIsDrawingModalOpen(false);
+            handleFileUpload([file], "drawing");
+          }}
+        />
+      )}
     </div>
   );
 }

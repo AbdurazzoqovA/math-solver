@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { base64, mimeType } = validation.body as { base64?: string; mimeType?: string };
+    const { base64, mimeType, source } = validation.body as { base64?: string; mimeType?: string; source?: string };
 
     if (!base64 || !mimeType) {
       return NextResponse.json(
@@ -49,6 +49,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // ── Canvas Drawing path: use GPT Vision directly (Azure DI is bad at freehand) ──
+    if (source === 'drawing') {
+      const text = await recognizeDrawingWithGptVision(base64, mimeType);
+      if (text && text.trim()) {
+        return NextResponse.json({ text: text.trim() });
+      }
+      return NextResponse.json(
+        { error: 'Could not recognize drawing. Please draw more clearly and try again.' },
+        { status: 422 }
+      );
+    }
+
+    // ── Standard document / photo path: Azure Document Intelligence ──
     const diKey = process.env.AZURE_DI_KEY;
     const diEndpoint = process.env.AZURE_DI_ENDPOINT;
 
@@ -256,6 +269,61 @@ function extractTextFromResult(analyzeResult: AnalyzeResult): string {
   }
 
   return result.trim();
+}
+
+/**
+ * For canvas-drawn math: skip Azure DI entirely and use GPT Vision
+ * to directly interpret the hand-drawn math expression.
+ */
+async function recognizeDrawingWithGptVision(base64: string, mimeType: string): Promise<string> {
+  const apiKey = process.env.AZURE_OPENAI_API_KEY;
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+
+  if (!apiKey || !endpoint) {
+    throw new Error('Missing Azure OpenAI environment variables for Vision');
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': apiKey,
+    },
+    body: JSON.stringify({
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a math expression recognizer. The user has drawn a math problem by hand on a digital canvas. Your job is to accurately interpret the hand-drawn mathematical expression and output it as clean text.\n\nRules:\n- Output ONLY the mathematical expression/equation, nothing else.\n- Use standard math notation. For complex expressions use LaTeX.\n- Do NOT solve the problem.\n- Do NOT add explanations or commentary.\n- Be very careful with superscripts (exponents), subscripts, fractions, and operators.\n- If you see something like "2x²=4" write it as "2x^2 = 4" or in LaTeX as "2x^{2} = 4".\n- If multiple expressions are drawn, separate them with newlines.'
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'What mathematical expression is drawn in this image? Output only the expression.'
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`
+              }
+            }
+          ]
+        }
+      ],
+      temperature: 0,
+      max_tokens: 300,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('GPT Vision recognition failed:', response.status, errText);
+    throw new Error('Failed to recognize drawing');
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 // ---- Type definitions for Azure DI response ----

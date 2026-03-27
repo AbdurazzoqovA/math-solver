@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowUpCircle, ImagePlus, Calculator, Loader2, X } from "lucide-react";
+import { ArrowUpCircle, ImagePlus, Calculator, Loader2, X, Pen } from "lucide-react";
 import MathKeyboard from "./MathKeyboard";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
+import DrawingCanvas from "./DrawingCanvas";
 import { useUI } from "@/context/UIContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
@@ -22,6 +23,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<{ url: string; ocrText: string }[]>([]);
+  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
@@ -100,7 +102,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
     }
   };
 
-  const handleFileUpload = async (files: File[]) => {
+  const handleFileUpload = async (files: File[], source?: string) => {
     const validFiles = files.filter(f => ACCEPTED_FILE_TYPES.includes(f.type) && f.size <= 10 * 1024 * 1024);
     if (validFiles.length === 0) {
       alert("No valid files to upload. Check file types (Images/PDFs) and size (max 10MB).");
@@ -116,7 +118,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
         const response = await fetch("/api/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64, mimeType: file.type, captchaToken }),
+          body: JSON.stringify({ base64, mimeType: file.type, captchaToken, source }),
         });
 
         if (!response.ok) {
@@ -272,6 +274,16 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
                 <Calculator className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
               </button>
 
+              {/* Draw toggle */}
+              <button
+                onClick={() => setIsDrawingModalOpen(true)}
+                onMouseDown={(e) => e.preventDefault()}
+                className="flex items-center justify-center p-2.5 rounded-xl transition-colors group text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                title="Draw Problem"
+              >
+                <Pen className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
+              </button>
+
               {/* Math keyboard toggle */}
               <button
                 onClick={handleMathButtonClick}
@@ -313,6 +325,16 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
           </div>
         )}
       </div>
+
+      {isDrawingModalOpen && (
+        <DrawingCanvas 
+          onCancel={() => setIsDrawingModalOpen(false)}
+          onConfirm={(file) => {
+            setIsDrawingModalOpen(false);
+            handleFileUpload([file], "drawing");
+          }}
+        />
+      )}
     </div>
   );
 }
