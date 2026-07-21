@@ -49,114 +49,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── Canvas Drawing path: use GPT Vision directly (Azure DI is bad at freehand) ──
-    if (source === 'drawing') {
-      const text = await recognizeDrawingWithGptVision(base64, mimeType);
-      if (text && text.trim()) {
-        return NextResponse.json({ text: text.trim() });
-      }
-      return NextResponse.json(
-        { error: 'Could not recognize drawing. Please draw more clearly and try again.' },
-        { status: 422 }
-      );
+    const text = await recognizeWithGemini(base64, mimeType, source);
+    if (text && text.trim()) {
+      return NextResponse.json({ text: text.trim() });
     }
-
-    // ── Standard document / photo path: Azure Document Intelligence ──
-    const diKey = process.env.AZURE_DI_KEY;
-    const diEndpoint = process.env.AZURE_DI_ENDPOINT;
-
-    if (!diKey || !diEndpoint) {
-      console.error('Missing AZURE_DI_KEY or AZURE_DI_ENDPOINT environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error for document analysis.' },
-        { status: 500 }
-      );
-    }
-
-    // ---- Step 1: Submit the document for analysis ----
-    // Using the prebuilt-read model with formula extraction add-on
-    const analyzeUrl = `${diEndpoint.replace(/\/$/, '')}/documentintelligence/documentModels/prebuilt-read:analyze?api-version=2024-11-30&features=formulas`;
-
-    const submitResponse = await fetch(analyzeUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Ocp-Apim-Subscription-Key': diKey,
-      },
-      body: JSON.stringify({
-        base64Source: base64,
-      }),
-    });
-
-    if (!submitResponse.ok) {
-      const errText = await submitResponse.text();
-      console.error('Azure DI submit error:', submitResponse.status, errText);
-      return NextResponse.json(
-        { error: 'Failed to submit document for analysis.' },
-        { status: 502 }
-      );
-    }
-
-    const operationLocation = submitResponse.headers.get('Operation-Location');
-    if (!operationLocation) {
-      console.error('No Operation-Location header in Azure DI response');
-      return NextResponse.json(
-        { error: 'Unexpected response from document analysis service.' },
-        { status: 502 }
-      );
-    }
-
-    // ---- Step 2: Poll until the analysis is complete ----
-    const maxAttempts = 30; // 30 seconds max
-    const pollInterval = 1000; // 1 second
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
-
-      const pollResponse = await fetch(operationLocation, {
-        method: 'GET',
-        headers: {
-          'Ocp-Apim-Subscription-Key': diKey,
-        },
-      });
-
-      if (!pollResponse.ok) {
-        const errText = await pollResponse.text();
-        console.error('Azure DI poll error:', pollResponse.status, errText);
-        return NextResponse.json(
-          { error: 'Error while checking analysis status.' },
-          { status: 502 }
-        );
-      }
-
-      const result = await pollResponse.json();
-      const status = result.status;
-
-      if (status === 'succeeded') {
-        // ---- Step 3: Extract text from the result ----
-        const rawText = extractTextFromResult(result.analyzeResult);
-
-        // ---- Step 4: Clean via GPT to extract only the math problem ----
-        const cleanedText = await cleanOcrWithGpt(rawText);
-        return NextResponse.json({ text: cleanedText });
-      }
-
-      if (status === 'failed') {
-        console.error('Azure DI analysis failed:', JSON.stringify(result));
-        return NextResponse.json(
-          { error: 'Document analysis failed. Please try a different file.' },
-          { status: 422 }
-        );
-      }
-
-      // status is 'running' or 'notStarted' — continue polling
-    }
-
-    // Timed out
+    
     return NextResponse.json(
-      { error: 'Document analysis timed out. Please try a smaller file.' },
-      { status: 504 }
+      { error: 'Could not recognize math expressions in the provided file. Please try again with a clearer image or document.' },
+      { status: 422 }
     );
+
   } catch (error) {
     console.error('Error in /api/ocr:', error);
     return NextResponse.json(
@@ -167,186 +69,67 @@ export async function POST(req: Request) {
 }
 
 /**
- * Use GPT to clean up raw OCR text and extract only the math problem.
- * Strips noise like problem numbers, stray fragments, and OCR artifacts.
+ * Use Google Gemini to directly interpret the document or hand-drawn math expression.
  */
-async function cleanOcrWithGpt(rawText: string): Promise<string> {
-  const apiKey = process.env.AZURE_OPENAI_API_KEY;
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+async function recognizeWithGemini(base64: string, mimeType: string, source?: string): Promise<string> {
+  const apiKey = process.env.GOOGLE_CLOUD_API_KEY;
+  const modelName = 'gemini-3.1-flash-lite';
 
-  if (!apiKey || !endpoint || !rawText.trim()) {
-    return rawText; // Fallback to raw text
+  if (!apiKey) {
+    throw new Error('Missing GOOGLE_CLOUD_API_KEY environment variable');
   }
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': apiKey,
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: 'system',
-            content: `You are an OCR post-processor for a math solver app. The user has uploaded an image of a math problem. The OCR has extracted raw text which may include noise like problem numbers (e.g. "2)"), stray text fragments, or partial duplicates.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-Your job: Extract ONLY the actual math problem/equation from the raw OCR text. Return it as clean, readable text. If there are LaTeX expressions, keep them. Remove problem numbers, noise, and duplicates.
+  const systemInstructionText = source === 'drawing' 
+    ? 'You are a math expression recognizer. The user has drawn a math problem by hand on a digital canvas. Your job is to accurately interpret the hand-drawn mathematical expression and output it as clean text.\n\nRules:\n- Output ONLY the mathematical expression/equation, nothing else.\n- Use standard math notation. For complex expressions use LaTeX.\n- Do NOT solve the problem.\n- Do NOT add explanations or commentary.\n- Be very careful with superscripts (exponents), subscripts, fractions, and operators.\n- If you see something like "2x²=4" write it as "2x^2 = 4" or in LaTeX as "2x^{2} = 4".\n- If multiple expressions are drawn, separate them with newlines.'
+    : 'You are an OCR and Document Parsing expert for a math solver app. The user has uploaded an image or PDF of a math problem. Extract ONLY the actual math problem/equation from the document. Return it as clean, readable text. If there are LaTeX expressions, keep them. Remove problem numbers, noise, and duplicates.\n\nRules:\n- Return ONLY the cleaned math problem, nothing else.\n- Do NOT add explanations or commentary.\n- Do NOT solve the problem.\n- If there are multiple problems, separate them with newlines.\n- Keep the math notation as-is (LaTeX or plain text).';
 
-Rules:
-- Return ONLY the cleaned math problem, nothing else.
-- Do NOT add explanations or commentary.
-- Do NOT solve the problem.
-- If there are multiple problems, separate them with newlines.
-- Keep the math notation as-is (LaTeX or plain text).`
-          },
-          {
-            role: 'user',
-            content: `Raw OCR text:\n${rawText}`
-          }
-        ],
-        temperature: 0,
-        max_tokens: 500,
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn('GPT cleanup failed, returning raw text');
-      return rawText;
-    }
-
-    const data = await response.json();
-    const cleaned = data.choices?.[0]?.message?.content?.trim();
-    return cleaned || rawText;
-  } catch (error) {
-    console.warn('GPT cleanup error, returning raw text:', error);
-    return rawText;
-  }
-}
-
-/**
- * Extract readable text from the Azure DI analyzeResult.
- *
- * Azure DI with the "formulas" add-on inserts `:formula:` placeholders into
- * `analyzeResult.content` and stores actual LaTeX values in per-page
- * `formulas[]` arrays, each with a `span` indicating offset + length inside
- * the content string. We replace each placeholder with the real LaTeX,
- * wrapped in $ (inline) or $$ (display).
- */
-function extractTextFromResult(analyzeResult: AnalyzeResult): string {
-  if (!analyzeResult) return '';
-
-  const content = analyzeResult.content || '';
-
-  // Collect all formulas across all pages, sorted by span offset
-  const allFormulas: Formula[] = [];
-  if (analyzeResult.pages) {
-    for (const page of analyzeResult.pages) {
-      if (page.formulas) {
-        allFormulas.push(...page.formulas);
-      }
-    }
-  }
-
-  // If no formulas, return the raw content
-  if (allFormulas.length === 0) {
-    return content;
-  }
-
-  // Sort formulas by span offset descending so we can replace from the end
-  // without shifting earlier offsets
-  const formulasWithSpans = allFormulas
-    .filter((f) => f.span && f.value)
-    .sort((a, b) => (b.span!.offset) - (a.span!.offset));
-
-  let result = content;
-
-  for (const formula of formulasWithSpans) {
-    const { offset, length } = formula.span!;
-
-    // Replace the span region (which contains `:formula:` placeholder) with raw LaTeX
-    result = result.slice(0, offset) + formula.value + result.slice(offset + length);
-  }
-
-  return result.trim();
-}
-
-/**
- * For canvas-drawn math: skip Azure DI entirely and use GPT Vision
- * to directly interpret the hand-drawn math expression.
- */
-async function recognizeDrawingWithGptVision(base64: string, mimeType: string): Promise<string> {
-  const apiKey = process.env.AZURE_OPENAI_API_KEY;
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-
-  if (!apiKey || !endpoint) {
-    throw new Error('Missing Azure OpenAI environment variables for Vision');
-  }
-
-  const response = await fetch(endpoint, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'api-key': apiKey,
     },
     body: JSON.stringify({
-      messages: [
+      systemInstruction: {
+        parts: [
+          {
+            text: systemInstructionText
+          }
+        ]
+      },
+      contents: [
         {
-          role: 'system',
-          content: 'You are a math expression recognizer. The user has drawn a math problem by hand on a digital canvas. Your job is to accurately interpret the hand-drawn mathematical expression and output it as clean text.\n\nRules:\n- Output ONLY the mathematical expression/equation, nothing else.\n- Use standard math notation. For complex expressions use LaTeX.\n- Do NOT solve the problem.\n- Do NOT add explanations or commentary.\n- Be very careful with superscripts (exponents), subscripts, fractions, and operators.\n- If you see something like "2x²=4" write it as "2x^2 = 4" or in LaTeX as "2x^{2} = 4".\n- If multiple expressions are drawn, separate them with newlines.'
-        },
-        {
-          role: 'user',
-          content: [
+          parts: [
             {
-              type: 'text',
-              text: 'What mathematical expression is drawn in this image? Output only the expression.'
+              text: 'What mathematical expression is in this file? Output only the expression.'
             },
             {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${base64}`
+              inlineData: {
+                mimeType: mimeType,
+                data: base64
               }
             }
           ]
         }
       ],
-      temperature: 0,
-      max_tokens: 300,
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 1000,
+      }
     }),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error('GPT Vision recognition failed:', response.status, errText);
-    throw new Error('Failed to recognize drawing');
+    console.error('Gemini recognition failed:', response.status, errText);
+    throw new Error('Failed to recognize math expression');
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content?.trim() || '';
-}
-
-// ---- Type definitions for Azure DI response ----
-
-interface Span {
-  offset: number;
-  length: number;
-}
-
-interface Formula {
-  value: string;
-  kind?: 'inline' | 'display';
-  span?: Span;
-  confidence?: number;
-}
-
-interface Page {
-  pageNumber: number;
-  lines?: { content: string }[];
-  formulas?: Formula[];
-}
-
-interface AnalyzeResult {
-  content?: string;
-  pages?: Page[];
+  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  
+  // Gemini sometimes includes markdown code block formatting like ```latex ... ```
+  // We'll strip that out so we only return the raw text/latex
+  return textContent.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
 }
