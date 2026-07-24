@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { BookOpen, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon, Menu } from "lucide-react";
+import { useState } from "react";
+import { BookOpen, Calculator, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import { useChatContext } from "@/context/ChatContext";
@@ -16,13 +16,8 @@ export default function Sidebar() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-
   const isOnPracticeTests = pathname === "/practice-tests";
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isOnCalculators = pathname.startsWith("/calculator");
 
   // Sort chats by most recently updated
   const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -72,7 +67,12 @@ export default function Sidebar() {
         </div>
 
         {/* Logo Container (slides/fades in next to it) */}
-        <div className={`flex items-center gap-3 transition-all duration-300 absolute left-14 ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'} md:transition-all`}>
+        <Link
+          href="/"
+          aria-label="Go to MathSolver home"
+          onClick={() => setMobileSidebarOpen(false)}
+          className={`flex items-center gap-3 rounded-xl transition-all duration-300 absolute left-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'} md:transition-all`}
+        >
           <div className="w-9 h-9 shrink-0 flex items-center justify-center">
             <Image 
               src="/icons8-math-40.png" 
@@ -85,7 +85,7 @@ export default function Sidebar() {
           <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 whitespace-nowrap">
             MathSolver
           </span>
-        </div>
+        </Link>
       </div>
 
       {/* New Chat Button */}
@@ -104,6 +104,16 @@ export default function Sidebar() {
 
       {/* Main Nav */}
       <nav className="flex-1 px-3 py-2 space-y-2 overflow-y-auto custom-scrollbar">
+        <Link
+          href="/calculator"
+          onClick={() => setMobileSidebarOpen(false)}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnCalculators ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+          title="Calculators"
+        >
+          <Calculator className={`w-5 h-5 transition-colors shrink-0 ${isOnCalculators ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
+          {isExpanded && <span className="font-medium text-sm truncate">Calculators</span>}
+        </Link>
+
         <button 
           onClick={handlePracticeTestsClick}
           className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnPracticeTests ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
@@ -159,11 +169,7 @@ export default function Sidebar() {
           className={`w-full flex items-center p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4 gap-3' : 'justify-center'}`}
           title="Toggle Theme"
         >
-          {mounted ? (
-            theme === "dark" ? <Moon className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" /> : <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />
-          ) : (
-            <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />
-          )}
+          {theme === "dark" ? <Moon className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" /> : <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />}
           {isExpanded && <span className="font-medium text-sm truncate">Theme</span>}
         </button>
 

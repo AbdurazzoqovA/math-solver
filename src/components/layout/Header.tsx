@@ -4,6 +4,7 @@ import { Sun, Moon, Menu } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useUI } from "@/context/UIContext";
+import Link from "next/link";
 
 export default function Header() {
   const { theme, setTheme } = useTheme();
@@ -11,6 +12,8 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Theme state is only reliable after next-themes hydrates on the client.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -26,9 +29,13 @@ export default function Header() {
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white flex flex-col items-center justify-center font-bold text-lg shadow-lg">
+        <Link
+          href="/"
+          aria-label="Go to MathSolver home"
+          className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white flex flex-col items-center justify-center font-bold text-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        >
           <span className="leading-none drop-shadow-sm">√</span>
-        </div>
+        </Link>
       </div>
 
       {/* Desktop spacer */}

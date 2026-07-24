@@ -1,27 +1,27 @@
 import type { MetadataRoute } from "next";
+import { calculatorDefinitions } from "@/lib/calculators";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://math-solver.io";
+  const calculatorReleaseDate = new Date("2026-07-24T00:00:00.000Z");
 
   return [
     {
       url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 1,
     },
     {
       url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
     },
+    {
+      url: `${baseUrl}/calculator`,
+      lastModified: calculatorReleaseDate,
+    },
+    ...calculatorDefinitions.map(({ slug }) => ({
+      url: `${baseUrl}/calculator/${slug}`,
+      lastModified: calculatorReleaseDate,
+    })),
   ];
 }
-

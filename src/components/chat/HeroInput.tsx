@@ -18,7 +18,15 @@ const ACCEPTED_FILE_TYPES = [
   "application/pdf",
 ];
 
-export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images?: { url: string; ocrText: string }[]) => void }) {
+export default function HeroInput({
+  onSubmit,
+  placeholder = "Type your math problem, or click Σ Math to insert a formula…",
+  inputId = "hero-input",
+}: {
+  onSubmit: (val: string, images?: { url: string; ocrText: string }[]) => void;
+  placeholder?: string;
+  inputId?: string;
+}) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -37,9 +45,9 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
       if (!inputRef.current) return;
       inputRef.current.smartInsert(val);
     };
-    registerInsertCallback("hero-input", insertVal);
-    return () => unregisterInsertCallback("hero-input");
-  }, [registerInsertCallback, unregisterInsertCallback]);
+    registerInsertCallback(inputId, insertVal);
+    return () => unregisterInsertCallback(inputId);
+  }, [inputId, registerInsertCallback, unregisterInsertCallback]);
 
   // Called by the Math Keyboard when a symbol is clicked
   const handleMathInsert = (latex: string) => {
@@ -244,7 +252,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
         <div className="p-3">
           <InlineMathInput
             ref={inputRef}
-            placeholder="Type your math problem, or click Σ Math to insert a formula…"
+            placeholder={placeholder}
             onSubmit={() => {
               if (inputRef.current) {
                 const val = inputRef.current.getValue();
@@ -301,6 +309,7 @@ export default function HeroInput({ onSubmit }: { onSubmit: (val: string, images
 
             {/* Submit */}
             <button
+              aria-label="Solve problem"
               onClick={() => {
                 if (inputRef.current) {
                   const val = inputRef.current.getValue();

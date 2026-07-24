@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/captcha';
+import { getCalculator } from '@/lib/calculators';
 
 // System prompt defining the AI's persona and formatting rules
 const MATH_TUTOR_PROMPT = `You are MathSolver, an expert AI math tutor. Your goal is to provide clear, visually distinct, and step-by-step solutions to mathematical problems. Start directly with the steps.
@@ -27,7 +28,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages } = validation.body as { messages?: unknown };
+    const { messages, source } = validation.body as {
+      messages?: unknown;
+      source?: unknown;
+    };
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -47,11 +51,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // Construct the payload for Azure OpenAI
-    // We prepend the system prompt to guide the model's behavior
+    const calculatorSlug =
+      typeof source === 'string' && source.startsWith('calculator:')
+        ? source.slice('calculator:'.length)
+        : null;
+    const calculator = calculatorSlug ? getCalculator(calculatorSlug) : undefined;
+    const systemPrompt = calculator?.solverInstruction
+      ? `${MATH_TUTOR_PROMPT}
+
+CALCULATOR MODE:
+The user started this chat from the ${calculator.name}. Apply this trusted topic instruction:
+${calculator.solverInstruction}`
+      : MATH_TUTOR_PROMPT;
+
+    // Construct the payload for Azure OpenAI.
+    // Calculator instructions are looked up from the server registry, never trusted from client text.
     const payload = {
       messages: [
-        { role: 'system', content: MATH_TUTOR_PROMPT },
+        { role: 'system', content: systemPrompt },
         ...messages
       ],
       temperature: 0.2, // Low temperature for more deterministic, accurate math logic
@@ -122,7 +139,7 @@ export async function POST(req: Request) {
               if (content) {
                 controller.enqueue(new TextEncoder().encode(content));
               }
-            } catch (e) { }
+            } catch { }
           }
         } catch (e) {
           console.error('Error reading stream', e);

@@ -289,6 +289,7 @@ export default function ChatInput({
             </div>
 
             <button
+              aria-label="Send follow-up"
               onClick={() => {
                 if (!disabled && inputRef.current && onSubmit) {
                   const val = inputRef.current.getValue();

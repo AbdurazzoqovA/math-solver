@@ -1,4 +1,78 @@
-import { Calculator, Camera, BookOpen, LineChart, Zap, MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Calculator, Camera, BookOpen, LineChart, Zap, MessageCircle } from "lucide-react";
+
+const popularCalculators = [
+  {
+    name: "Solve for X",
+    href: "/calculator/solve-for-x",
+    detail: "Linear and multistep equations",
+  },
+  {
+    name: "Graphing",
+    href: "/calculator/graphing",
+    detail: "Plot and compare functions online",
+  },
+  {
+    name: "Quadratic equations",
+    href: "/calculator/quadratic-equation",
+    detail: "Roots, discriminant, and formula",
+  },
+  {
+    name: "Factoring",
+    href: "/calculator/factoring",
+    detail: "GCF, trinomials, and special products",
+  },
+  {
+    name: "Fractions",
+    href: "/calculator/fraction",
+    detail: "Add, subtract, multiply, and divide",
+  },
+  {
+    name: "Systems of equations",
+    href: "/calculator/systems-of-equations",
+    detail: "Substitution and elimination",
+  },
+  {
+    name: "Inequalities",
+    href: "/calculator/inequalities",
+    detail: "Intervals and sign changes",
+  },
+  {
+    name: "Logarithms",
+    href: "/calculator/logarithms",
+    detail: "Evaluate, expand, and solve logs",
+  },
+  {
+    name: "Derivatives",
+    href: "/calculator/derivative",
+    detail: "Power, product, quotient, and chain rules",
+  },
+  {
+    name: "Integrals",
+    href: "/calculator/integral",
+    detail: "Antiderivatives and integration methods",
+  },
+  {
+    name: "Matrices",
+    href: "/calculator/matrix",
+    detail: "Operations, transpose, and row reduction",
+  },
+  {
+    name: "Determinants",
+    href: "/calculator/determinant",
+    detail: "2 by 2 and larger square matrices",
+  },
+  {
+    name: "Trig identities",
+    href: "/calculator/trig-identities",
+    detail: "Verify and simplify exact identities",
+  },
+  {
+    name: "Standard deviation",
+    href: "/calculator/standard-deviation",
+    detail: "Sample and population spread",
+  },
+];
 
 export default function SeoSections() {
   return (
@@ -14,6 +88,49 @@ export default function SeoSections() {
             <p>Struggling with a tough equation? MathSolver is a free online math solver that turns complex problems into clear, step-by-step answers. Just type your equation, paste a word problem, or snap a photo of your homework and our AI does the rest.</p>
             <p>From basic algebra and geometry to advanced calculus and statistics, MathSolver doesn&apos;t just give you the final answer. It shows you exactly how to get there, explaining every step along the way so you can learn the method and apply it on your own next time.</p>
           </div>
+        </div>
+      </div>
+
+      <div className="flex justify-center mt-16">
+        <div className="w-full max-w-5xl">
+          <div className="max-w-2xl">
+            <h2 className="text-2xl sm:text-3xl font-medium dark:text-gray-200 text-foreground">
+              Popular math calculators
+            </h2>
+            <p className="mt-3 text-gray-500 dark:text-zinc-400 leading-relaxed">
+              Start with the exact skill you are studying. Each calculator
+              keeps the full explanation free.
+            </p>
+          </div>
+          <div className="mt-7 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {popularCalculators.map((calculator) => (
+              <Link
+                key={calculator.href}
+                href={calculator.href}
+                className="group flex items-center justify-between gap-5 rounded-xl border border-black/5 bg-white/60 px-5 py-4 shadow-sm transition-colors hover:border-primary-300 hover:bg-primary-50/70 dark:border-white/5 dark:bg-zinc-900/40 dark:hover:border-primary-800 dark:hover:bg-primary-950/20"
+              >
+                <span>
+                  <span className="block font-medium text-foreground">
+                    {calculator.name}
+                  </span>
+                  <span className="mt-1 block text-sm text-gray-500 dark:text-zinc-400">
+                    {calculator.detail}
+                  </span>
+                </span>
+                <ArrowRight
+                  className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary-600"
+                  aria-hidden="true"
+                />
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/calculator"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-3 font-medium text-primary-700 transition-colors hover:bg-primary-50 active:translate-y-px dark:text-primary-300 dark:hover:bg-primary-950/30"
+          >
+            Browse all calculators
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
       </div>
 

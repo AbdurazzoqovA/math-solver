@@ -9,6 +9,7 @@ import { Question } from "@/context/UIContext";
 export type Chat = {
   id: string;
   title: string;
+  source?: string;
   messages: Message[];
   createdAt: number;
   updatedAt: number;
@@ -17,12 +18,17 @@ export type Chat = {
 type ChatContextType = {
   chats: Chat[];
   activeChatId: string | null;
+  activeChatSource: string | null;
   messages: Message[];
   isLoading: boolean;
   createNewChat: () => void;
   switchChat: (id: string) => void;
   deleteChat: (id: string) => void;
-  sendMessage: (content: string, images?: { url: string; ocrText: string }[]) => Promise<void>;
+  sendMessage: (
+    content: string,
+    images?: { url: string; ocrText: string }[],
+    options?: { forceNewChat?: boolean; source?: string },
+  ) => Promise<void>;
   savePracticeToMessage: (messageId: string, practiceTest: { title: string; questions: Question[] }) => void;
 };
 
@@ -66,12 +72,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Keep a ref so the streaming callback can always read the latest chats
   const chatsRef = useRef(chats);
-  chatsRef.current = chats;
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   // ── Hydrate from localStorage (client-only) ────────
   useEffect(() => {
     const stored = loadChatsFromStorage();
     if (stored.length > 0) {
+      // Hydration is the intentional synchronization point for browser storage.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setChats(stored);
     }
     setHydrated(true);
@@ -86,6 +96,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Derived messages for the active chat
   const activeChat = chats.find((c) => c.id === activeChatId);
+  const activeChatSource = activeChat?.source ?? null;
   const messages = activeChat?.messages ?? [];
 
   // ── Actions ─────────────────────────────────────────
@@ -129,7 +140,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendMessage = useCallback(
-    async (content: string, images?: { url: string; ocrText: string }[]) => {
+    async (
+      content: string,
+      images?: { url: string; ocrText: string }[],
+      options?: { forceNewChat?: boolean; source?: string },
+    ) => {
       if ((!content.trim() && (!images || images.length === 0)) || isLoading) return;
 
       const displayContent = content.trim() || "Solve the above math problem.";
@@ -141,7 +156,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         images: images && images.length > 0 ? images : undefined,
       };
 
-      let chatId = activeChatId;
+      let chatId = options?.forceNewChat ? null : activeChatId;
 
       // If no active chat, create one
       if (!chatId) {
@@ -149,6 +164,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const newChat: Chat = {
           id: chatId,
           title: generateTitle(displayContent),
+          source: options?.source,
           messages: [newUserMsg],
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -172,6 +188,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         // Build API messages from the chat's full history + the new user message
         const currentChat = chatsRef.current.find((c) => c.id === chatId);
         const allMessages = currentChat ? [...currentChat.messages, newUserMsg] : [newUserMsg];
+        const chatSource = currentChat?.source ?? options?.source;
 
         const apiMessages = allMessages.map((m) => {
           let finalContent = m.content;
@@ -189,7 +206,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/solve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, captchaToken }),
+          body: JSON.stringify({
+            messages: apiMessages,
+            captchaToken,
+            source: chatSource,
+          }),
         });
 
         if (!response.ok) throw new Error("Failed to fetch response");
@@ -263,7 +284,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [activeChatId, isLoading]
+    [activeChatId, getToken, isLoading]
   );
 
   return (
@@ -271,6 +292,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       value={{
         chats,
         activeChatId,
+        activeChatSource,
         messages,
         isLoading,
         createNewChat,

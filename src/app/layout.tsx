@@ -45,6 +45,33 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const websiteStructuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://math-solver.io/#website",
+        url: "https://math-solver.io",
+        name: "MathSolver",
+        description:
+          "Free math solver with step-by-step solutions and practice questions.",
+        publisher: { "@id": "https://math-solver.io/#organization" },
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://math-solver.io/#organization",
+        name: "MathSolver",
+        url: "https://math-solver.io",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://math-solver.io/icons8-math-80.png",
+          width: 80,
+          height: 80,
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -62,6 +89,15 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteStructuredData).replace(
+              /</g,
+              "\\u003c",
+            ),
+          }}
+        />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TurnstileProvider>
           <UIProvider>
@@ -74,7 +110,7 @@ export default function RootLayout({
             <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary-400/10 blur-[120px] pointer-events-none -z-10" />
             <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10" />
 
-            <div className="flex h-screen overflow-hidden relative">
+            <div className="flex h-[100dvh] overflow-hidden relative">
               <Sidebar />
               <div className="flex flex-col flex-1 overflow-hidden relative">
                 {/* Mobile header with hamburger */}

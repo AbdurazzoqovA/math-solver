@@ -2,7 +2,6 @@
 
 import HeroInput from "./HeroInput";
 import SeoSections from "./SeoSections";
-import Script from "next/script";
 import Link from "next/link";
 
 export default function EmptyState({ onStartChat }: { onStartChat: (message: string, images?: { url: string; ocrText: string }[]) => void }) {
@@ -40,6 +39,8 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
             <span>&middot;</span>
             <a href="#" className="hover:text-foreground transition-colors">Blog</a>
             <span>&middot;</span>
+            <Link href="/calculator" className="hover:text-foreground transition-colors">Calculators</Link>
+            <span>&middot;</span>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <span>&middot;</span>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
@@ -50,69 +51,6 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
           <p className="mt-1">&copy; 2026 MathSolver. All rights reserved.</p>
         </footer>
       </div>
-
-      {/* FAQ JSON-LD Structured Data */}
-      <Script
-        id="faq-schema"
-        type="application/ld+json"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "What is MathSolver?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "MathSolver is a free AI-powered math solver that delivers step-by-step solutions for algebra, calculus, geometry, trigonometry, statistics, and more. Simply type an equation or upload a photo of your math problem to get an instant, detailed breakdown.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Can MathSolver solve math from a photo?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Yes. Upload a picture of any handwritten or printed problem and MathSolver will read it, extract the equation, and return a full step-by-step solution automatically.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "What subjects does MathSolver cover?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "It covers arithmetic, pre-algebra, algebra, geometry, trigonometry, precalculus, calculus, linear algebra, differential equations, statistics, probability, plus physics and chemistry questions.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Is MathSolver completely free?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Yes. You can solve unlimited problems, view every step-by-step explanation, and generate practice quizzes, all at no cost, with no account required.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "How accurate is the AI math solver?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "MathSolver uses advanced AI models trained on millions of math problems. While it handles most problems with high accuracy, we always recommend double-checking critical calculations, especially for exams or professional work.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Does MathSolver work on mobile?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Absolutely. MathSolver runs in any modern browser on phones and tablets, no app install needed. The full math solver experience, including photo upload, works exactly the same on mobile.",
-                },
-              },
-            ],
-          }),
-        }}
-      />
 
     </div>
   );

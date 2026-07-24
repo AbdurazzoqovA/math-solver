@@ -1,0 +1,37 @@
+# Log
+
+Chronological, append-only. Newest at bottom. Format: `## [YYYY-MM-DD] <ingest|query|lint|change> | <title>`
+Parse recent entries with: `grep "^## \[" wiki/log.md | tail -5`
+
+## [2026-07-24] ingest | Knowledge base created
+Set up the agent knowledge base following the "LLM Wiki" pattern. Created `AGENTS.md` (canonical entry point, read by Codex + Claude), `CLAUDE.md` (thin pointer to AGENTS.md), and `wiki/` with `index.md`, `codebase-map.md`, `product-overview.md`, `tech-and-ops.md`, `growth-strategy.md`, and this log. Codebase facts verified against the source tree; growth strategy distilled from July 2026 market research (artifact: https://claude.ai/code/artifact/472a8bcd-7183-44a8-8ab7-c7e23babe8a0). Goal: future agents ramp up from these pages instead of re-exploring the whole repo.
+
+## [2026-07-24] change | Converted cross-links to Obsidian wikilinks
+Replaced Markdown-style `[text](file.md)` cross-references with `[[wikilinks]]` across AGENTS.md, CLAUDE.md, and all wiki pages so the Obsidian graph view connects properly. Added a few extra cross-links (e.g. growth-strategy → product-overview/tech-and-ops) to reduce leaf/sink nodes. Note for graph: open the **repo root** as the Obsidian vault, not the `wiki/` subfolder, so AGENTS.md and CLAUDE.md are included.
+
+## [2026-07-24] ingest | Expanded growth-strategy to full detail
+The initial growth-strategy.md was a compressed summary; the full detail (9-tool competitor table, all 10 gaps, evidence-backed retention list, metrics) lived only in the artifact URL. Rewrote it to be **self-contained** — memory no longer depends on the artifact. Added a concrete SEO **page-build list** with real slugs: ~35 `/calculator/{topic}` pages grouped by subject, plus the alternative/comparison page slugs. This answers "which pages do we need" explicitly.
+
+## [2026-07-24] lint | Accuracy audit vs source
+Verified wiki claims against the actual code. Confirmed: localStorage key `mathsolver_chats`, solve temp 0.2/max_tokens 2000, OCR model `gemini-3.1-flash-lite`, GA4 `G-YG1NPYM8BS`, sitemap = only /,/privacy,/terms, rate-limit `RATE_LIMIT_MAX=60`/hr. Corrected: previously stated Azure `deployment gpt-4o, api-version 2025-01-01-preview` as fact — the routes fetch `AZURE_OPENAI_ENDPOINT` as-is, so those live in the env URL, not the source; softened the claim in tech-and-ops and product-overview. Minor code smell noted (not a wiki error): `captcha.ts` doc comment says "30 req/hr" but the enforced constant is 60.
+
+## [2026-07-24] change | Launched Algebra and precalculus calculator pages
+Added `/calculator` plus 13 statically generated calculator routes backed by one typed content registry and one reusable solver client. Each page includes unique metadata, canonical, generated OG/Twitter card, WebPage/BreadcrumbList/WebApplication JSON-LD, human-edited topic content, worked examples, visible FAQs, and curated internal links. Expanded the sitemap and homepage/sidebar navigation, added `forceNewChat` isolation for the first calculator submission, removed retired FAQPage schema, and documented the keyword map, cannibalization rules, architecture, and verification in [[calculator-pages]].
+
+## [2026-07-24] change | Matched calculator pages to the main solver layout
+Replaced the split landing-page hero on every topic calculator with the product's centered solver pattern: page title and short context first, then one prominent calculator with examples directly below. Removed the promotional badges and kept the supporting SEO content beneath the working tool.
+
+## [2026-07-24] change | Reused the main chat experience on calculator routes
+Removed the calculator-specific result cards. Submitting a calculator problem now replaces the article with the same full-height, streaming chat surface used on the homepage, including automatic transcript scrolling, the bottom-pinned follow-up composer, continued questions, practice tests, and responsive mobile behavior. Calculator chats are isolated and associated with their originating route through a `calculator:<slug>` source tag.
+
+## [2026-07-24] change | Launched the Calculus calculator category
+Added eight indexed calculator routes for derivatives, indefinite and definite integrals, limits, partial derivatives, implicit differentiation, Taylor series, and series convergence. Expanded the hub to 21 calculators, updated metadata and the dynamic hub OG count, added server-validated topic instructions for ambiguous Calculus input, added registry quality checks, confirmed all new routes and OG images, tested the shared mobile chat with live derivative solves, and updated [[calculator-pages]], [[growth-strategy]], [[product-overview]], [[tech-and-ops]], and [[codebase-map]].
+
+## [2026-07-24] change | Launched the Linear Algebra calculator category
+Added six indexed calculator routes for matrix operations, determinants, matrix inverses, eigenvalues and eigenvectors, dot products, and cross products. Expanded the hub to 27 calculators and the sitemap to 31 URLs, added reusable one-line matrix/vector input hints, server-trusted operation instructions, Linear Algebra internal links and homepage entries, and stricter registry checks. Verified the production build, every route and OG image, a 390 × 844 mobile layout, and a live determinant solve in the shared chat. Updated [[calculator-pages]], [[growth-strategy]], [[product-overview]], [[tech-and-ops]], and [[codebase-map]].
+
+## [2026-07-24] change | Completed the first-wave calculator taxonomy and graphing tool
+Added 16 indexed routes across Trigonometry, Statistics, General Math, Precalculus, and Graphing, bringing the registry to 43 calculators and the sitemap to 47 URLs. Shipped unique keyword metadata, generated OG cards, server-trusted solver instructions, subject-specific SEO content, expanded internal links, stricter registry validation, currency-safe math rendering, and a reusable no-eval graphing engine with multi-function canvas controls and chat explanation. Verified the production build, all new routes and OG images, mobile layouts, multi-curve graphing, and live unit-circle, standard-deviation, inverse-function, graph-explanation, and word-problem solves. Updated [[calculator-pages]], [[growth-strategy]], [[product-overview]], [[tech-and-ops]], [[codebase-map]], and AGENTS.md.
+
+## [2026-07-24] change | Recorded calculator deployment and linked the logo home
+Recorded the user's confirmation that the complete 43-calculator, 47-URL release reached production. Updated the shared desktop/mobile brand and compact mobile header logo to link accessibly to `/`; the mobile drawer closes when its brand link is used. Updated [[calculator-pages]], [[growth-strategy]], [[product-overview]], [[tech-and-ops]], and [[codebase-map]].
