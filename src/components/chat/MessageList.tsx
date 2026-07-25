@@ -9,15 +9,24 @@ import { useTurnstile } from "@/components/providers/TurnstileProvider";
 import { useState } from "react";
 import Image from "next/image";
 
+export type PracticeAttempt = {
+  id: string;
+  completedAt: number;
+  correctCount: number;
+  wrongCount: number;
+  totalQuestions: number;
+};
+
 export type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   isCorrect?: boolean;
-  images?: { url: string; ocrText: string }[]; // Replace singular imageUrl / ocrText
+  images?: { url?: string; ocrText: string }[];
   practiceTest?: {
     title: string;
     questions: Question[];
+    attempts?: PracticeAttempt[];
   };
 };
 
@@ -85,13 +94,13 @@ export default function MessageList({
                 </button>
               </div>
               <div className="bg-primary-600 text-white px-5 py-4 rounded-3xl rounded-tr-sm shadow-sm leading-relaxed relative flex flex-col items-end">
-                {message.images && message.images.length > 0 && (
+                {message.images?.some((image) => image.url) && (
                   <div className="mb-3 flex flex-row gap-2 overflow-x-auto pb-2 w-full justify-end max-w-full">
-                    {message.images.map((img, index) => (
+                    {message.images.filter((image) => image.url).map((img, index) => (
                       <div key={index} className="relative group/img cursor-pointer shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={img.url}
+                          src={img.url!}
                           alt={`Uploaded problem ${index + 1}`}
                           className="max-w-[200px] sm:max-w-[280px] rounded-xl shadow-md border-2 border-primary-500/30 object-contain max-h-[160px] bg-white dark:bg-zinc-800"
                         />

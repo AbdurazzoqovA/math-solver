@@ -30,13 +30,15 @@ export default function PrivacyPolicyPage() {
           
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">1. Introduction</h2>
           <p className="mb-4">
-            Welcome to MathSolver ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you visit our website at math-solver.io and use our AI math solver services.
+            Welcome to MathSolver (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you visit our website at math-solver.io and use our AI math solver services.
           </p>
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">2. Information We Collect</h2>
           <p className="mb-4">We collect information that you manually provide to us, such as:</p>
           <ul className="list-disc pl-6 mb-4 space-y-2">
             <li><strong>Input Data:</strong> The text, equations, and images of math problems you upload or type into our solver for the purpose of receiving step-by-step solutions.</li>
+            <li><strong>Optional Account Data:</strong> If you choose to create an account or sign in with Google, we receive your Firebase user identifier and email address. Google sign-in can also provide basic profile information such as your name.</li>
+            <li><strong>Notebook Data:</strong> Signed-out chats are stored in your browser. If you sign in, chat text, extracted OCR text, solutions, generated practice tests, and practice-attempt results are also stored in your private cloud notebook. Uploaded image previews remain stored only in the browser in the current sync version.</li>
             <li><strong>Usage Data:</strong> Information about how you use our website, including pages visited, features used, and time spent on the site. We use standard analytics tools to collect this data.</li>
             <li><strong>Device Data:</strong> We may automatically collect device information, such as your IP address, browser type, operating system, and geographic location (at the city or country level).</li>
           </ul>
@@ -46,7 +48,7 @@ export default function PrivacyPolicyPage() {
           <ul className="list-disc pl-6 mb-4 space-y-2">
             <li>To provide, maintain, and improve our AI math solving services.</li>
             <li>To process and analyze the math problems you submit to generate accurate step-by-step solutions.</li>
-            <li>To train and improve the underlying artificial intelligence models powering our solver (input data may be anonymized for this purpose).</li>
+            <li>To authenticate an optional account and synchronize your notebook and practice history across devices.</li>
             <li>To analyze usage patterns to enhance user experience and optimize our website infrastructure.</li>
             <li>To respond to your inquiries or support requests.</li>
           </ul>
@@ -58,7 +60,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">5. Third-Party Services</h2>
           <p className="mb-4">
-            We may share your information with third-party vendors, service providers, contractors, or agents who perform services for us or on our behalf. This includes our AI API providers (such as OpenAI, Anthropic, or similar services) necessary to process your queries, and analytics providers.
+            We use service providers to operate MathSolver. These include Microsoft Azure OpenAI for solutions and practice content, Google Gemini for OCR, Google Firebase Authentication and Cloud Firestore for optional account and notebook sync, Cloudflare Turnstile for abuse protection, and Google Analytics for usage analytics.
           </p>
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">6. Data Security</h2>
@@ -73,7 +75,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">8. Changes to This Privacy Policy</h2>
           <p className="mb-4">
-            We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.
+            We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date.
           </p>
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">9. Contact Us</h2>

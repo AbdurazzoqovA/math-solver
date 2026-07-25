@@ -87,7 +87,7 @@ Microsoft Math Solver's superpower was heavy localization; that multilingual dem
 Homework traffic is transactional — converting it needs a **forward-looking goal** (streak, exam date, mastery %). Duolingo: 55% return next day to keep a streak; streaks cut churn 47%→28% and drove ~4.5× DAU.
 
 1. **Streaks + daily goal** — highest-leverage mechanic in edtech; works pre-accounts via localStorage.
-2. **Lightweight accounts + synced notebook** — every solved problem saved, foldered by course, cross-device. Also the email-capture hook. Today a cleared cache erases everything.
+2. **Lightweight accounts + synced notebook** — the optional Email/Password or Google account + private Firestore chat/practice sync foundation is implemented as of 2026-07-26, preserving the no-login path. Course folders remain unbuilt.
 3. **Daily mistake-review queue (spaced repetition)** — auto-build a 5-min queue from wrong answers. The `PracticePanel` already *tracks* wrong answers then discards them. This is exactly what Quizlet paywalled. Hide the algorithm; show one tap: "Review 5 problems".
 4. **Exam-prep tracks (SAT/ACT/AP/GCSE)** — external deadline → multi-month daily use. Pairs with exam-hub SEO pages.
 5. **PWA + streak-reminder push** — installable; prompt install right after a solved problem, never on load (iOS needs home-screen install first).
@@ -99,9 +99,9 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 
 ## Roadmap
 
-**Now (wks 1–4):** the first 43 calculator pages, graphing tool, and 47-URL sitemap are shipped and were confirmed deployed on 2026-07-24. Next: submit and inspect them in Search Console; ship 4–6 alternative/comparison pages; persist practice scores plus a streak counter in localStorage; add one-tap follow-ups and GA4 events for solves, calculator starts, practice starts, and returns.
+**Now (wks 1–4):** the first 43 calculator pages, graphing tool, and 47-URL sitemap are shipped and were confirmed deployed on 2026-07-24. Practice completion scores now persist with each saved test. Firebase Auth/Web app/domain setup is complete; the owner must still enable Firestore, create the database, and deploy rules before notebook sync launches. Next: finish that Firestore step; submit and inspect calculator pages in Search Console; ship 4–6 alternative/comparison pages; add the streak counter, one-tap follow-ups, and GA4 events for solves, calculator starts, practice starts, and returns.
 
-**Next (mo 1–3):** optional accounts + synced notebook; daily mistake-review queue; worked-example problem library (quality-gated); blog live with topic explainers; PWA install + post-solve prompt; distributed rate limiting (replace the in-memory limiter).
+**Next (mo 1–3):** add course folders and a daily mistake-review queue on the synced notebook; worked-example problem library (quality-gated); blog live with topic explainers; PWA install + post-solve prompt; distributed rate limiting (replace the in-memory limiter).
 
 **Later (mo 3–6+):** exam-prep tracks with progress; mastery dashboard + weekly email; push notifications (timed to evening homework hours); answer-verification / "checked" badge; localization of top calculator pages.
 

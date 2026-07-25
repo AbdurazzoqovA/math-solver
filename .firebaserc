@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "cloud-run-infrastructure": "axial-willow-428621-n4",
+    "default": "math-solver-e3a55"
+  }
+}

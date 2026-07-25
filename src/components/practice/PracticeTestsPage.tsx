@@ -5,6 +5,7 @@ import { useUI } from "@/context/UIContext";
 import { useRouter } from "next/navigation";
 import { BookOpen, ArrowRight, ClipboardList, Sparkles } from "lucide-react";
 import { Question } from "@/context/UIContext";
+import { PracticeAttempt } from "@/components/chat/MessageList";
 
 type PracticeTestEntry = {
   chatId: string;
@@ -12,6 +13,7 @@ type PracticeTestEntry = {
   messageId: string;
   title: string;
   questions: Question[];
+  attempts: PracticeAttempt[];
 };
 
 export default function PracticeTestsPage() {
@@ -30,6 +32,7 @@ export default function PracticeTestsPage() {
           messageId: message.id,
           title: message.practiceTest.title,
           questions: message.practiceTest.questions,
+          attempts: message.practiceTest.attempts ?? [],
         });
       }
     }
@@ -78,7 +81,7 @@ export default function PracticeTestsPage() {
               </div>
               <h2 className="text-xl font-bold text-foreground mb-2">No practice tests yet</h2>
               <p className="text-muted-foreground text-[15px] max-w-sm leading-relaxed">
-                Start a chat, solve a math problem, then tap <strong>"Take a Practice Test"</strong> to generate questions. They&apos;ll show up here.
+                Start a chat, solve a math problem, then tap <strong>&quot;Take a Practice Test&quot;</strong> to generate questions. They&apos;ll show up here.
               </p>
               <button
                 onClick={() => router.push("/")}
@@ -106,6 +109,11 @@ export default function PracticeTestsPage() {
                         <span className="text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
                           {test.questions.length} questions
                         </span>
+                        {test.attempts.length > 0 && (
+                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
+                            Best {Math.max(...test.attempts.map((attempt) => attempt.correctCount))}/{test.questions.length}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-3 truncate">
                         From: {test.chatTitle}

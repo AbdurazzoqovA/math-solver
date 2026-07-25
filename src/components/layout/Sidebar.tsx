@@ -8,6 +8,7 @@ import { useChatContext } from "@/context/ChatContext";
 import { useUI } from "@/context/UIContext";
 import Image from "next/image";
 import Link from "next/link";
+import AccountButton from "@/components/auth/AccountButton";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -164,6 +165,8 @@ export default function Sidebar() {
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2">
+        <AccountButton isExpanded={isExpanded} />
+
         <button 
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className={`w-full flex items-center p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4 gap-3' : 'justify-center'}`}

@@ -4,7 +4,7 @@
 
 ## What this project is
 
-**MathSolver** (`math-solver.io`) — a free, no-login web math solver. Students type, paste, photograph, or hand-draw a math problem and get streamed step-by-step solutions, plus auto-generated practice quizzes. Everything is client-side + a few thin AI-proxy API routes. **No database, no accounts** — all user data lives in browser `localStorage`.
+**MathSolver** (`math-solver.io`) — a free, no-login web math solver. Students type, paste, photograph, or hand-draw a math problem and get streamed step-by-step solutions, plus auto-generated practice quizzes. The core product remains usable without an account. Optional Firebase Authentication is configured in `math-solver-e3a55`, and the Firestore notebook foundation is implemented in code; live notebook sync still requires the owner-side Firestore API/database/rules step described in [[tech-and-ops]].
 
 Goal driving current work: **grow Google organic traffic** (the "math solver" keyword universe is ~8M searches/mo) **and increase return visits**. See `wiki/growth-strategy.md`.
 
@@ -27,7 +27,7 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 - **Solver:** Azure OpenAI **GPT-4o** — `src/app/api/solve/route.ts`, streamed. Prompt `MATH_TUTOR_PROMPT` forces `**Step N:**` format.
 - **OCR (photo/PDF/drawing → text):** Google **Gemini 3.1 flash-lite** — `src/app/api/ocr/route.ts`. Extracts the expression only; does not solve.
 - **Practice quizzes:** Azure GPT-4o — `src/app/api/practice/route.ts` + `/steps`.
-- **State:** `src/context/ChatContext.tsx` (chats + `localStorage` key `mathsolver_chats`), `src/context/UIContext.tsx` (panels/calculator/practice).
+- **State:** `src/context/ChatContext.tsx` (local-first chats + optional Firestore sync), `src/context/AuthContext.tsx` (optional Firebase Email/Password or Google account), `src/context/UIContext.tsx` (panels/calculator/practice).
 - **Routes:** `/` (solver + landing), `/calculator` + 43 static calculator pages across eight categories, `/practice-tests` (noindex), `/privacy`, `/terms`.
 - **Hosting:** Google Cloud Run via `deploy.sh` + `Dockerfile` (`output: "standalone"`).
 - **Analytics:** GA4 only (`G-YG1NPYM8BS`) in `src/app/layout.tsx`.
@@ -35,7 +35,7 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 ## Rules for working here
 
 1. **⚠️ Secrets:** `deploy.sh` currently contains plaintext API keys (Azure OpenAI, Google Cloud, Turnstile). Do **not** add more secrets to tracked files; these should be rotated and moved to secret management. Never print or commit keys.
-2. **No backend/DB exists.** Persistence is `localStorage`. Don't assume a server store — if a task needs one, flag it as new infrastructure.
+2. **Firebase is optional and split from hosting.** `math-solver-e3a55` owns Email/Password + Google Auth and the planned Firestore notebook; `axial-willow-428621-n4` remains Cloud Run only. Guests use `localStorage`. Firestore is not live until its API/database and checked-in rules are enabled/deployed. Do not assume Storage or other backend services exist. See [[tech-and-ops]].
 3. **Keep the wiki current.** After any change that alters architecture, features, routes, or the plan, update the relevant `wiki/` page, bump [[index]] if pages were added/removed, and append one line to [[log]]. This is what keeps future sessions cheap. See the workflow below. Use `[[wikilinks]]` for any new cross-references so the Obsidian graph stays connected.
 4. **Math rendering is fragile.** LaTeX delimiters are preprocessed (`\(..\)`→`$..$`) in `MessageList.tsx`. Test rendering after touching the solve/render path.
 

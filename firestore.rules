@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownsUserData(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isValidChat(chatId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'schemaVersion',
+          'id',
+          'title',
+          'source',
+          'messages',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'schemaVersion',
+          'id',
+          'title',
+          'messages',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.schemaVersion == 1
+        && data.id == chatId
+        && data.title is string
+        && data.title.size() <= 160
+        && (!('source' in data) || data.source is string)
+        && data.messages is list
+        && data.messages.size() <= 200
+        && data.createdAt is int
+        && data.updatedAt is int
+        && data.updatedAt >= data.createdAt;
+    }
+
+    match /users/{userId}/chats/{chatId} {
+      allow read, delete: if ownsUserData(userId);
+      allow create, update: if ownsUserData(userId) && isValidChat(chatId);
+    }
+
+    match /users/{userId}/chatDeletions/{chatId} {
+      allow read, delete: if ownsUserData(userId);
+      allow create, update: if ownsUserData(userId)
+        && request.resource.data.keys().hasOnly(['deletedAt'])
+        && request.resource.data.deletedAt is int;
+    }
+  }
+}

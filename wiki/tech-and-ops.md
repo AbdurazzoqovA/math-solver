@@ -15,6 +15,7 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 |---|---|---|
 | Solve + practice generation | Azure OpenAI **GPT-4o** (temp 0.2, max_tokens 2000) | `/api/solve`, `/api/practice`, `/api/practice/steps` |
 | OCR (image/PDF/drawing → text) | Google **Gemini 3.1 flash-lite** (`gemini-3.1-flash-lite`, `generativelanguage.googleapis.com/v1beta`) | `/api/ocr` |
+| Optional account + notebook sync | Google **Firebase Authentication + Cloud Firestore** | `AuthContext`, `ChatContext`, `firebase-client.ts`, `firebase-notebook.ts` |
 
 > Azure detail: the routes fetch `AZURE_OPENAI_ENDPOINT` **as-is** — the deployment name and api-version are encoded in that env-var URL, not hardcoded in the source. So the exact deployment/api-version depends on the deployed env value (GPT-4o per current config); don't assume specific values from the code.
 | Bot protection | Cloudflare Turnstile | `src/lib/captcha.ts`, `TurnstileProvider.tsx` |
@@ -24,11 +25,19 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 
 Referenced: `AZURE_OPENAI_ENDPOINT`, Azure OpenAI key, Google Cloud/Gemini API key, Turnstile site + secret keys.
 
+Optional Firebase Web app values: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`. These public identifiers are listed in `.env.example`; they are not service-account credentials. Next embeds them at build time, so Docker/Cloud Build must pass them as build arguments rather than only setting Cloud Run runtime env vars.
+
 ⚠️ **Security debt (fix before scaling traffic):** `deploy.sh` has these as **plaintext, committed** values. They should be **rotated** and moved to Cloud Run secret management / Secret Manager. Never print, echo, or commit these. Do not add new secrets to tracked files.
 
 ## Persistence
 
-**None server-side.** All user data (chats, messages, uploaded image data-URLs, generated practice tests) is serialized to browser `localStorage` under key `mathsolver_chats` in `ChatContext.tsx`. A cleared cache = total data loss. Any feature needing durable/cross-device data requires new backend infrastructure (flag it explicitly).
+Persistence is local-first. Signed-out data uses browser `localStorage` key `mathsolver_chats`. Signed-in account caches use `mathsolver_chats_user_{uid}`. If Firebase is configured, signing in merges guest, account-cache, and Firestore chat versions by chat ID/latest `updatedAt`, imports the guest notebook, then debounces writes until streaming finishes. Firestore documents live at `/users/{uid}/chats/{chatId}` and checked-in rules restrict all access to the matching authenticated UID. Deletes also write `/users/{uid}/chatDeletions/{chatId}` tombstones, preventing an older device cache from resurrecting a removed chat.
+
+Chat text, OCR text, generated tests, generated explanations, and up to 20 recent completion attempts per test sync. Original uploaded image data URLs remain browser-local: cloud serialization retains their OCR text but removes the binary data to stay below Firestore's 1 MiB document limit. Chats are capped at 200 messages by rules; a future long-notebook design should move messages into subcollections before raising that limit.
+
+**Project architecture confirmed 2026-07-26:** `axial-willow-428621-n4` remains the Cloud Run build/hosting project in `us-central1`; `math-solver-e3a55` is the separate Firebase Authentication and Firestore data project. The latter owns the Admin SDK identity and registered Web app, with Email/Password and Google Auth enabled. `.firebaserc` defaults Firebase-only operations to `math-solver-e3a55` and retains a non-default alias for the Cloud Run project. Storage and billing-dependent image sync remain out of scope.
+
+**Live setup status:** the ignored local Web config matches the registered Firebase Web app; `math-solver.io` is authorized; a temporary Email/Password account passed live create/sign-in/delete; and Google provider configuration is enabled. Interactive Google OAuth was not automated because no user Google session was supplied. Firestore remains the only launch blocker: its API is disabled, and the supplied Firebase Admin SDK identity lacks `serviceusage.services.enable`, so it could neither enable the API nor deploy rules. A project owner must enable `firestore.googleapis.com` (or grant Service Usage Admin); then create `(default)` in Native mode at `us-central1`, deploy `firestore.rules`, and run the live owner/cross-user/anonymous isolation test.
 
 ## SEO infrastructure (current)
 
@@ -49,3 +58,5 @@ Referenced: `AZURE_OPENAI_ENDPOINT`, Azure OpenAI key, Google Cloud/Gemini API k
 - **`isCorrect` badge** — supported in the `Message` type / `MessageList` but never set anywhere.
 - **Rate limiter is in-memory per instance** (`captcha.ts`, 60/hr) — won't hold globally across Cloud Run's up-to-20 instances. Needs a distributed store at scale.
 - **`DraggableCalculator` uses `new Function()`** to eval expressions — arithmetic only, but arbitrary-eval-flavored; keep inputs constrained.
+- **Firebase sync is configuration-gated.** Auth is configured, but do not ship active production Web config until Firestore is enabled and rules are deployed; otherwise sign-in works while notebook sync reports an error.
+- **No Firebase Storage/image sync.** Image previews remain on the originating browser; OCR text makes the synced conversation usable.

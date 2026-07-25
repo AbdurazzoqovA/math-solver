@@ -12,7 +12,7 @@ import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
 export default function PracticePanel() {
   const { isPracticePanelOpen, closePracticePanel, practiceTopic, practiceMessageId, practiceQuestions, setPracticeQuestions } = useUI();
-  const { savePracticeToMessage } = useChatContext();
+  const { savePracticeToMessage, savePracticeAttempt } = useChatContext();
   const { getToken } = useTurnstile();
   
   const questions = practiceQuestions;
@@ -91,6 +91,19 @@ export default function PracticePanel() {
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
     }
+  };
+
+  const handleFinish = () => {
+    if (practiceMessageId) {
+      savePracticeAttempt(practiceMessageId, {
+        id: crypto.randomUUID(),
+        completedAt: Date.now(),
+        correctCount,
+        wrongCount,
+        totalQuestions: questions.length,
+      });
+    }
+    closePracticePanel();
   };
 
   const currentWrongGuessesSet = allWrongGuesses[currentIndex];
@@ -308,7 +321,7 @@ export default function PracticePanel() {
                   </button>
                 ) : (
                   <button
-                    onClick={currentIndex === questions.length - 1 ? closePracticePanel : goToNext}
+                    onClick={currentIndex === questions.length - 1 ? handleFinish : goToNext}
                     className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
                   >
                     {currentIndex === questions.length - 1 ? 'Finish Practice' : 'Next Question'}

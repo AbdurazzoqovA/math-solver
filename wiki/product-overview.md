@@ -12,8 +12,9 @@ Free, no-login, unlimited AI math solver. Core wedge vs competitors: **full step
 - **Rich math input** — type plain text, or insert LaTeX via a MathLive field + Σ math keyboard (`InlineMathInput`, `MathFieldInput`, `MathKeyboard`).
 - **Photo / PDF OCR** — drag-drop, paste, or file-pick images/PDFs (≤10MB). Extracted equation text is attached to the message. Model: Gemini 3.1 flash-lite via `/api/ocr`.
 - **Drawing canvas** — hand-draw a problem (color, line width, undo, clear); exported at 2× as JPEG and sent through the same OCR pipeline (`source:"drawing"`). Almost no competitor offers draw-to-solve on web — currently unmarketed.
-- **Practice quizzes** — "Take a Practice Test" on any solution generates 4 MCQs (`/api/practice`); opens in a resizable split panel (desktop) or full-screen (mobile). Per-question answer checking, wrong-answer tracking, running score, on-demand per-question step explanations (`/api/practice/steps`). **Scores are not persisted** — they reset when the panel reopens.
-- **Practice library** — `/practice-tests` scans all `localStorage` chats for saved tests. Closest thing to progress tracking today. `noindex`.
+- **Practice quizzes** — "Take a Practice Test" on any solution generates 4 MCQs (`/api/practice`); opens in a resizable split panel (desktop) or full-screen (mobile). Per-question answer checking, wrong-answer tracking, running score, on-demand per-question step explanations (`/api/practice/steps`). Finishing a test persists an attempt record with its first-try-correct score.
+- **Practice library** — `/practice-tests` scans the local-first notebook for saved tests. Completed attempts are stored with each test (up to 20 recent attempts), and the library shows the best score. `noindex`.
+- **Optional account + synced notebook foundation** — when Firebase is configured, the sidebar offers Email/Password account creation/sign-in and Google sign-in. Signing in merges guest chats, the account's browser cache, and the user's private Firestore chats by ID/latest update. Chat text, OCR text, solutions, generated tests, and practice attempts sync across devices; original uploaded image data URLs stay browser-local. The no-account flow remains unchanged.
 - **Draggable calculator** — basic arithmetic (+−×÷), draggable; injects results into the active input.
 - **Topic calculators** — `/calculator` links to 43 focused, indexed pages across General Math, Algebra, Precalculus, Trigonometry, Calculus, Linear Algebra, Statistics, and Graphing. Solver-backed pages configure the existing chat for one intent, supply example problems, stream full steps, support photo/PDF/drawing input and follow-ups, and include a formula guide, worked example, common mistakes, FAQs, and related tools. Each chat sends a validated page source so `/api/solve` can apply the correct server-owned operation instruction. See [[calculator-pages]].
 - **Graphing calculator** — `/calculator/graphing` is a real client-side plotter, not an SEO-only shell. It supports up to four explicit functions, show/hide and remove controls, editable x/y ranges, pan, zoom, reset, coordinate tracing, an accessible sample-value table, and an "Explain this graph" handoff into the shared tutor chat. Expressions are evaluated by a reusable recursive-descent parser, not `eval`.
@@ -28,6 +29,6 @@ Free, no-login, unlimited AI math solver. Core wedge vs competitors: **full step
 
 ## What it does NOT have (today)
 
-- No accounts, no login, no server database, no cross-device sync.
-- No streaks, bookmarks, saved scores, email capture, or notifications — **no retention layer**. This is the biggest product gap; see [[growth-strategy]].
+- Firebase Auth and the Web app are configured, but cross-device notebook sync is not live until the owner enables Firestore, creates the `(default)` Native database in `us-central1`, and deploys the checked-in rules.
+- No streaks, bookmarks, folders/courses, daily mistake-review queue, mastery tracking, email capture, or notifications. Practice attempt history is the first persisted progress primitive; see [[growth-strategy]].
 - No monetization (no ads, no premium, no paywall).

@@ -1,9 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import { Message } from "@/components/chat/MessageList";
+import {
+  Message,
+  PracticeAttempt,
+} from "@/components/chat/MessageList";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
 import { Question } from "@/context/UIContext";
+import { useAuth } from "@/context/AuthContext";
+import {
+  deleteCloudChat,
+  loadCloudNotebook,
+  saveCloudChats,
+} from "@/lib/firebase-notebook";
 
 // ── Types ──────────────────────────────────────────────
 export type Chat = {
@@ -15,12 +24,20 @@ export type Chat = {
   updatedAt: number;
 };
 
+export type CloudSyncState =
+  | "unavailable"
+  | "signed-out"
+  | "syncing"
+  | "synced"
+  | "error";
+
 type ChatContextType = {
   chats: Chat[];
   activeChatId: string | null;
   activeChatSource: string | null;
   messages: Message[];
   isLoading: boolean;
+  cloudSyncState: CloudSyncState;
   createNewChat: () => void;
   switchChat: (id: string) => void;
   deleteChat: (id: string) => void;
@@ -29,30 +46,69 @@ type ChatContextType = {
     images?: { url: string; ocrText: string }[],
     options?: { forceNewChat?: boolean; source?: string },
   ) => Promise<void>;
-  savePracticeToMessage: (messageId: string, practiceTest: { title: string; questions: Question[] }) => void;
+  savePracticeToMessage: (
+    messageId: string,
+    practiceTest: {
+      title: string;
+      questions: Question[];
+      attempts?: PracticeAttempt[];
+    },
+  ) => void;
+  savePracticeAttempt: (
+    messageId: string,
+    attempt: PracticeAttempt,
+  ) => void;
 };
 
 // ── Constants ──────────────────────────────────────────
 const STORAGE_KEY = "mathsolver_chats";
+const ACCOUNT_STORAGE_PREFIX = "mathsolver_chats_user_";
+const CLOUD_SYNC_DEBOUNCE_MS = 900;
 
 // ── Helpers ────────────────────────────────────────────
-function loadChatsFromStorage(): Chat[] {
+function getAccountStorageKey(userId: string) {
+  return `${ACCOUNT_STORAGE_PREFIX}${userId}`;
+}
+
+function loadChatsFromStorage(storageKey = STORAGE_KEY): Chat[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function saveChatsToStorage(chats: Chat[]) {
+function saveChatsToStorage(chats: Chat[], storageKey = STORAGE_KEY) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+    localStorage.setItem(storageKey, JSON.stringify(chats));
   } catch (e) {
     console.warn("Failed to persist chats to localStorage:", e);
   }
+}
+
+function mergeChats(...chatCollections: Chat[][]): Chat[] {
+  const merged = new Map<string, Chat>();
+
+  for (const chats of chatCollections) {
+    for (const chat of chats) {
+      const existing = merged.get(chat.id);
+      if (!existing || chat.updatedAt >= existing.updatedAt) {
+        merged.set(chat.id, chat);
+      }
+    }
+  }
+
+  return [...merged.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function applyCloudDeletions(
+  chats: Chat[],
+  deletions: Map<string, number>,
+): Chat[] {
+  return chats.filter((chat) => !deletions.has(chat.id));
 }
 
 function generateTitle(content: string): string {
@@ -68,31 +124,130 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [cloudSyncState, setCloudSyncState] =
+    useState<CloudSyncState>("unavailable");
   const { getToken } = useTurnstile();
+  const { user, isAuthReady, isFirebaseEnabled } = useAuth();
 
   // Keep a ref so the streaming callback can always read the latest chats
   const chatsRef = useRef(chats);
+  const lastCloudVersionsRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     chatsRef.current = chats;
   }, [chats]);
 
-  // ── Hydrate from localStorage (client-only) ────────
+  // ── Hydrate the guest or signed-in notebook ─────────
   useEffect(() => {
-    const stored = loadChatsFromStorage();
-    if (stored.length > 0) {
-      // Hydration is the intentional synchronization point for browser storage.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setChats(stored);
-    }
-    setHydrated(true);
-  }, []);
+    if (!isAuthReady) return;
+
+    let cancelled = false;
+    const hydrateNotebook = async () => {
+      setHydrated(false);
+      setActiveChatId(null);
+      lastCloudVersionsRef.current.clear();
+
+      const guestChats = loadChatsFromStorage();
+      if (!user || !isFirebaseEnabled) {
+        if (cancelled) return;
+        chatsRef.current = guestChats;
+        setChats(guestChats);
+        setCloudSyncState(
+          isFirebaseEnabled ? "signed-out" : "unavailable",
+        );
+        setHydrated(true);
+        return;
+      }
+
+      const accountStorageKey = getAccountStorageKey(user.uid);
+      const cachedAccountChats = loadChatsFromStorage(accountStorageKey);
+      const localChats = mergeChats(cachedAccountChats, guestChats);
+      chatsRef.current = localChats;
+      setChats(localChats);
+      setCloudSyncState("syncing");
+
+      try {
+        const cloudNotebook = await loadCloudNotebook(user.uid);
+        if (cancelled) return;
+
+        // Include any chats created while the initial cloud read was in flight.
+        const mergedChats = applyCloudDeletions(
+          mergeChats(chatsRef.current, cloudNotebook.chats),
+          cloudNotebook.deletions,
+        );
+        chatsRef.current = mergedChats;
+        setChats(mergedChats);
+        saveChatsToStorage(mergedChats, accountStorageKey);
+
+        await saveCloudChats(user.uid, mergedChats);
+        if (cancelled) return;
+
+        lastCloudVersionsRef.current = new Map(
+          mergedChats.map((chat) => [chat.id, chat.updatedAt]),
+        );
+        // Guest work has now been imported into this account successfully.
+        if (guestChats.length > 0) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+        setCloudSyncState("synced");
+      } catch (error) {
+        console.error("Failed to synchronize the Firebase notebook:", error);
+        if (!cancelled) setCloudSyncState("error");
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    };
+
+    void hydrateNotebook();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthReady, isFirebaseEnabled, user]);
 
   // ── Persist whenever chats change (after hydration) ─
   useEffect(() => {
     if (hydrated) {
-      saveChatsToStorage(chats);
+      const storageKey =
+        user && isFirebaseEnabled
+          ? getAccountStorageKey(user.uid)
+          : STORAGE_KEY;
+      saveChatsToStorage(chats, storageKey);
     }
-  }, [chats, hydrated]);
+  }, [chats, hydrated, isFirebaseEnabled, user]);
+
+  // Avoid a Firestore write for every streamed token. Once a solve completes,
+  // write only chats whose updatedAt version has changed.
+  useEffect(() => {
+    if (
+      !hydrated ||
+      !user ||
+      !isFirebaseEnabled ||
+      isLoading
+    ) {
+      return;
+    }
+
+    const dirtyChats = chats.filter(
+      (chat) =>
+        lastCloudVersionsRef.current.get(chat.id) !== chat.updatedAt,
+    );
+    if (dirtyChats.length === 0) return;
+
+    const timeoutId = window.setTimeout(async () => {
+      setCloudSyncState("syncing");
+      try {
+        await saveCloudChats(user.uid, dirtyChats);
+        for (const chat of dirtyChats) {
+          lastCloudVersionsRef.current.set(chat.id, chat.updatedAt);
+        }
+        setCloudSyncState("synced");
+      } catch (error) {
+        console.error("Failed to save the Firebase notebook:", error);
+        setCloudSyncState("error");
+      }
+    }, CLOUD_SYNC_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [chats, hydrated, isFirebaseEnabled, isLoading, user]);
 
   // Derived messages for the active chat
   const activeChat = chats.find((c) => c.id === activeChatId);
@@ -118,11 +273,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (activeChatId === id) {
         setActiveChatId(null);
       }
+      lastCloudVersionsRef.current.delete(id);
+      if (user && isFirebaseEnabled) {
+        setCloudSyncState("syncing");
+        void deleteCloudChat(user.uid, id)
+          .then(() => setCloudSyncState("synced"))
+          .catch((error) => {
+            console.error("Failed to delete the synced chat:", error);
+            setCloudSyncState("error");
+          });
+      }
     },
-    [activeChatId]
+    [activeChatId, isFirebaseEnabled, user]
   );
 
-  const savePracticeToMessage = useCallback((messageId: string, practiceTest: { title: string; questions: Question[] }) => {
+  const savePracticeToMessage = useCallback((messageId: string, practiceTest: { title: string; questions: Question[]; attempts?: PracticeAttempt[] }) => {
     setChats(prev => prev.map(c => {
       // Check if this chat contains the message we want to update
       const hasMessage = c.messages.some(m => m.id === messageId);
@@ -133,11 +298,53 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ...c,
         updatedAt: Date.now(),
         messages: c.messages.map(m => 
-          m.id === messageId ? { ...m, practiceTest } : m
+          m.id === messageId
+            ? {
+                ...m,
+                practiceTest: {
+                  ...practiceTest,
+                  attempts:
+                    practiceTest.attempts ?? m.practiceTest?.attempts,
+                },
+              }
+            : m
         )
       };
     }));
   }, []);
+
+  const savePracticeAttempt = useCallback(
+    (messageId: string, attempt: PracticeAttempt) => {
+      setChats((prev) =>
+        prev.map((chat) => {
+          const hasMessage = chat.messages.some(
+            (message) => message.id === messageId && message.practiceTest,
+          );
+          if (!hasMessage) return chat;
+
+          return {
+            ...chat,
+            updatedAt: Date.now(),
+            messages: chat.messages.map((message) =>
+              message.id === messageId && message.practiceTest
+                ? {
+                    ...message,
+                    practiceTest: {
+                      ...message.practiceTest,
+                      attempts: [
+                        attempt,
+                        ...(message.practiceTest.attempts ?? []),
+                      ].slice(0, 20),
+                    },
+                  }
+                : message,
+            ),
+          };
+        }),
+      );
+    },
+    [],
+  );
 
   const sendMessage = useCallback(
     async (
@@ -295,11 +502,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         activeChatSource,
         messages,
         isLoading,
+        cloudSyncState,
         createNewChat,
         switchChat,
         deleteChat,
         sendMessage,
         savePracticeToMessage,
+        savePracticeAttempt,
       }}
     >
       {children}

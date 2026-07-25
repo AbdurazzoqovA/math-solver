@@ -38,6 +38,7 @@ import DraggableCalculator from "@/components/chat/DraggableCalculator";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import SplitLayoutWrapper from "@/components/layout/SplitLayoutWrapper";
 import TurnstileProvider from "@/components/providers/TurnstileProvider";
+import { AuthProvider } from "@/context/AuthContext";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -100,36 +101,38 @@ export default function RootLayout({
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TurnstileProvider>
-          <UIProvider>
-            <ChatProvider>
-            {/* Global Tools */}
-            <DraggableCalculator />
+            <AuthProvider>
+              <UIProvider>
+                <ChatProvider>
+                  {/* Global Tools */}
+                  <DraggableCalculator />
 
-            {/* Atmospheric Background */}
-            <div className="fixed inset-0 bg-[#fafafa] dark:bg-[#0a0a0a] -z-10" />
-            <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary-400/10 blur-[120px] pointer-events-none -z-10" />
-            <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10" />
+                  {/* Atmospheric Background */}
+                  <div className="fixed inset-0 bg-[#fafafa] dark:bg-[#0a0a0a] -z-10" />
+                  <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary-400/10 blur-[120px] pointer-events-none -z-10" />
+                  <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10" />
 
-            <div className="flex h-[100dvh] overflow-hidden relative">
-              <Sidebar />
-              <div className="flex flex-col flex-1 overflow-hidden relative">
-                {/* Mobile header with hamburger */}
-                <div className="md:hidden">
-                  <Header />
-                </div>
-                <SplitLayoutWrapper>
-                  <div className="flex-1 flex flex-col h-full w-full relative">
-                    <main className="flex-1 overflow-y-auto relative z-0 h-full w-full">
-                      {children}
-                    </main>
+                  <div className="flex h-[100dvh] overflow-hidden relative">
+                    <Sidebar />
+                    <div className="flex flex-col flex-1 overflow-hidden relative">
+                      {/* Mobile header with hamburger */}
+                      <div className="md:hidden">
+                        <Header />
+                      </div>
+                      <SplitLayoutWrapper>
+                        <div className="flex-1 flex flex-col h-full w-full relative">
+                          <main className="flex-1 overflow-y-auto relative z-0 h-full w-full">
+                            {children}
+                          </main>
+                        </div>
+                      </SplitLayoutWrapper>
+                    </div>
                   </div>
-                </SplitLayoutWrapper>
-              </div>
-            </div>
-          </ChatProvider>
-        </UIProvider>
+                </ChatProvider>
+              </UIProvider>
+            </AuthProvider>
           </TurnstileProvider>
-      </ThemeProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

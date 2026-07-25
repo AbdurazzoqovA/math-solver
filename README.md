@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MathSolver
 
-## Getting Started
+MathSolver is a free, no-login web math solver with streamed step-by-step
+solutions, photo/PDF/drawing OCR, focused calculator pages, and generated
+practice tests.
 
-First, run the development server:
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Firebase is optional in local development. Without Firebase configuration, the
+app keeps its original browser-only `localStorage` notebook and does not render
+account controls.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Firebase account and notebook sync
 
-## Learn More
+The owner-confirmed production architecture uses two separate Google Cloud
+projects:
 
-To learn more about Next.js, take a look at the following resources:
+- `axial-willow-428621-n4` is the existing Cloud Run build/hosting project in
+  `us-central1`.
+- `math-solver-e3a55` is the Firebase Authentication and Firestore data project.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`.firebaserc` defaults Firebase CLI operations to `math-solver-e3a55` and keeps
+an explicit non-default alias for the Cloud Run infrastructure project. Do not
+move Cloud Run resources or server-side AI configuration into the Firebase
+project.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The Firebase setup must include:
 
-## Deploy on Vercel
+1. Create or verify a Firestore database in Native mode. Choose the region
+   deliberately; it cannot be changed later, and the current Cloud Run service
+   is in `us-central1`.
+2. Verify Email/Password and Google providers in Firebase Authentication.
+3. Register or reuse the Web app and add `math-solver.io` to Authentication's
+   authorized domains.
+4. Copy `.env.example` to `.env.local` and fill in the confirmed public Web app
+   configuration.
+5. Authenticate the Firebase CLI as a project owner and deploy the checked-in
+   owner-only rules:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npx firebase-tools deploy --only firestore:rules --project math-solver-e3a55
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Current live state (2026-07-26):
+
+- The Firebase project and registered Web app are active, and the ignored local
+  Web config exactly matches the registered app.
+- Email/Password and Google Auth are enabled.
+- `math-solver.io` is an authorized Auth domain.
+- A temporary Email/Password user completed a live create/sign-in/delete test.
+- Firestore is still blocked: `firestore.googleapis.com` is disabled, and the
+  supplied Firebase Admin SDK service account does not have Service Usage
+  permission to enable it. A project owner must enable that API (or grant
+  Service Usage Admin), after which the `(default)` Native database can be
+  created in `us-central1` and `firestore.rules` deployed.
+
+Firebase Web configuration values are public project identifiers, not admin
+credentials. Access control lives in `firestore.rules`; never put service
+account keys or other private credentials in `NEXT_PUBLIC_*` variables.
+
+The sync model is local-first:
+
+- Guests continue using `mathsolver_chats` in `localStorage`.
+- On first sign-in, guest chats, the account's browser cache, and Firestore
+  chats are merged by chat ID and latest update time.
+- Each user's chats live under `/users/{uid}/chats/{chatId}` and can only be
+  read or written by that Firebase Authentication UID.
+- Deletions write private `/users/{uid}/chatDeletions/{chatId}` tombstones so
+  an older browser cache cannot resurrect a chat removed on another device.
+- Uploaded image data URLs remain browser-local to avoid Firestore's document
+  limit. OCR text, solutions, generated tests, and saved practice attempts sync.
+- Writes wait until streaming finishes and are debounced to avoid writing every
+  solver token.
+
+`NEXT_PUBLIC_*` values are embedded by `next build`. The Dockerfile accepts all
+six Firebase values as build arguments, so production builds must pass them
+during the image build; setting them only on the running Cloud Run container is
+too late.
+
+## Verification
+
+```bash
+npx tsc --noEmit
+npm run build
+npx firebase-tools emulators:exec --only firestore --project demo-mathsolver "node --test tests/firestore.rules.test.mjs"
+```
