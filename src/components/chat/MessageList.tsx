@@ -22,6 +22,7 @@ import {
   isActionableSolution,
   SIMILAR_PROBLEM_PROMPT,
 } from "@/lib/post-solution-actions";
+import { preprocessMathMarkdown } from "@/lib/math-markdown";
 
 export type PracticeAttempt = {
   id: string;
@@ -42,21 +43,6 @@ export type Message = {
     questions: Question[];
     attempts?: PracticeAttempt[];
   };
-};
-
-// Normalize model LaTeX delimiters \( \) and \[ \] to remark-math's $ and $$.
-const preprocessLaTeX = (content: string) => {
-  let processed = content;
-  // Keep currency such as "$12.50" from being paired as inline math.
-  processed = processed.replace(
-    /(?<!\\)\$(?=\d+(?:,\d{3})*(?:\.\d{1,2})?(?:\s|[.,!?;:)]|$))/g,
-    "\\$",
-  );
-  // Replace block math \[ ... \] with $$ ... $$
-  processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `$$${math}$$`);
-  // Replace inline math \( ... \) with $ ... $
-  processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => `$${math}$`);
-  return processed;
 };
 
 export default function MessageList({
@@ -179,7 +165,7 @@ export default function MessageList({
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
-                    {preprocessLaTeX(message.content)}
+                    {preprocessMathMarkdown(message.content)}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -210,7 +196,7 @@ export default function MessageList({
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
-                    {preprocessLaTeX(message.content)}
+                    {preprocessMathMarkdown(message.content)}
                   </ReactMarkdown>
                 </div>
 

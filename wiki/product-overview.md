@@ -28,7 +28,7 @@ Free, no-login, unlimited AI math solver. Core wedge vs competitors: **full step
 1. `ChatContext.sendMessage` POSTs to `/api/solve`.
 2. `/api/solve` calls Gemini 3.1 flash-lite (temp 0.2, max 2000 output tokens) with `MATH_TUTOR_PROMPT`, which forces numbered `**Step N:**` headers, `---` dividers, LaTeX for all math, and a `**Final Answer**` block. For calculator chats, the route validates the `calculator:<slug>` source and appends the matching server-owned topic instruction.
 3. The shared Gemini adapter converts provider SSE into a clean `text/plain` stream; the client reads it incrementally.
-4. `MessageList` renders markdown via `react-markdown` + KaTeX; `preprocessLaTeX` normalizes delimiters; horizontal rules become styled step dividers.
+4. `MessageList` renders markdown via `react-markdown` + KaTeX; `preprocessMathMarkdown` normalizes delimiters while distinguishing number-leading inline math from standalone currency; horizontal rules become styled step dividers.
 
 ## What it does NOT have (today)
 

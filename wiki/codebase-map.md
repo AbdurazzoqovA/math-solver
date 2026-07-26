@@ -78,6 +78,7 @@ src/
     graphing-calculator.ts # Graphing definition and client-tool configuration
     gemini.ts              # server-only Gemini text/JSON generation + SSE stream adapter
     math-expression.ts     # safe recursive-descent expression parser used by graphing
+    math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
     analytics.ts          # privacy-safe GA4 event queue + return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
@@ -100,6 +101,7 @@ firestore.rules            # verified-owner-only notebook rules + document valid
 tests/firestore.rules.test.mjs # verified-owner/isolation/validation emulator tests
 tests/firebase-auth-actions.test.mjs # email action mode/redirect safety tests
 tests/post-solution-actions.test.mjs # short/long step extraction + prompt contract tests
+tests/math-markdown.test.mjs # KaTeX regressions for number-leading math and currency
 tests/learning-progress.test.mjs # spaced-review and local activity-state tests
 tests/analytics.test.mjs # low-cardinality return interval contract
 ```
@@ -107,7 +109,7 @@ tests/analytics.test.mjs # low-cardinality return interval contract
 ## Load-bearing files (touch with care)
 
 - **`src/app/api/solve/route.ts`** — the solve prompt + streaming. Changing the prompt changes step formatting everywhere.
-- **`src/components/chat/MessageList.tsx`** — `preprocessLaTeX` normalizes `\(..\)`/`\[..\]` to `$..$`/`$$..$$`, protects currency dollar signs from math parsing, and turns horizontal rules into step dividers. Break this and all math rendering breaks.
+- **`src/components/chat/MessageList.tsx`** — renders solver markdown and KaTeX after `src/lib/math-markdown.ts` normalizes `\(..\)`/`\[..\]` to `$..$`/`$$..$$` and protects standalone currency dollar signs from math parsing. Horizontal rules become step dividers. Break this path and all math rendering breaks.
 - **`src/context/ChatContext.tsx`** — the local-first persistence and sync coordinator. Guest/account browser caches, initial cloud merge, debounced cloud writes, deletions, uploaded-image handling, practice attempts, and derived mistake-review queues meet here.
 
 ## Data flow (one-liner)

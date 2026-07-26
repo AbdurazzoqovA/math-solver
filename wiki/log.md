@@ -95,3 +95,6 @@ Removed the “Today’s goal” and streak control from the desktop/mobile side
 
 ## [2026-07-26] lint | Corrected MathGPT video infrastructure prerequisites
 Verified that Firebase Authentication and live verified-owner Firestore persistence already provide MathSolver's account and database foundation. Corrected [[mathgpt-video-research]] to reuse Firebase identity and Firestore for video quota/job state; the remaining additions are server-side token verification and atomic quota enforcement, an asynchronous render queue/worker, and private video storage/delivery.
+
+## [2026-07-26] change | Fixed number-leading math rendering after image solves
+Fixed the currency-protection preprocessor incorrectly escaping valid solver LaTeX such as `$1 + 2 = 3$` and `$6 \div 2(3)$`, which exposed raw dollar delimiters in uploaded-image solutions. Moved delimiter handling into a tested helper that preserves number-leading math while still escaping standalone and repeated prices, and added server-rendered React Markdown + KaTeX regression coverage.

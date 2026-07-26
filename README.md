@@ -139,5 +139,5 @@ variables such as `PRESSROOM_API_KEY` are preserved.
 npx tsc --noEmit
 npm run build
 npx firebase-tools emulators:exec --only firestore --project demo-mathsolver "node --test tests/firestore.rules.test.mjs"
-node --experimental-strip-types --test tests/firebase-auth-actions.test.mjs tests/post-solution-actions.test.mjs tests/learning-progress.test.mjs tests/analytics.test.mjs
+node --experimental-strip-types --test tests/firebase-auth-actions.test.mjs tests/post-solution-actions.test.mjs tests/math-markdown.test.mjs tests/learning-progress.test.mjs tests/analytics.test.mjs
 ```
