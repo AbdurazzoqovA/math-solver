@@ -35,7 +35,7 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 
 ## Rules for working here
 
-1. **⚠️ Secrets:** the owner-side `deploy.sh` currently contains plaintext API keys (including legacy Azure config, Google Cloud, and Turnstile). Do **not** add more secrets to tracked files; these should be rotated and moved to secret management. Never print or commit keys.
+1. **⚠️ Secrets:** `deploy.sh` is safe to track and loads its values from ignored local `.env` files. Do **not** add API keys, service-account files, or other credentials to tracked files. Never print or commit keys.
 2. **Firebase is optional and split from hosting.** `math-solver-e3a55` owns Email/Password + Google Auth and the Firestore notebook; `axial-willow-428621-n4` remains Cloud Run only. Guests use `localStorage`. Firestore exists in `nam5`, and the checked-in verified-account rules are live. Do not assume Storage or other backend services exist. See [[tech-and-ops]].
 3. **Keep the wiki current.** After any change that alters architecture, features, routes, or the plan, update the relevant `wiki/` page, bump [[index]] if pages were added/removed, and append one line to [[log]]. This is what keeps future sessions cheap. See the workflow below. Use `[[wikilinks]]` for any new cross-references so the Obsidian graph stays connected.
 4. **Math rendering is fragile.** LaTeX delimiters are preprocessed (`\(..\)`→`$..$`) in `MessageList.tsx`. Test rendering after touching the solve/render path.

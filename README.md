@@ -128,7 +128,9 @@ as event parameters. The event table and dashboard funnel are documented in
 `NEXT_PUBLIC_*` values are embedded by `next build`. The Dockerfile accepts all
 six Firebase values as build arguments, so production builds must pass them
 during the image build; setting them only on the running Cloud Run container is
-too late.
+too late. `deploy.sh` loads the six values from ignored local deployment
+configuration and passes them to Cloud Build; it preserves
+existing Cloud Run runtime variables such as `PRESSROOM_API_KEY`.
 
 ## Verification
 

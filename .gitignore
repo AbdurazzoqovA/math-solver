@@ -41,6 +41,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# deployment (contains secrets)
-deploy.sh
-deploy.sh
+# Local deployment values belong in ignored .env files; deploy.sh itself is safe to track.

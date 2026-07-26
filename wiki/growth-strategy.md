@@ -24,7 +24,7 @@ The full first-wave taxonomy of 43 calculator pages across eight categories ship
 | **MS Math Solver** | **Retired July 2025** | — | Huge localized pages, now orphaned | Its keyword footprint is unclaimed |
 | **Wolfram Alpha** | 50–100 queries | Full steps, Pro from $5/mo | Brand + query-page authority | Terse steps, intimidating input — learners bounce |
 | **Gauth** (ByteDance) | Daily question caps | Unlimited, ~$11.99/mo | Programmatic answer pages (#1 in category) | Accuracy complaints; caps push users out |
-| **MathGPT** | Limited freemium | Unlimited, $9.99/mo | Comparison / "vs ChatGPT" content | Beatable on price (we're fully free) |
+| **MathGPT** | Server-side daily video cap; exact free count not publicly verified | Unlimited videos/chats; current web bundle defaults to $14.99/mo | Comparison / "vs ChatGPT" content + shareable videos | Beatable on core price; explanation video architecture researched in [[mathgpt-video-research]] |
 | **Quizlet** | Capped study modes | Learn mode + practice tests, $35.99/yr | 65M visits from user-generated sets | Paywall backlash — our practice tests are free |
 | **Khan Academy** | Everything core | Khanmigo AI tutor | Authority course content | Complementary — don't fight head terms |
 
