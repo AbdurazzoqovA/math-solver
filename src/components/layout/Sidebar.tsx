@@ -9,8 +9,6 @@ import { useUI } from "@/context/UIContext";
 import Image from "next/image";
 import Link from "next/link";
 import AccountButton from "@/components/auth/AccountButton";
-import DailyGoal from "@/components/learning/DailyGoal";
-import { trackEvent } from "@/lib/analytics";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -22,11 +20,7 @@ export default function Sidebar() {
     deleteChat,
     dueReviewItems,
   } = useChatContext();
-  const {
-    isMobileSidebarOpen,
-    setMobileSidebarOpen,
-    openReviewPanel,
-  } = useUI();
+  const { isMobileSidebarOpen, setMobileSidebarOpen } = useUI();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -52,21 +46,6 @@ export default function Sidebar() {
   const handlePracticeTestsClick = () => {
     setMobileSidebarOpen(false);
     router.push("/practice-tests");
-  };
-
-  const handleOpenReview = () => {
-    const reviewBatch = dueReviewItems.slice(0, 5);
-    if (reviewBatch.length === 0) {
-      handlePracticeTestsClick();
-      return;
-    }
-    trackEvent("review_queue_started", {
-      question_count: reviewBatch.length,
-      source: "daily_goal",
-    });
-    openReviewPanel(reviewBatch);
-    setMobileSidebarOpen(false);
-    if (pathname !== "/") router.push("/");
   };
 
   const sidebarContent = (
@@ -209,14 +188,6 @@ export default function Sidebar() {
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2">
-        <DailyGoal
-          isExpanded={isExpanded}
-          dueReviewCount={dueReviewItems.length}
-          onStartSolve={handleNewChat}
-          onOpenPractice={handlePracticeTestsClick}
-          onOpenReview={handleOpenReview}
-        />
-
         <AccountButton isExpanded={isExpanded} />
 
         <button 

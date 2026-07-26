@@ -90,5 +90,8 @@ Replaced Cloud Run source-build environment flags with an explicit Cloud Build D
 ## [2026-07-26] change | Deployed Firebase-enabled production release
 Deployed Artifact Registry image tag `09f5dbb` as Cloud Run revision `mathsolver-00014-g5n` with 100% traffic. Verified Firebase public configuration in the canonical-domain browser bundle and HTTP 200 responses for the homepage, blog, branded auth action, practice library, and sitemap.
 
+## [2026-07-26] change | Removed the visible daily goal
+Removed the “Today’s goal” and streak control from the desktop/mobile sidebar after owner UX review. Auth, Practice Tests, the due-mistake badge, review scheduling, and privacy-conscious local activity measurement remain intact.
+
 ## [2026-07-26] lint | Corrected MathGPT video infrastructure prerequisites
 Verified that Firebase Authentication and live verified-owner Firestore persistence already provide MathSolver's account and database foundation. Corrected [[mathgpt-video-research]] to reuse Firebase identity and Firestore for video quota/job state; the remaining additions are server-side token verification and atomic quota enforcement, an asynchronous render queue/worker, and private video storage/delivery.

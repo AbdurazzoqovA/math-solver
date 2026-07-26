@@ -52,8 +52,6 @@ src/
     practice/
       PracticePanel.tsx    # quiz/review runner: answers, steps, mistake schedule, completion
       PracticeTestsPage.tsx# saved tests, best score, due mistake-review entry point
-    learning/
-      DailyGoal.tsx        # quiet sidebar progress + visible current streak
     auth/
       AccountButton.tsx    # Email/Password + Google auth dialog, account menu, sync status
       AuthActionHandler.tsx# verify/reset/recover code UI + safe return handling
@@ -67,7 +65,7 @@ src/
   context/
     AuthContext.tsx        # Firebase session, Google + verified Email/Password/reset journey
     ChatContext.tsx        # chats, review queue, scoped local cache, verified-only Firestore sync
-    LearningProgressContext.tsx # guest/account local daily goal, migration, streak state
+    LearningProgressContext.tsx # guest/account local activity record and return measurement
     UIContext.tsx          # panel/calculator/practice/review UI state; calculator injection registry
   lib/
     captcha.ts             # Turnstile verify + in-memory per-IP rate limit (60/hr) [not distributed]
@@ -102,7 +100,7 @@ firestore.rules            # verified-owner-only notebook rules + document valid
 tests/firestore.rules.test.mjs # verified-owner/isolation/validation emulator tests
 tests/firebase-auth-actions.test.mjs # email action mode/redirect safety tests
 tests/post-solution-actions.test.mjs # short/long step extraction + prompt contract tests
-tests/learning-progress.test.mjs # spaced-review, daily goal, merge, and streak tests
+tests/learning-progress.test.mjs # spaced-review and local activity-state tests
 tests/analytics.test.mjs # low-cardinality return interval contract
 ```
 
