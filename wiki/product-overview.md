@@ -33,6 +33,6 @@ Free, no-login, unlimited AI math solver. Core wedge vs competitors: **full step
 
 ## What it does NOT have (today)
 
-- Firebase's verification/reset email templates still need to target the new custom `/auth/action` route after that route is deployed; until then emails open Firebase's hosted action page first.
+- Firebase's verification/reset email templates still need to target the production-live custom `/auth/action` route; until that owner-side template setting is changed, emails open Firebase's hosted action page first.
 - No bookmarks, folders/courses, topic mastery dashboard, customizable goals, email capture, or notifications. The shipped streak is intentionally device-local/account-scoped rather than a Firestore-synced cross-device record; see [[growth-strategy]].
 - No monetization (no ads, no premium, no paywall).

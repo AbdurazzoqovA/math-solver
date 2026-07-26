@@ -70,7 +70,7 @@ Never add problem text, options/answers, OCR/image data, email/profile values, F
 - The graphing calculator has no external plotting dependency. `src/lib/math-expression.ts` safely parses supported explicit expressions, and `GraphingCalculator.tsx` renders them to canvas in the browser.
 - The homepage has priority calculator links in `SeoSections.tsx`, and the sidebar links to the calculator hub.
 - Pressroom blog routes are live in code, but the connected site had zero live articles at the 2026-07-26 validation. No i18n (`<html lang="en">` hardcoded).
-- **Current release:** the user confirmed that the 43-calculator, 47-URL release was deployed on 2026-07-24. A local code change made after that confirmation makes the shared desktop/mobile logo link to `/`; deploy that follow-up for it to reach production.
+- **Current release:** Cloud Run revision `mathsolver-00014-g5n` was deployed on 2026-07-26 from Artifact Registry image tag `09f5dbb`. It includes Firebase Auth/notebook sync, learning retention, post-solution actions, and the Pressroom blog. The canonical domain returned 200 for `/`, `/blog`, `/auth/action`, `/practice-tests`, and `/sitemap.xml`, and the browser bundle was verified to contain the Firebase public configuration.
 
 ## Known gotchas & stubs (as of 2026-07)
 
@@ -80,7 +80,7 @@ Never add problem text, options/answers, OCR/image data, email/profile values, F
 - **`isCorrect` badge** — supported in the `Message` type / `MessageList` but never set anywhere.
 - **Rate limiter is in-memory per instance** (`captcha.ts`, 60/hr) — won't hold globally across Cloud Run's up-to-20 instances. Needs a distributed store at scale.
 - **`DraggableCalculator` uses `new Function()`** to eval expressions — arithmetic only, but arbitrary-eval-flavored; keep inputs constrained.
-- **Firebase email templates still need the custom action URL.** Until the new route is deployed and the verification/reset templates point to `https://math-solver.io/auth/action`, Firebase's hosted action widget remains the first page opened from emails.
+- **Firebase email templates still need the custom action URL.** The route is production-live, but until the verification/reset templates point to `https://math-solver.io/auth/action`, Firebase's hosted action widget remains the first page opened from emails.
 - **No Firebase Storage/image sync.** Image previews remain on the originating browser; OCR text makes the synced conversation usable.
 - **Daily streaks are not cross-device.** Mistake schedules sync inside verified notebooks, but the lightweight daily activity/streak record remains in the current browser's UID-scoped local storage.
 - **Pressroom is runtime configuration.** `PRESSROOM_API_KEY` is ignored locally and must be added as a server-only Cloud Run environment variable. The API currently returns zero live posts; drafts/scheduled posts intentionally remain absent until their publish time.

@@ -87,5 +87,8 @@ Replaced the secret-bearing local deployment helper with a tracked, env-driven C
 ## [2026-07-26] change | Passed Firebase config into production Docker builds
 Replaced Cloud Run source-build environment flags with an explicit Cloud Build Docker step that supplies all six Firebase public values as Docker build arguments. Deployments now push a commit-tagged Artifact Registry image and deploy that image while preserving server runtime configuration.
 
+## [2026-07-26] change | Deployed Firebase-enabled production release
+Deployed Artifact Registry image tag `09f5dbb` as Cloud Run revision `mathsolver-00014-g5n` with 100% traffic. Verified Firebase public configuration in the canonical-domain browser bundle and HTTP 200 responses for the homepage, blog, branded auth action, practice library, and sitemap.
+
 ## [2026-07-26] lint | Corrected MathGPT video infrastructure prerequisites
 Verified that Firebase Authentication and live verified-owner Firestore persistence already provide MathSolver's account and database foundation. Corrected [[mathgpt-video-research]] to reuse Firebase identity and Firestore for video quota/job state; the remaining additions are server-side token verification and atomic quota enforcement, an asynchronous render queue/worker, and private video storage/delivery.
