@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Calculator, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
+import { BookOpen, Calculator, Plus, History, Newspaper, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import { useChatContext } from "@/context/ChatContext";
@@ -32,6 +32,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const isOnPracticeTests = pathname === "/practice-tests";
   const isOnCalculators = pathname.startsWith("/calculator");
+  const isOnBlog = pathname.startsWith("/blog");
 
   // Sort chats by most recently updated
   const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -141,6 +142,16 @@ export default function Sidebar() {
         >
           <Calculator className={`w-5 h-5 transition-colors shrink-0 ${isOnCalculators ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
           {isExpanded && <span className="font-medium text-sm truncate">Calculators</span>}
+        </Link>
+
+        <Link
+          href="/blog"
+          onClick={() => setMobileSidebarOpen(false)}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnBlog ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+          title="Blog"
+        >
+          <Newspaper className={`w-5 h-5 transition-colors shrink-0 ${isOnBlog ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
+          {isExpanded && <span className="font-medium text-sm truncate">Blog</span>}
         </Link>
 
         <button 

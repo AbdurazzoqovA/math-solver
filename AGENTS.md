@@ -28,9 +28,10 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 - **OCR (photo/PDF/drawing → text):** Google **Gemini 3.1 flash-lite** — `src/app/api/ocr/route.ts`. Extracts the expression only; does not solve.
 - **Practice quizzes:** Gemini 3.1 flash-lite — `src/app/api/practice/route.ts` + `/steps`.
 - **State:** `src/context/ChatContext.tsx` (local-first chats, mistake queue, optional Firestore sync), `src/context/LearningProgressContext.tsx` (local daily goal/streak), `src/context/AuthContext.tsx` (optional Firebase Email/Password or Google account), `src/context/UIContext.tsx` (panels/calculator/practice/review).
-- **Routes:** `/` (solver + landing), `/calculator` + 43 static calculator pages across eight categories, `/practice-tests` (noindex), `/privacy`, `/terms`.
+- **Routes:** `/` (solver + landing), `/calculator` + 43 static calculator pages across eight categories, `/blog` + dynamic Pressroom articles, `/practice-tests` (noindex), `/privacy`, `/terms`.
 - **Hosting:** Google Cloud Run via `deploy.sh` + `Dockerfile` (`output: "standalone"`).
 - **Analytics:** GA4 (`G-YG1NPYM8BS`) plus the no-content retention event contract in `src/lib/analytics.ts`; never attach math content, identity fields, or notebook IDs.
+- **Blog:** Pressroom server API (`PRESSROOM_API_KEY`) → dynamic `/blog` and `/blog/[slug]`, cached for five minutes. The key must remain server-only.
 
 ## Rules for working here
 

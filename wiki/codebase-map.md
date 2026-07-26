@@ -9,7 +9,7 @@ src/
   app/                     # Next.js App Router
     page.tsx               # "/" — solver + landing in one (renders ChatArea)
     layout.tsx             # root layout: metadata, OpenGraph, GA4, providers, fonts
-    sitemap.ts             # sitemap: core routes + calculator hub + all calculator registry slugs
+    sitemap.ts             # core/calculator routes + live Pressroom article URLs
     robots.ts              # robots.txt — allows all, disallows /api/, base math-solver.io
     calculator/
       page.tsx             # "/calculator" — crawlable eight-category calculator hub
@@ -18,6 +18,10 @@ src/
         page.tsx           # 43 statically generated calculator pages + metadata/JSON-LD
         opengraph-image.tsx# topic-specific social card generated from the registry
     practice-tests/page.tsx# "/practice-tests" — library of saved tests (noindex)
+    blog/
+      page.tsx             # "/blog" — paginated live Pressroom article index
+      error.tsx            # retryable blog API/configuration failure state
+      [slug]/page.tsx      # rich article, metadata, author, JSON-LD, solver CTA
     auth/action/page.tsx   # "/auth/action" — noindex Firebase email action handler
     privacy/page.tsx       # static legal
     terms/page.tsx         # static legal
@@ -79,6 +83,7 @@ src/
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
     analytics.ts          # privacy-safe GA4 event queue + return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
+    pressroom.ts          # server-only list/article API, types, 5-minute cache
     firebase-auth-actions.ts # action-mode validation + same-origin continue URL guard
     firebase-client.ts     # env-gated Firebase App/Auth/Firestore initialization
     firebase-notebook.ts   # Firestore chat serialization, merge inputs, writes, deletion tombstones
@@ -92,7 +97,7 @@ package.json               # deps & scripts
 firebase.json              # Firestore rules/emulator configuration
 firestore.rules            # verified-owner-only notebook rules + document validation
 .firebaserc                # Firebase default math-solver-e3a55 + non-default Cloud Run alias
-.env.example               # public Firebase names + server-only Gemini variable names
+.env.example               # public Firebase names + server-only Gemini/Pressroom names
 tests/firestore.rules.test.mjs # verified-owner/isolation/validation emulator tests
 tests/firebase-auth-actions.test.mjs # email action mode/redirect safety tests
 tests/post-solution-actions.test.mjs # short/long step extraction + prompt contract tests

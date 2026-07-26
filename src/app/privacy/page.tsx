@@ -60,7 +60,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">5. Third-Party Services</h2>
           <p className="mb-4">
-            We use service providers to operate MathSolver. These include Google Gemini for solutions, practice content, and OCR; Google Firebase Authentication and Cloud Firestore for optional account and notebook sync; Cloudflare Turnstile for abuse protection; and Google Analytics for usage analytics.
+            We use service providers to operate MathSolver. These include Google Gemini for solutions, practice content, and OCR; Google Firebase Authentication and Cloud Firestore for optional account and notebook sync; Pressroom for published blog content; Cloudflare Turnstile for abuse protection; and Google Analytics for usage analytics.
           </p>
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">6. Data Security</h2>

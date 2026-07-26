@@ -71,3 +71,9 @@ Persisted first-attempt practice mistakes on their existing saved questions, add
 
 ## [2026-07-26] change | Made retention actions discoverable and measurable
 Added a due-review badge to Practice Tests and made the daily-goal card recommend the next eligible solve, review, or practice action. Added a content-free GA4 contract for returns, activity, mistake capture, review entry/outcomes/completion/removal, and goal completion, plus a documented dashboard funnel. Desktop browser QA covered previous-day return, solve→review recommendation, queue completion, event payloads, and streak rollover; mobile QA found no horizontal overflow; a live temporary Email/Password session confirmed guest progress moved into UID-scoped storage and was deleted afterward.
+
+## [2026-07-26] change | Collapsed the daily goal into an on-demand panel
+Replaced the permanently expanded sidebar goal card with one 44px summary row showing goal progress. Activating the row opens the full progress, streak, and next-action content in an anchored overlay above it, so Sign in, Theme, and legal links keep their positions. The control exposes expanded state, supports Escape/outside-click dismissal, and passed desktop plus 390px mobile layout checks without horizontal overflow.
+
+## [2026-07-26] change | Added the Pressroom-powered blog
+Added server-rendered `/blog` pagination and `/blog/[slug]` articles using the server-only Pressroom key with five-minute revalidation. The release includes conditional covers/tags/authors, rich-content styles, metadata, Blog/BlogPosting JSON-LD, empty/error states, sidebar/footer navigation, and live article sitemap entries. The real API authenticated but returned zero live posts; a local Pressroom fixture passed list/article metadata, rich tables/highlights/tasks, author, CTA, sitemap, and 390px mobile layout checks. Production must receive `PRESSROOM_API_KEY` at runtime; the ignored local key was never committed or exposed to the browser.

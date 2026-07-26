@@ -72,7 +72,7 @@ Search intent matches our exact differentiator (free steps, no caps, in-browser)
 Indexed pages of solved problems grouped by topic, seeded from anonymized real user queries — the model behind Mathway "Popular Problems" and Gauth's #1 category ranking. **Requires quality thresholds, dedup, and canonical discipline** to avoid thin-content penalties. Start after calculator pages prove out.
 
 ### Play 4: Topic explainers feeding the calculators
-"How to find the derivative of ln(x)", "chain rule with examples" — each interlinked with its matching calculator page. Target low-competition long-tail first. Doubles as content for the dead footer "Blog" link.
+"How to find the derivative of ln(x)", "chain rule with examples" — each interlinked with its matching calculator page. Target low-competition long-tail first. The Pressroom-backed `/blog` index, article template, navigation, metadata, and dynamic sitemap integration shipped in code on 2026-07-26; the feed had zero live posts at validation, so publishing the first focused explainer cluster is now the content blocker rather than engineering.
 
 ### Play 5: Exam-track hubs
 Free Digital SAT / ACT / AP Calc / GCSE practice pages. Khan owns head terms, but long-tail ("AP Calc AB unit 3 practice problems") is open. Feeds the retention loop.
@@ -99,9 +99,9 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 
 ## Roadmap
 
-**Now (wks 1–4):** the first 43 calculator pages, graphing tool, 47-URL sitemap, persisted practice scores, one-tap solution follow-ups, production-ready auth journey, mistake review, and daily goal/streak are shipped in code. Firebase Auth/Web app/domain setup is complete; Firestore exists in `nam5`; verified-owner CRUD and isolation tests pass live. Privacy-conscious retention events now cover return, first mistake saved, review entry/outcome/completion/removal, distinct learning activity, daily-goal actions, and daily-goal completion without sending math content or identity fields. Next: deploy the custom email-action route and point Firebase verification/reset templates to it; submit and inspect calculator pages in Search Console; ship 4–6 alternative/comparison pages; then inspect the retention funnel before investing in mastery or reminders.
+**Now (wks 1–4):** the first 43 calculator pages, graphing tool, core 47-URL sitemap, Pressroom blog surface, persisted practice scores, one-tap solution follow-ups, production-ready auth journey, mistake review, and daily goal/streak are shipped in code. Firebase Auth/Web app/domain setup is complete; Firestore exists in `nam5`; verified-owner CRUD and isolation tests pass live. Privacy-conscious retention events now cover return, first mistake saved, review entry/outcome/completion/removal, distinct learning activity, daily-goal actions, and daily-goal completion without sending math content or identity fields. Next: deploy the custom email-action/blog release and provide `PRESSROOM_API_KEY` to Cloud Run; publish the first Pressroom topic explainers; submit and inspect calculator/blog URLs in Search Console; ship 4–6 alternative/comparison pages; then inspect the retention funnel before investing in mastery or reminders.
 
-**Next (mo 1–3):** use review/streak behavior to decide whether cross-device progress sync and topic-level mastery are justified; add course folders; build the quality-gated worked-example library; take the blog live with topic explainers; add a PWA install prompt after successful solves; replace the in-memory rate limiter.
+**Next (mo 1–3):** use review/streak behavior to decide whether cross-device progress sync and topic-level mastery are justified; add course folders; build the quality-gated worked-example library; grow the Pressroom feed into interlinked topic clusters; add a PWA install prompt after successful solves; replace the in-memory rate limiter.
 
 **Later (mo 3–6+):** exam-prep tracks with progress; mastery dashboard + weekly email; push notifications (timed to evening homework hours); answer-verification / "checked" badge; localization of top calculator pages.
 

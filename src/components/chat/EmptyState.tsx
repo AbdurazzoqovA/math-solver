@@ -37,7 +37,7 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
           <div className="flex items-center justify-center gap-2 sm:gap-4 mb-3 flex-wrap px-4">
             <a href="#" className="hover:text-foreground transition-colors">Careers</a>
             <span>&middot;</span>
-            <a href="#" className="hover:text-foreground transition-colors">Blog</a>
+            <Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link>
             <span>&middot;</span>
             <Link href="/calculator" className="hover:text-foreground transition-colors">Calculators</Link>
             <span>&middot;</span>

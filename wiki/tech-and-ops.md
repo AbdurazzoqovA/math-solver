@@ -16,13 +16,14 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 | Solve + practice generation | Google **Gemini 3.1 flash-lite** (solve temp 0.2, max 2000 output tokens) | `/api/solve`, `/api/practice`, `/api/practice/steps`, `src/lib/gemini.ts` |
 | OCR (image/PDF/drawing → text) | Google **Gemini 3.1 flash-lite** (`gemini-3.1-flash-lite`, `generativelanguage.googleapis.com/v1beta`) | `/api/ocr` |
 | Optional account + notebook sync | Google **Firebase Authentication + Cloud Firestore** | `AuthContext`, `ChatContext`, `firebase-client.ts`, `firebase-notebook.ts` |
+| Blog content | **Pressroom** server API | `src/lib/pressroom.ts`, `/blog`, `/blog/[slug]` |
 
 | Bot protection | Cloudflare Turnstile | `src/lib/captcha.ts`, `TurnstileProvider.tsx` |
 | Analytics | Google Analytics 4 (`G-YG1NPYM8BS`) | `src/app/layout.tsx` + privacy-safe event adapter in `src/lib/analytics.ts` |
 
 ## Env vars / secrets
 
-Referenced: server-only `GOOGLE_CLOUD_API_KEY`; optional `GEMINI_MODEL` override (default `gemini-3.1-flash-lite`); and Turnstile site + secret keys. Legacy Azure values may remain in owner-side deployment configuration but are no longer read by the application.
+Referenced: server-only `GOOGLE_CLOUD_API_KEY`; optional `GEMINI_MODEL` override (default `gemini-3.1-flash-lite`); server-only `PRESSROOM_API_KEY` for the blog; and Turnstile site + secret keys. Legacy Azure values may remain in owner-side deployment configuration but are no longer read by the application.
 
 Optional Firebase Web app values: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`. These public identifiers are listed in `.env.example`; they are not service-account credentials. Next embeds them at build time, so Docker/Cloud Build must pass them as build arguments rather than only setting Cloud Run runtime env vars.
 
@@ -62,19 +63,19 @@ Never add problem text, options/answers, OCR/image data, email/profile values, F
 
 ## SEO infrastructure (current)
 
-- Sitemap contains `/`, legal pages, `/calculator`, and all 43 calculator registry routes, for 47 URLs total. Calculator `lastModified` uses the stable 2026-07-24 release date rather than changing on every request.
+- The sitemap is runtime-generated: it keeps the 47 core solver/legal/calculator URLs, adds `/blog`, and adds every live Pressroom article with its publish date. Calculator `lastModified` uses the stable 2026-07-24 release date, and Pressroom failures do not remove the core sitemap.
 - `robots.ts` allows all, disallows `/api/`, base `https://math-solver.io`.
 - Root `WebSite` + `Organization` JSON-LD lives in `layout.tsx`. Calculator pages add self-canonicals, unique metadata, topic OG/Twitter cards, `WebPage`, `BreadcrumbList`, and `WebApplication` JSON-LD. Visible FAQs do not use retired FAQ schema.
 - `src/lib/calculators.ts` combines definitions from the Algebra, Calculus, Linear Algebra, Trigonometry, Statistics, General Math/Precalculus, and Graphing modules. The registry drives static generation, the sitemap, related links, metadata, tool selection, and generated OG cards, and validates integrity when imported. See [[calculator-pages]].
 - The graphing calculator has no external plotting dependency. `src/lib/math-expression.ts` safely parses supported explicit expressions, and `GraphingCalculator.tsx` renders them to canvas in the browser.
 - The homepage has priority calculator links in `SeoSections.tsx`, and the sidebar links to the calculator hub.
-- No blog, no i18n (`<html lang="en">` hardcoded).
+- Pressroom blog routes are live in code, but the connected site had zero live articles at the 2026-07-26 validation. No i18n (`<html lang="en">` hardcoded).
 - **Current release:** the user confirmed that the 43-calculator, 47-URL release was deployed on 2026-07-24. A local code change made after that confirmation makes the shared desktop/mobile logo link to `/`; deploy that follow-up for it to reach production.
 
 ## Known gotchas & stubs (as of 2026-07)
 
 - **Repo-wide ESLint debt** — the calculator launch files lint clean and the production build passes, but a full `eslint .` still reports 21 errors and 12 warnings in pre-existing legal-page copy, refs/effects, MathLive typings, practice state, and Turnstile code.
-- **Dead footer links** — "Blog", "Careers", "Contact" are `href="#"` in `EmptyState.tsx`.
+- **Dead footer links** — "Careers" and "Contact" remain `href="#"` in `EmptyState.tsx`; Blog now links to `/blog`.
 - **Edit-message button** — pencil icon on user messages in `MessageList.tsx` has no `onClick` (stub).
 - **`isCorrect` badge** — supported in the `Message` type / `MessageList` but never set anywhere.
 - **Rate limiter is in-memory per instance** (`captcha.ts`, 60/hr) — won't hold globally across Cloud Run's up-to-20 instances. Needs a distributed store at scale.
@@ -82,3 +83,4 @@ Never add problem text, options/answers, OCR/image data, email/profile values, F
 - **Firebase email templates still need the custom action URL.** Until the new route is deployed and the verification/reset templates point to `https://math-solver.io/auth/action`, Firebase's hosted action widget remains the first page opened from emails.
 - **No Firebase Storage/image sync.** Image previews remain on the originating browser; OCR text makes the synced conversation usable.
 - **Daily streaks are not cross-device.** Mistake schedules sync inside verified notebooks, but the lightweight daily activity/streak record remains in the current browser's UID-scoped local storage.
+- **Pressroom is runtime configuration.** `PRESSROOM_API_KEY` is ignored locally and must be added as a server-only Cloud Run environment variable. The API currently returns zero live posts; drafts/scheduled posts intentionally remain absent until their publish time.

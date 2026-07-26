@@ -19,6 +19,12 @@ Firebase is optional in local development. Without Firebase configuration, the
 app keeps its original browser-only `localStorage` notebook and does not render
 account controls.
 
+The blog uses a server-only Pressroom integration. Set `PRESSROOM_API_KEY` in
+`.env.local`; never expose it through a `NEXT_PUBLIC_*` variable. `/blog`,
+`/blog?page=N`, article metadata, and `/blog/{slug}` are rendered on the server,
+while Pressroom responses are revalidated every five minutes. Production
+Cloud Run must receive the same variable at runtime.
+
 ## Firebase account and notebook sync
 
 The owner-confirmed production architecture uses two separate Google Cloud
