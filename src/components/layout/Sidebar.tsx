@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Calculator, Plus, History, Newspaper, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
+import { BookOpen, Calculator, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import { useChatContext } from "@/context/ChatContext";
@@ -32,7 +32,6 @@ export default function Sidebar() {
   const pathname = usePathname();
   const isOnPracticeTests = pathname === "/practice-tests";
   const isOnCalculators = pathname.startsWith("/calculator");
-  const isOnBlog = pathname.startsWith("/blog");
 
   // Sort chats by most recently updated
   const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -144,16 +143,6 @@ export default function Sidebar() {
           {isExpanded && <span className="font-medium text-sm truncate">Calculators</span>}
         </Link>
 
-        <Link
-          href="/blog"
-          onClick={() => setMobileSidebarOpen(false)}
-          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnBlog ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
-          title="Blog"
-        >
-          <Newspaper className={`w-5 h-5 transition-colors shrink-0 ${isOnBlog ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
-          {isExpanded && <span className="font-medium text-sm truncate">Blog</span>}
-        </Link>
-
         <button 
           onClick={handlePracticeTestsClick}
           className={`relative w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnPracticeTests ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
@@ -240,6 +229,7 @@ export default function Sidebar() {
         </button>
 
         <div className={`flex flex-col gap-1 mt-2 text-xs text-muted-foreground/60 transition-all duration-300 ${isExpanded ? 'px-4 opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+          <Link href="/blog" onClick={() => setMobileSidebarOpen(false)} className="hover:text-foreground transition-colors py-1 truncate">Blog</Link>
           <Link href="/privacy" className="hover:text-foreground transition-colors py-1 truncate">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-foreground transition-colors py-1 truncate">Terms of Service</Link>
         </div>

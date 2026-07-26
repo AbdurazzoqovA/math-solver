@@ -77,3 +77,6 @@ Replaced the permanently expanded sidebar goal card with one 44px summary row sh
 
 ## [2026-07-26] change | Added the Pressroom-powered blog
 Added server-rendered `/blog` pagination and `/blog/[slug]` articles using the server-only Pressroom key with five-minute revalidation. The release includes conditional covers/tags/authors, rich-content styles, metadata, Blog/BlogPosting JSON-LD, empty/error states, sidebar/footer navigation, and live article sitemap entries. The real API authenticated but returned zero live posts; a local Pressroom fixture passed list/article metadata, rich tables/highlights/tasks, author, CTA, sitemap, and 390px mobile layout checks. Production must receive `PRESSROOM_API_KEY` at runtime; the ignored local key was never committed or exposed to the browser.
+
+## [2026-07-26] change | Moved Blog out of primary navigation
+Moved the Blog link from the sidebar's primary navigation to its compact bottom link group beside Privacy Policy and Terms of Service, keeping learning and solver actions prominent.
