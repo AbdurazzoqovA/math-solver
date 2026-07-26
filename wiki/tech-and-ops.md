@@ -13,17 +13,16 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 
 | Purpose | Provider | Where |
 |---|---|---|
-| Solve + practice generation | Azure OpenAI **GPT-4o** (temp 0.2, max_tokens 2000) | `/api/solve`, `/api/practice`, `/api/practice/steps` |
+| Solve + practice generation | Google **Gemini 3.1 flash-lite** (solve temp 0.2, max 2000 output tokens) | `/api/solve`, `/api/practice`, `/api/practice/steps`, `src/lib/gemini.ts` |
 | OCR (image/PDF/drawing → text) | Google **Gemini 3.1 flash-lite** (`gemini-3.1-flash-lite`, `generativelanguage.googleapis.com/v1beta`) | `/api/ocr` |
 | Optional account + notebook sync | Google **Firebase Authentication + Cloud Firestore** | `AuthContext`, `ChatContext`, `firebase-client.ts`, `firebase-notebook.ts` |
 
-> Azure detail: the routes fetch `AZURE_OPENAI_ENDPOINT` **as-is** — the deployment name and api-version are encoded in that env-var URL, not hardcoded in the source. So the exact deployment/api-version depends on the deployed env value (GPT-4o per current config); don't assume specific values from the code.
 | Bot protection | Cloudflare Turnstile | `src/lib/captcha.ts`, `TurnstileProvider.tsx` |
-| Analytics | Google Analytics 4 (`G-YG1NPYM8BS`) | `src/app/layout.tsx` — pageviews only, no event tracking |
+| Analytics | Google Analytics 4 (`G-YG1NPYM8BS`) | `src/app/layout.tsx` + privacy-safe event adapter in `src/lib/analytics.ts` |
 
 ## Env vars / secrets
 
-Referenced: `AZURE_OPENAI_ENDPOINT`, Azure OpenAI key, Google Cloud/Gemini API key, Turnstile site + secret keys.
+Referenced: server-only `GOOGLE_CLOUD_API_KEY`; optional `GEMINI_MODEL` override (default `gemini-3.1-flash-lite`); and Turnstile site + secret keys. Legacy Azure values may remain in owner-side deployment configuration but are no longer read by the application.
 
 Optional Firebase Web app values: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`. These public identifiers are listed in `.env.example`; they are not service-account credentials. Next embeds them at build time, so Docker/Cloud Build must pass them as build arguments rather than only setting Cloud Run runtime env vars.
 
@@ -31,13 +30,35 @@ Optional Firebase Web app values: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_F
 
 ## Persistence
 
-Persistence is local-first. Signed-out data uses browser `localStorage` key `mathsolver_chats`. Signed-in account caches use `mathsolver_chats_user_{uid}`. If Firebase is configured, signing in merges guest, account-cache, and Firestore chat versions by chat ID/latest `updatedAt`, imports the guest notebook, then debounces writes until streaming finishes. Firestore documents live at `/users/{uid}/chats/{chatId}` and checked-in rules restrict all access to the matching authenticated UID. Deletes also write `/users/{uid}/chatDeletions/{chatId}` tombstones, preventing an older device cache from resurrecting a removed chat.
+Persistence is local-first. Signed-out data uses browser `localStorage` key `mathsolver_chats`. Signed-in account caches use `mathsolver_chats_user_{uid}`. Email/Password users can keep solving locally while verification is pending, but neither the client nor the checked-in rules permit cloud notebook access until `email_verified` is true. Google users arrive verified. A verified sign-in merges guest, account-cache, and Firestore chat versions by chat ID/latest `updatedAt`, imports the guest notebook, then debounces writes until streaming finishes. Firestore documents live at `/users/{uid}/chats/{chatId}` and checked-in rules restrict all access to the matching verified UID. Deletes also write `/users/{uid}/chatDeletions/{chatId}` tombstones, preventing an older device cache from resurrecting a removed chat.
 
-Chat text, OCR text, generated tests, generated explanations, and up to 20 recent completion attempts per test sync. Original uploaded image data URLs remain browser-local: cloud serialization retains their OCR text but removes the binary data to stay below Firestore's 1 MiB document limit. Chats are capped at 200 messages by rules; a future long-notebook design should move messages into subcollections before raising that limit.
+Chat text, OCR text, generated tests, generated explanations, per-question mistake-review schedules, and up to 20 recent completion attempts per test sync. Review state is nested on the existing question (`dueAt`, interval, review count, lapses, last review), so there is no duplicated question text or separate Firestore collection. Original uploaded image data URLs remain browser-local: cloud serialization retains their OCR text but removes the binary data to stay below Firestore's 1 MiB document limit. Chats are capped at 200 messages by rules; a future long-notebook design should move messages into subcollections before raising that limit.
+
+Daily goal/streak state is a smaller device-local layer managed by `LearningProgressContext`, not Firestore. Guests use `mathsolver_learning_progress_v1`; signed-in browsers use `mathsolver_learning_progress_user_{uid}` and merge/remove guest progress at sign-in. Only boolean daily activity categories are retained (maximum 90 dates), with no problem content or identity data. Local calendar dates define day boundaries. This account-scoped cache does not yet provide cross-device streak sync.
+
+## Analytics contract
+
+`src/lib/analytics.ts` queues GA4 events even if `gtag.js` is still loading. The retention contract is intentionally narrow:
+
+| Event | Parameters |
+|---|---|
+| `learning_return` | `days_away`: `1`, `2_7`, `8_30`, or `31_plus` |
+| `learning_activity` | `activity`: `solve`, `practice`, or `review` |
+| `daily_goal_action_clicked` | `action`: `solve`, `practice`, or `review` |
+| `daily_goal_completed` | `completing_activity`, `streak_days` |
+| `mistake_saved` | none |
+| `review_queue_started` | `question_count` (max 5), `source` |
+| `review_answered` | `outcome`, `attempt_number`, `next_interval_days` |
+| `review_queue_completed` | `question_count`, `reviewed_count`, `first_try_correct` |
+| `review_item_removed` | none |
+
+Never add problem text, options/answers, OCR/image data, email/profile values, Firebase IDs, chat IDs, or question IDs. `learning_return` fires at most once per local date/session when an earlier local activity date exists. The practical funnel and scorecards live in [[growth-strategy]].
 
 **Project architecture confirmed 2026-07-26:** `axial-willow-428621-n4` remains the Cloud Run build/hosting project in `us-central1`; `math-solver-e3a55` is the separate Firebase Authentication and Firestore data project. The latter owns the Admin SDK identity and registered Web app, with Email/Password and Google Auth enabled. `.firebaserc` defaults Firebase-only operations to `math-solver-e3a55` and retains a non-default alias for the Cloud Run project. Storage and billing-dependent image sync remain out of scope.
 
-**Live setup status:** the ignored local Web config matches the registered Firebase Web app; `math-solver.io` is authorized; a temporary Email/Password account passed live create/sign-in/delete; and Google provider configuration is enabled. Interactive Google OAuth was not automated because no user Google session was supplied. Firestore remains the only launch blocker: its API is disabled, and the supplied Firebase Admin SDK identity lacks `serviceusage.services.enable`, so it could neither enable the API nor deploy rules. A project owner must enable `firestore.googleapis.com` (or grant Service Usage Admin); then create `(default)` in Native mode at `us-central1`, deploy `firestore.rules`, and run the live owner/cross-user/anonymous isolation test.
+**Live setup status:** the ignored local Web config matches the registered Firebase Web app; `math-solver.io` is authorized; Email/Password and Google providers are enabled; and the Email/Password create, sign-in, verification-email request, reset-email request, and cleanup paths passed temporary live tests. Interactive Google OAuth was not automated because no user Google session was supplied. Firestore's `(default)` Native database is active in existing multi-region `nam5` (preserve it). The owner published the checked-in rules; live verified-owner chat and tombstone create/read/update/delete pass, while anonymous, cross-user, unverified, and malformed operations are denied.
+
+**Custom email action handler:** `/auth/action` handles `verifyEmail`, `resetPassword`, and `recoverEmail` codes inside the MathSolver UI. It accepts only same-origin continue URLs and feeds successful verification/reset state back to `AuthContext`. Firebase controls the email's initial destination in Authentication → Templates, not through the client `ActionCodeSettings.url` (that value is only `continueUrl`). After the route reaches production, set the customized action URL for **Email address verification** and **Password reset** to `https://math-solver.io/auth/action`; use the same URL for email-change/recovery if that flow is enabled. `math-solver.io` must remain authorized. This web-only flow needs neither Firebase Hosting nor `linkDomain`, and keeps `handleCodeInApp: false`.
 
 ## SEO infrastructure (current)
 
@@ -58,5 +79,6 @@ Chat text, OCR text, generated tests, generated explanations, and up to 20 recen
 - **`isCorrect` badge** — supported in the `Message` type / `MessageList` but never set anywhere.
 - **Rate limiter is in-memory per instance** (`captcha.ts`, 60/hr) — won't hold globally across Cloud Run's up-to-20 instances. Needs a distributed store at scale.
 - **`DraggableCalculator` uses `new Function()`** to eval expressions — arithmetic only, but arbitrary-eval-flavored; keep inputs constrained.
-- **Firebase sync is configuration-gated.** Auth is configured, but do not ship active production Web config until Firestore is enabled and rules are deployed; otherwise sign-in works while notebook sync reports an error.
+- **Firebase email templates still need the custom action URL.** Until the new route is deployed and the verification/reset templates point to `https://math-solver.io/auth/action`, Firebase's hosted action widget remains the first page opened from emails.
 - **No Firebase Storage/image sync.** Image previews remain on the originating browser; OCR text makes the synced conversation usable.
+- **Daily streaks are not cross-device.** Mistake schedules sync inside verified notebooks, but the lightweight daily activity/streak record remains in the current browser's UID-scoped local storage.

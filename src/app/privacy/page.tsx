@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
             <li><strong>Input Data:</strong> The text, equations, and images of math problems you upload or type into our solver for the purpose of receiving step-by-step solutions.</li>
             <li><strong>Optional Account Data:</strong> If you choose to create an account or sign in with Google, we receive your Firebase user identifier and email address. Google sign-in can also provide basic profile information such as your name.</li>
             <li><strong>Notebook Data:</strong> Signed-out chats are stored in your browser. If you sign in, chat text, extracted OCR text, solutions, generated practice tests, and practice-attempt results are also stored in your private cloud notebook. Uploaded image previews remain stored only in the browser in the current sync version.</li>
-            <li><strong>Usage Data:</strong> Information about how you use our website, including pages visited, features used, and time spent on the site. We use standard analytics tools to collect this data.</li>
+            <li><strong>Usage Data:</strong> Information about how you use our website, including pages visited, learning features used, review outcomes, and time spent on the site. Math problems, answer choices, uploaded images, email addresses, and notebook identifiers are not included in our learning-event parameters.</li>
             <li><strong>Device Data:</strong> We may automatically collect device information, such as your IP address, browser type, operating system, and geographic location (at the city or country level).</li>
           </ul>
 
@@ -60,7 +60,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">5. Third-Party Services</h2>
           <p className="mb-4">
-            We use service providers to operate MathSolver. These include Microsoft Azure OpenAI for solutions and practice content, Google Gemini for OCR, Google Firebase Authentication and Cloud Firestore for optional account and notebook sync, Cloudflare Turnstile for abuse protection, and Google Analytics for usage analytics.
+            We use service providers to operate MathSolver. These include Google Gemini for solutions, practice content, and OCR; Google Firebase Authentication and Cloud Firestore for optional account and notebook sync; Cloudflare Turnstile for abuse protection; and Google Analytics for usage analytics.
           </p>
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">6. Data Security</h2>

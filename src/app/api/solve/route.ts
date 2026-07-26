@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/captcha';
 import { getCalculator } from '@/lib/calculators';
+import { streamGeminiText, type GeminiMessage } from '@/lib/gemini';
 
 // System prompt defining the AI's persona and formatting rules
 const MATH_TUTOR_PROMPT = `You are MathSolver, an expert AI math tutor. Your goal is to provide clear, visually distinct, and step-by-step solutions to mathematical problems. Start directly with the steps.
@@ -40,17 +41,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.AZURE_OPENAI_API_KEY;
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-
-    if (!apiKey || !endpoint) {
-      console.error('Missing Azure OpenAI environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error.' },
-        { status: 500 }
-      );
-    }
-
     const calculatorSlug =
       typeof source === 'string' && source.startsWith('calculator:')
         ? source.slice('calculator:'.length)
@@ -64,89 +54,33 @@ The user started this chat from the ${calculator.name}. Apply this trusted topic
 ${calculator.solverInstruction}`
       : MATH_TUTOR_PROMPT;
 
-    // Construct the payload for Azure OpenAI.
-    // Calculator instructions are looked up from the server registry, never trusted from client text.
-    const payload = {
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ],
-      temperature: 0.2, // Low temperature for more deterministic, accurate math logic
-      max_tokens: 2000,
-      stream: true,
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': apiKey,
-      },
-      body: JSON.stringify(payload),
+    const geminiMessages = messages.flatMap((message): GeminiMessage[] => {
+      if (!message || typeof message !== 'object') return [];
+      const role = 'role' in message ? message.role : undefined;
+      const content = 'content' in message ? message.content : undefined;
+      if (
+        (role !== 'user' && role !== 'assistant') ||
+        typeof content !== 'string'
+      ) {
+        return [];
+      }
+      return [{ role: role === 'assistant' ? 'model' : 'user', text: content }];
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Azure OpenAI API Error:', response.status, errorData);
+    if (geminiMessages.length === 0) {
       return NextResponse.json(
-        { error: 'Failed to communicate with AI provider.' },
-        { status: response.status }
+        { error: 'Invalid request format. Expected text messages.' },
+        { status: 400 }
       );
     }
 
-    if (!response.body) {
-      throw new Error('No body returned from Azure OpenAI');
-    }
-
-    // Create a robust stream that converts Azure's SSE format into clean text chunks
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-              const trimmedLine = line.trim();
-              if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
-              if (trimmedLine === 'data: [DONE]') continue;
-
-              try {
-                const data = JSON.parse(trimmedLine.slice(6));
-                const content = data.choices?.[0]?.delta?.content;
-                if (content) {
-                  controller.enqueue(new TextEncoder().encode(content));
-                }
-              } catch (e) {
-                console.warn('Could not parse SSE line', trimmedLine, e);
-              }
-            }
-          }
-
-          // Flush whatever is left in the buffer
-          if (buffer.trim() && buffer.startsWith('data: ') && buffer.trim() !== 'data: [DONE]') {
-            try {
-              const data = JSON.parse(buffer.trim().slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) {
-                controller.enqueue(new TextEncoder().encode(content));
-              }
-            } catch { }
-          }
-        } catch (e) {
-          console.error('Error reading stream', e);
-        } finally {
-          controller.close();
-        }
-      }
+    // Calculator instructions are looked up from the server registry, never
+    // trusted from client text.
+    const stream = await streamGeminiText({
+      systemInstruction: systemPrompt,
+      messages: geminiMessages,
+      temperature: 0.2,
+      maxOutputTokens: 2000,
     });
 
     return new Response(stream, {

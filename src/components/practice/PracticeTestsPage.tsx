@@ -3,9 +3,17 @@
 import { useChatContext } from "@/context/ChatContext";
 import { useUI } from "@/context/UIContext";
 import { useRouter } from "next/navigation";
-import { BookOpen, ArrowRight, ClipboardList, Sparkles } from "lucide-react";
+import {
+  BookOpen,
+  ArrowRight,
+  Brain,
+  ClipboardList,
+  Clock3,
+  Sparkles,
+} from "lucide-react";
 import { Question } from "@/context/UIContext";
 import { PracticeAttempt } from "@/components/chat/MessageList";
+import { trackEvent } from "@/lib/analytics";
 
 type PracticeTestEntry = {
   chatId: string;
@@ -17,8 +25,13 @@ type PracticeTestEntry = {
 };
 
 export default function PracticeTestsPage() {
-  const { chats, switchChat } = useChatContext();
-  const { openPracticePanel } = useUI();
+  const {
+    chats,
+    switchChat,
+    reviewItems,
+    dueReviewItems,
+  } = useChatContext();
+  const { openPracticePanel, openReviewPanel } = useUI();
   const router = useRouter();
 
   // Scan all chats for messages with practice tests
@@ -51,6 +64,18 @@ export default function PracticeTestsPage() {
     router.push("/");
   };
 
+  const handleReviewClick = () => {
+    const reviewBatch = dueReviewItems.slice(0, 5);
+    trackEvent("review_queue_started", {
+      question_count: reviewBatch.length,
+      source: "practice_library",
+    });
+    openReviewPanel(reviewBatch);
+    router.push("/");
+  };
+
+  const nextReviewAt = reviewItems[0]?.question.reviewState?.dueAt;
+
   return (
     <div className="h-full w-full flex flex-col">
       {/* Header */}
@@ -73,6 +98,40 @@ export default function PracticeTestsPage() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 md:px-10 pb-10">
         <div className="max-w-4xl mx-auto">
+          {dueReviewItems.length > 0 ? (
+            <button
+              type="button"
+              onClick={handleReviewClick}
+              className="group mb-6 flex w-full items-center gap-4 rounded-2xl border border-primary-200 bg-gradient-to-r from-primary-50 to-white p-5 text-left shadow-sm transition-all hover:border-primary-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-primary-800/70 dark:from-primary-950/45 dark:to-zinc-900"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-sm">
+                <Brain className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-foreground">
+                  Review {Math.min(dueReviewItems.length, 5)} due{" "}
+                  {dueReviewItems.length === 1 ? "mistake" : "mistakes"}
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  A focused set from questions you missed before.
+                </span>
+              </span>
+              <ArrowRight className="h-5 w-5 shrink-0 text-primary-500 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          ) : nextReviewAt ? (
+            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-black/8 bg-white px-4 py-3 text-sm text-muted-foreground dark:border-white/8 dark:bg-zinc-900">
+              <Clock3 className="h-4 w-4 shrink-0 text-primary-500" />
+              <span>
+                You&apos;re caught up. Next mistake review is due{" "}
+                {new Intl.DateTimeFormat(undefined, {
+                  month: "short",
+                  day: "numeric",
+                }).format(nextReviewAt)}
+                .
+              </span>
+            </div>
+          ) : null}
+
           {sortedTests.length === 0 ? (
             /* Empty State */
             <div className="flex flex-col items-center justify-center text-center py-24 px-4">

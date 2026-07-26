@@ -1,13 +1,23 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import {
   Message,
   PracticeAttempt,
 } from "@/components/chat/MessageList";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
-import { Question } from "@/context/UIContext";
+import { Question, type ReviewItem } from "@/context/UIContext";
 import { useAuth } from "@/context/AuthContext";
+import { useLearningProgress } from "@/context/LearningProgressContext";
+import type { ReviewState } from "@/lib/learning-progress";
 import {
   deleteCloudChat,
   loadCloudNotebook,
@@ -27,6 +37,7 @@ export type Chat = {
 export type CloudSyncState =
   | "unavailable"
   | "signed-out"
+  | "verification-required"
   | "syncing"
   | "synced"
   | "error";
@@ -38,6 +49,8 @@ type ChatContextType = {
   messages: Message[];
   isLoading: boolean;
   cloudSyncState: CloudSyncState;
+  reviewItems: ReviewItem[];
+  dueReviewItems: ReviewItem[];
   createNewChat: () => void;
   switchChat: (id: string) => void;
   deleteChat: (id: string) => void;
@@ -57,6 +70,11 @@ type ChatContextType = {
   savePracticeAttempt: (
     messageId: string,
     attempt: PracticeAttempt,
+  ) => void;
+  saveQuestionReviewState: (
+    messageId: string,
+    questionIndex: number,
+    reviewState: ReviewState | undefined,
   ) => void;
 };
 
@@ -127,7 +145,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [cloudSyncState, setCloudSyncState] =
     useState<CloudSyncState>("unavailable");
   const { getToken } = useTurnstile();
-  const { user, isAuthReady, isFirebaseEnabled } = useAuth();
+  const { user, isAuthReady, isFirebaseEnabled, canSyncNotebook } = useAuth();
+  const { recordLearningActivity } = useLearningProgress();
 
   // Keep a ref so the streaming callback can always read the latest chats
   const chatsRef = useRef(chats);
@@ -163,6 +182,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const localChats = mergeChats(cachedAccountChats, guestChats);
       chatsRef.current = localChats;
       setChats(localChats);
+
+      if (!canSyncNotebook) {
+        saveChatsToStorage(localChats, accountStorageKey);
+        setCloudSyncState("verification-required");
+        setHydrated(true);
+        return;
+      }
+
       setCloudSyncState("syncing");
 
       try {
@@ -201,7 +228,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthReady, isFirebaseEnabled, user]);
+  }, [canSyncNotebook, isAuthReady, isFirebaseEnabled, user]);
 
   // ── Persist whenever chats change (after hydration) ─
   useEffect(() => {
@@ -221,6 +248,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       !hydrated ||
       !user ||
       !isFirebaseEnabled ||
+      !canSyncNotebook ||
       isLoading
     ) {
       return;
@@ -247,12 +275,49 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }, CLOUD_SYNC_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [chats, hydrated, isFirebaseEnabled, isLoading, user]);
+  }, [
+    canSyncNotebook,
+    chats,
+    hydrated,
+    isFirebaseEnabled,
+    isLoading,
+    user,
+  ]);
 
   // Derived messages for the active chat
   const activeChat = chats.find((c) => c.id === activeChatId);
   const activeChatSource = activeChat?.source ?? null;
   const messages = activeChat?.messages ?? [];
+  const reviewItems = useMemo(() => {
+    const items: ReviewItem[] = [];
+
+    for (const chat of chats) {
+      for (const message of chat.messages) {
+        message.practiceTest?.questions.forEach((question, questionIndex) => {
+          if (!question.reviewState) return;
+          items.push({
+            messageId: message.id,
+            questionIndex,
+            question,
+            title: message.practiceTest?.title ?? chat.title,
+          });
+        });
+      }
+    }
+
+    return items.sort(
+      (left, right) =>
+        left.question.reviewState!.dueAt -
+        right.question.reviewState!.dueAt,
+    );
+  }, [chats]);
+  const dueReviewItems = useMemo(
+    () =>
+      reviewItems.filter(
+        (item) => item.question.reviewState!.dueAt <= Date.now(),
+      ),
+    [reviewItems],
+  );
 
   // ── Actions ─────────────────────────────────────────
 
@@ -274,7 +339,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setActiveChatId(null);
       }
       lastCloudVersionsRef.current.delete(id);
-      if (user && isFirebaseEnabled) {
+      if (user && isFirebaseEnabled && canSyncNotebook) {
         setCloudSyncState("syncing");
         void deleteCloudChat(user.uid, id)
           .then(() => setCloudSyncState("synced"))
@@ -284,7 +349,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
       }
     },
-    [activeChatId, isFirebaseEnabled, user]
+    [activeChatId, canSyncNotebook, isFirebaseEnabled, user]
   );
 
   const savePracticeToMessage = useCallback((messageId: string, practiceTest: { title: string; questions: Question[]; attempts?: PracticeAttempt[] }) => {
@@ -339,6 +404,56 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   }
                 : message,
             ),
+          };
+        }),
+      );
+    },
+    [],
+  );
+
+  const saveQuestionReviewState = useCallback(
+    (
+      messageId: string,
+      questionIndex: number,
+      reviewState: ReviewState | undefined,
+    ) => {
+      setChats((previousChats) =>
+        previousChats.map((chat) => {
+          const targetMessage = chat.messages.find(
+            (message) => message.id === messageId,
+          );
+          if (
+            !targetMessage?.practiceTest?.questions[questionIndex]
+          ) {
+            return chat;
+          }
+
+          return {
+            ...chat,
+            updatedAt: Date.now(),
+            messages: chat.messages.map((message) => {
+              if (message.id !== messageId || !message.practiceTest) {
+                return message;
+              }
+
+              return {
+                ...message,
+                practiceTest: {
+                  ...message.practiceTest,
+                  questions: message.practiceTest.questions.map(
+                    (question, index) => {
+                      if (index !== questionIndex) return question;
+                      if (reviewState) {
+                        return { ...question, reviewState };
+                      }
+                      const questionWithoutReview = { ...question };
+                      delete questionWithoutReview.reviewState;
+                      return questionWithoutReview;
+                    },
+                  ),
+                },
+              };
+            }),
           };
         }),
       );
@@ -466,6 +581,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             )
           );
         }
+        if (streamedContent.trim()) {
+          recordLearningActivity("solve");
+        }
       } catch (error) {
         console.error("Error solving math problem:", error);
         const capturedChatId = chatId;
@@ -491,7 +609,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [activeChatId, getToken, isLoading]
+    [activeChatId, getToken, isLoading, recordLearningActivity]
   );
 
   return (
@@ -503,12 +621,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         messages,
         isLoading,
         cloudSyncState,
+        reviewItems,
+        dueReviewItems,
         createNewChat,
         switchChat,
         deleteChat,
         sendMessage,
         savePracticeToMessage,
         savePracticeAttempt,
+        saveQuestionReviewState,
       }}
     >
       {children}

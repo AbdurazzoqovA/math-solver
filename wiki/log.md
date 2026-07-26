@@ -50,3 +50,24 @@ Verified the ignored Web config exactly matches the registered `math-solver-e3a5
 
 ## [2026-07-26] change | Applied official Google sign-in branding
 Replaced the generic account silhouette in the “Sync your notebook” dialog with Google's pre-approved light “Sign in with Google” button asset while preserving the Firebase popup flow. The exact official asset path is allowlisted through Next's image optimizer so the logo, type, spacing, colors, and boundary stay aligned with Google's current sign-in branding guidance.
+
+## [2026-07-26] change | Added one-tap post-solution learning actions
+Replaced the latest answer's single oversized practice CTA with a horizontally scrollable “Keep learning” row that detects numbered solution steps, sends contextual “explain step N” follow-ups, requests a same-difficulty problem without revealing its answer, and generates or reopens the existing practice quiz. Actions are suppressed during streaming and on failed solves; historical saved-practice access remains intact. Added isolated parsing/prompt helpers and updated [[product-overview]], [[growth-strategy]], and [[codebase-map]].
+
+## [2026-07-26] change | Completed verified authentication journey
+Added Email/Password activation with resend and return-state refresh, password reset with neutral account-discovery messaging, Google sign-in, account/session status, and verified-only cloud notebook gating in both the client and Firestore rules while keeping guest mode local-first. The five-case rules emulator suite passes. Live Auth accepted temporary signup, verification-email, reset-email, sign-in, and cleanup tests; Firestore exists in Native mode at `nam5` and rejects anonymous, cross-user, and unverified access. The supplied service account cannot publish rules (`403`), so an owner rules deployment and verified-owner retest remain.
+
+## [2026-07-26] change | Switched solver and practice from Azure to Gemini
+Replaced the failing local Azure-only solution and practice calls with a shared server-only Gemini 3.1 flash-lite adapter while retaining streamed step formatting and structured quiz JSON. Reused the owner’s existing Gemini credential only in ignored local configuration, documented `GOOGLE_CLOUD_API_KEY` plus optional `GEMINI_MODEL`, updated privacy/provider documentation, and verified a real local streamed solve plus a four-question practice response.
+
+## [2026-07-26] change | Verified live Firestore rules and added direct email actions
+Recorded the owner-published verified-account rules after live owner chat/tombstone CRUD and unverified/cross-user/anonymous/malformed denial tests passed. Added a noindex `/auth/action` handler for verification, password reset, and email recovery with same-origin continue guards, branded success/error states, and safe session return handling. Firebase verification/reset templates still need to target the route after deployment.
+
+## [2026-07-26] change | Fixed and scaled post-solution actions
+Fixed the transparent composer gradient intercepting clicks on Explain, Similar problem, and Quiz me by limiting pointer events to the composer itself. Replaced per-step chips with one native accessible step picker that scales to 20+ steps, added visible retryable quiz errors, and preserved the similar-problem no-answer prompt. A real Gemini-completed answer passed browser checks for short/20-step pickers, Explain and Similar request payloads, quiz loading/failure/retry, and the four-question practice-panel transition.
+
+## [2026-07-26] change | Added mistake review and a daily learning streak
+Persisted first-attempt practice mistakes on their existing saved questions, added a five-item due queue and reusable review mode with 1→3→7→14-day scheduling, one-day lapse resets, and manual removal, and made those schedules part of the existing verified notebook sync. Added a separate privacy-light local progress layer that counts two distinct solve/practice/review activities per local day, merges guest progress into UID-scoped browser storage, and shows a quiet sidebar goal/streak. Unit tests cover scheduling, merge, rollover, and streak behavior; browser checks covered wrong-answer persistence, due review, interval advance, successful solve credit, and daily-goal completion.
+
+## [2026-07-26] change | Made retention actions discoverable and measurable
+Added a due-review badge to Practice Tests and made the daily-goal card recommend the next eligible solve, review, or practice action. Added a content-free GA4 contract for returns, activity, mistake capture, review entry/outcomes/completion/removal, and goal completion, plus a documented dashboard funnel. Desktop browser QA covered previous-day return, solve→review recommendation, queue completion, event payloads, and streak rollover; mobile QA found no horizontal overflow; a live temporary Email/Password session confirmed guest progress moved into UID-scoped storage and was deleted afterward.

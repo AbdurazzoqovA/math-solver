@@ -86,12 +86,12 @@ Microsoft Math Solver's superpower was heavy localization; that multilingual dem
 
 Homework traffic is transactional — converting it needs a **forward-looking goal** (streak, exam date, mastery %). Duolingo: 55% return next day to keep a streak; streaks cut churn 47%→28% and drove ~4.5× DAU.
 
-1. **Streaks + daily goal** — highest-leverage mechanic in edtech; works pre-accounts via localStorage.
-2. **Lightweight accounts + synced notebook** — the optional Email/Password or Google account + private Firestore chat/practice sync foundation is implemented as of 2026-07-26, preserving the no-login path. Course folders remain unbuilt.
-3. **Daily mistake-review queue (spaced repetition)** — auto-build a 5-min queue from wrong answers. The `PracticePanel` already *tracks* wrong answers then discards them. This is exactly what Quizlet paywalled. Hide the algorithm; show one tap: "Review 5 problems".
+1. **Streaks + daily goal (shipped in code 2026-07-26)** — a deliberately lightweight, local-first two-activity goal now counts distinct solves, completed practice, and completed reviews. It works before signup, uses account-scoped browser storage after Firebase sign-in, merges guest progress, and stays quiet/non-punitive in the sidebar. The card recommends the next eligible action, and the Practice Tests navigation shows a due-review badge.
+2. **Lightweight accounts + synced notebook** — the optional Google or verified Email/Password journey and private Firestore chat/practice sync foundation are implemented as of 2026-07-26, preserving the no-login path. Live verified-owner/isolation tests pass; course folders remain unbuilt.
+3. **Daily mistake-review queue (shipped in code 2026-07-26)** — first-attempt misses now persist on the existing saved question and feed a one-tap queue of up to five due problems. Correct reviews use 1→3→7→14-day intervals; misses reset to one day. The learner can remove a bad AI-generated item, and verified notebook sync carries review state with its source practice test.
 4. **Exam-prep tracks (SAT/ACT/AP/GCSE)** — external deadline → multi-month daily use. Pairs with exam-hub SEO pages.
 5. **PWA + streak-reminder push** — installable; prompt install right after a solved problem, never on load (iOS needs home-screen install first).
-6. **One-tap follow-ups on every solution** — "explain step 3" / "give me a similar problem" / "quiz me" buttons. Turns a 40-sec lookup into a 10-min session using existing chat.
+6. **One-tap follow-ups on every solution (shipped 2026-07-26)** — the latest completed solution offers one scalable numbered-step picker plus "similar problem" and "quiz me" actions. The first two reuse contextual chat; the third reuses saved/generated practice. This targets the strategy's 3+ interactions-per-session goal without a new model or API.
 7. **Mastery dashboard + weekly email** — per-topic progress ("Quadratics: mastered — next: factoring").
 - **Skipped:** community/leaderboards — Brainly owns peer Q&A (350M MAU); expensive to bootstrap. Revisit only at large scale.
 
@@ -99,9 +99,9 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 
 ## Roadmap
 
-**Now (wks 1–4):** the first 43 calculator pages, graphing tool, and 47-URL sitemap are shipped and were confirmed deployed on 2026-07-24. Practice completion scores now persist with each saved test. Firebase Auth/Web app/domain setup is complete; the owner must still enable Firestore, create the database, and deploy rules before notebook sync launches. Next: finish that Firestore step; submit and inspect calculator pages in Search Console; ship 4–6 alternative/comparison pages; add the streak counter, one-tap follow-ups, and GA4 events for solves, calculator starts, practice starts, and returns.
+**Now (wks 1–4):** the first 43 calculator pages, graphing tool, 47-URL sitemap, persisted practice scores, one-tap solution follow-ups, production-ready auth journey, mistake review, and daily goal/streak are shipped in code. Firebase Auth/Web app/domain setup is complete; Firestore exists in `nam5`; verified-owner CRUD and isolation tests pass live. Privacy-conscious retention events now cover return, first mistake saved, review entry/outcome/completion/removal, distinct learning activity, daily-goal actions, and daily-goal completion without sending math content or identity fields. Next: deploy the custom email-action route and point Firebase verification/reset templates to it; submit and inspect calculator pages in Search Console; ship 4–6 alternative/comparison pages; then inspect the retention funnel before investing in mastery or reminders.
 
-**Next (mo 1–3):** add course folders and a daily mistake-review queue on the synced notebook; worked-example problem library (quality-gated); blog live with topic explainers; PWA install + post-solve prompt; distributed rate limiting (replace the in-memory limiter).
+**Next (mo 1–3):** use review/streak behavior to decide whether cross-device progress sync and topic-level mastery are justified; add course folders; build the quality-gated worked-example library; take the blog live with topic explainers; add a PWA install prompt after successful solves; replace the in-memory rate limiter.
 
 **Later (mo 3–6+):** exam-prep tracks with progress; mastery dashboard + weekly email; push notifications (timed to evening homework hours); answer-verification / "checked" badge; localization of top calculator pages.
 
@@ -115,3 +115,7 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 - **Practice completion** — share of solutions that become a started (and finished) practice test.
 - **Accuracy complaints** per 1,000 solves — one wrong answer at homework crunch is a permanent churn event.
 - **Seasonality** — edtech peaks Sept/Jan/March, troughs in summer. The May→July 2026 growth happened in the trough, so September should amplify it. Plan exam-season pushes (May AP/finals, SAT dates) as re-activation moments.
+
+### Retention dashboard after release
+
+Use one GA4 exploration funnel: `learning_return` → `review_queue_started` → `review_queue_completed` → `daily_goal_completed`. Segment by `days_away` and review `source`, then keep four scorecards beside it: returned learners, review start→completion rate, first-try review accuracy (`first_try_correct / reviewed_count`), and daily-goal completion count. Treat `review_item_removed / mistake_saved` as the AI-question quality warning. Do not add problem text, answers, emails, Firebase IDs, chat/question IDs, or images as analytics parameters.

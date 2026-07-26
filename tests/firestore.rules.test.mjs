@@ -36,6 +36,12 @@ function validChat(id = "chat-1") {
   };
 }
 
+function verifiedContext(userId) {
+  return testEnvironment.authenticatedContext(userId, {
+    email_verified: true,
+  });
+}
+
 test.afterEach(async () => {
   await testEnvironment.clearFirestore();
 });
@@ -45,7 +51,7 @@ test.after(async () => {
 });
 
 test("a signed-in user can create, read, and delete their own chat", async () => {
-  const ownerDb = testEnvironment.authenticatedContext("owner").firestore();
+  const ownerDb = verifiedContext("owner").firestore();
   const chatRef = doc(ownerDb, "users", "owner", "chats", "chat-1");
 
   await assertSucceeds(setDoc(chatRef, validChat()));
@@ -62,7 +68,7 @@ test("other users and signed-out clients cannot access a private chat", async ()
   });
 
   const otherUserDb = testEnvironment
-    .authenticatedContext("other-user")
+    .authenticatedContext("other-user", { email_verified: true })
     .firestore();
   const signedOutDb = testEnvironment.unauthenticatedContext().firestore();
   const otherUserChatRef = doc(
@@ -86,7 +92,7 @@ test("other users and signed-out clients cannot access a private chat", async ()
 });
 
 test("malformed chat documents are rejected", async () => {
-  const ownerDb = testEnvironment.authenticatedContext("owner").firestore();
+  const ownerDb = verifiedContext("owner").firestore();
   const chatRef = doc(ownerDb, "users", "owner", "chats", "chat-1");
 
   await assertFails(
@@ -98,9 +104,9 @@ test("malformed chat documents are rejected", async () => {
 });
 
 test("only the owner can write and read chat deletion tombstones", async () => {
-  const ownerDb = testEnvironment.authenticatedContext("owner").firestore();
+  const ownerDb = verifiedContext("owner").firestore();
   const otherUserDb = testEnvironment
-    .authenticatedContext("other-user")
+    .authenticatedContext("other-user", { email_verified: true })
     .firestore();
   const ownerDeletionRef = doc(
     ownerDb,
@@ -121,4 +127,28 @@ test("only the owner can write and read chat deletion tombstones", async () => {
   await assertSucceeds(getDoc(ownerDeletionRef));
   await assertFails(getDoc(otherUserDeletionRef));
   await assertFails(setDoc(otherUserDeletionRef, { deletedAt: 400 }));
+});
+
+test("an unverified account cannot access cloud notebook data", async () => {
+  const unverifiedDb = testEnvironment
+    .authenticatedContext("owner", { email_verified: false })
+    .firestore();
+  const chatRef = doc(
+    unverifiedDb,
+    "users",
+    "owner",
+    "chats",
+    "chat-1",
+  );
+  const deletionRef = doc(
+    unverifiedDb,
+    "users",
+    "owner",
+    "chatDeletions",
+    "chat-1",
+  );
+
+  await assertFails(setDoc(chatRef, validChat()));
+  await assertFails(getDoc(chatRef));
+  await assertFails(setDoc(deletionRef, { deletedAt: 300 }));
 });

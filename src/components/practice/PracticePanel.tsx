@@ -2,17 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { useUI } from "@/context/UIContext";
-import { Loader2, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { Loader2, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useChatContext } from "@/context/ChatContext";
+import { useLearningProgress } from "@/context/LearningProgressContext";
+import {
+  scheduleInitialMistake,
+  scheduleReview,
+  type ReviewState,
+} from "@/lib/learning-progress";
+import { trackEvent } from "@/lib/analytics";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
 
 export default function PracticePanel() {
-  const { isPracticePanelOpen, closePracticePanel, practiceTopic, practiceMessageId, practiceQuestions, setPracticeQuestions } = useUI();
-  const { savePracticeToMessage, savePracticeAttempt } = useChatContext();
+  const {
+    isPracticePanelOpen,
+    closePracticePanel,
+    practiceTopic,
+    practiceMessageId,
+    practiceQuestions,
+    practiceMode,
+    practiceReviewItems,
+    setPracticeQuestions,
+  } = useUI();
+  const {
+    savePracticeToMessage,
+    savePracticeAttempt,
+    saveQuestionReviewState,
+  } = useChatContext();
+  const { recordLearningActivity } = useLearningProgress();
   const { getToken } = useTurnstile();
   
   const questions = practiceQuestions;
@@ -57,16 +78,58 @@ export default function PracticePanel() {
   const currentWrongGuesses = allWrongGuesses[currentIndex] ?? new Set<number>();
   const isStepsShown = shownSteps.has(currentIndex);
 
+  const persistReviewState = (reviewState: ReviewState | undefined) => {
+    setPracticeQuestions((currentQuestions) =>
+      currentQuestions.map((question, index) => {
+        if (index !== currentIndex) return question;
+        if (reviewState) return { ...question, reviewState };
+        const nextQuestion = { ...question };
+        delete nextQuestion.reviewState;
+        return nextQuestion;
+      }),
+    );
+
+    const reviewTarget =
+      practiceMode === "review"
+        ? practiceReviewItems[currentIndex]
+        : practiceMessageId
+          ? {
+              messageId: practiceMessageId,
+              questionIndex: currentIndex,
+            }
+          : null;
+    if (reviewTarget) {
+      saveQuestionReviewState(
+        reviewTarget.messageId,
+        reviewTarget.questionIndex,
+        reviewState,
+      );
+    }
+  };
+
   const handleCheck = () => {
     if (currentSelectedOption === null) return;
     
     const isCorrect = currentSelectedOption === currentQ.correctAnswerIndex;
+    const isFirstAttempt = !answeredQuestions.has(currentIndex);
 
     if (isCorrect) {
       setCompletedQuestions(prev => new Set(prev).add(currentIndex));
-      if (!answeredQuestions.has(currentIndex)) {
+      if (isFirstAttempt) {
         setCorrectCount(prev => prev + 1);
         setAnsweredQuestions(prev => new Set(prev).add(currentIndex));
+      }
+      if (practiceMode === "review" && currentQ.reviewState) {
+        const nextReviewState = scheduleReview(
+          currentQ.reviewState,
+          true,
+        );
+        persistReviewState(nextReviewState);
+        trackEvent("review_answered", {
+          outcome: "correct",
+          attempt_number: currentWrongGuesses.size + 1,
+          next_interval_days: nextReviewState.intervalDays,
+        });
       }
     } else {
       setAllWrongGuesses(prev => {
@@ -74,9 +137,24 @@ export default function PracticePanel() {
         currentSet.add(currentSelectedOption);
         return { ...prev, [currentIndex]: currentSet };
       });
-      if (!answeredQuestions.has(currentIndex)) {
+      if (isFirstAttempt) {
         setWrongCount(prev => prev + 1);
         setAnsweredQuestions(prev => new Set(prev).add(currentIndex));
+        const nextReviewState =
+          currentQ.reviewState
+            ? scheduleReview(currentQ.reviewState, false)
+            : scheduleInitialMistake();
+        persistReviewState(nextReviewState);
+        if (practiceMode === "practice" && !currentQ.reviewState) {
+          trackEvent("mistake_saved");
+        }
+      }
+      if (practiceMode === "review") {
+        trackEvent("review_answered", {
+          outcome: "wrong",
+          attempt_number: currentWrongGuesses.size + 1,
+          next_interval_days: 1,
+        });
       }
     }
   };
@@ -94,7 +172,19 @@ export default function PracticePanel() {
   };
 
   const handleFinish = () => {
-    if (practiceMessageId) {
+    if (practiceMode === "review") {
+      if (answeredQuestions.size > 0) {
+        recordLearningActivity("review");
+      }
+      trackEvent("review_queue_completed", {
+        question_count: questions.length,
+        reviewed_count: answeredQuestions.size,
+        first_try_correct: correctCount,
+      });
+    } else {
+      recordLearningActivity("practice");
+    }
+    if (practiceMode === "practice" && practiceMessageId) {
       savePracticeAttempt(practiceMessageId, {
         id: crypto.randomUUID(),
         completedAt: Date.now(),
@@ -104,6 +194,19 @@ export default function PracticePanel() {
       });
     }
     closePracticePanel();
+  };
+
+  const handleRemoveFromReview = () => {
+    persistReviewState(undefined);
+    trackEvent("review_item_removed");
+    setCompletedQuestions((current) =>
+      new Set(current).add(currentIndex),
+    );
+    if (currentIndex === questions.length - 1) {
+      handleFinish();
+    } else {
+      goToNext();
+    }
   };
 
   const currentWrongGuessesSet = allWrongGuesses[currentIndex];
@@ -197,8 +300,14 @@ export default function PracticePanel() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 sm:p-5 border-b border-black/5 dark:border-white/5 shrink-0 bg-zinc-50 dark:bg-zinc-900/50">
         <div>
-          <h2 className="text-lg font-bold text-foreground leading-tight">Practice Test</h2>
-          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{shortTitle}</p>
+          <h2 className="text-lg font-bold text-foreground leading-tight">
+            {practiceMode === "review" ? "Mistake Review" : "Practice Test"}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+            {practiceMode === "review"
+              ? "Strengthen questions you missed before"
+              : shortTitle}
+          </p>
         </div>
         <button 
           onClick={closePracticePanel}
@@ -324,7 +433,11 @@ export default function PracticePanel() {
                     onClick={currentIndex === questions.length - 1 ? handleFinish : goToNext}
                     className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
                   >
-                    {currentIndex === questions.length - 1 ? 'Finish Practice' : 'Next Question'}
+                    {currentIndex === questions.length - 1
+                      ? practiceMode === "review"
+                        ? "Finish Review"
+                        : "Finish Practice"
+                      : "Next Question"}
                     {currentIndex !== questions.length - 1 && <ChevronRight className="w-4 h-4" />}
                   </button>
                 )}
@@ -340,6 +453,17 @@ export default function PracticePanel() {
                   </button>
                 )}
               </div>
+
+              {practiceMode === "review" && (
+                <button
+                  type="button"
+                  onClick={handleRemoveFromReview}
+                  className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  Remove from review
+                </button>
+              )}
 
               {/* Steps Area */}
               {canShowSteps && isStepsShown && currentQ.steps && (

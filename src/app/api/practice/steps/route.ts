@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/captcha';
+import { generateGeminiText } from '@/lib/gemini';
 
 const STEPS_PROMPT = `You are MathSolver, an expert AI math tutor. 
 Generate a step-by-step explanation for the provided multiple-choice math question.
@@ -46,17 +47,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.AZURE_OPENAI_API_KEY;
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-
-    if (!apiKey || !endpoint) {
-      console.error('Missing Azure OpenAI environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error.' },
-        { status: 500 }
-      );
-    }
-
     const correctOptionText = options[correctAnswerIndex];
     const userPrompt = `
 Generate the step-by-step explanation to arrive at the correct answer for this problem:
@@ -65,39 +55,15 @@ Options: ${JSON.stringify(options)}
 Correct Answer: Option ${correctAnswerIndex + 1} ("${correctOptionText}")
 `;
 
-    const payload = {
+    const content = await generateGeminiText({
+      systemInstruction: STEPS_PROMPT,
       messages: [
-        { role: 'system', content: STEPS_PROMPT },
-        { role: 'user', content: userPrompt }
+        { role: 'user', text: userPrompt },
       ],
-      temperature: 0.4, // slightly lower temperature for more deterministic logic steps
-      max_tokens: 2000,
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': apiKey,
-      },
-      body: JSON.stringify(payload),
+      temperature: 0.4,
+      maxOutputTokens: 2000,
+      responseMimeType: 'application/json',
     });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Azure OpenAI API Error:', response.status, errorData);
-      return NextResponse.json(
-        { error: 'Failed to communicate with AI provider.' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content returned from Azure OpenAI');
-    }
 
     try {
       // 1. Remove potential markdown wrappers
@@ -127,7 +93,7 @@ Correct Answer: Option ${correctAnswerIndex + 1} ("${correctOptionText}")
         return NextResponse.json(parsed);
       }
       
-    } catch (parseError) {
+    } catch {
       console.error('Failed to parse AI JSON response:', content);
       return NextResponse.json(
         { error: 'Failed to parse AI response.', details: content },

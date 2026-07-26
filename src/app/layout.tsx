@@ -39,6 +39,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import SplitLayoutWrapper from "@/components/layout/SplitLayoutWrapper";
 import TurnstileProvider from "@/components/providers/TurnstileProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import { LearningProgressProvider } from "@/context/LearningProgressContext";
 import Script from "next/script";
 
 export default function RootLayout({
@@ -102,8 +103,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TurnstileProvider>
             <AuthProvider>
-              <UIProvider>
-                <ChatProvider>
+              <LearningProgressProvider>
+                <UIProvider>
+                  <ChatProvider>
                   {/* Global Tools */}
                   <DraggableCalculator />
 
@@ -128,8 +130,9 @@ export default function RootLayout({
                       </SplitLayoutWrapper>
                     </div>
                   </div>
-                </ChatProvider>
-              </UIProvider>
+                  </ChatProvider>
+                </UIProvider>
+              </LearningProgressProvider>
             </AuthProvider>
           </TurnstileProvider>
         </ThemeProvider>

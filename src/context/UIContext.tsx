@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef } from "react";
+import type { ReviewState } from "@/lib/learning-progress";
 
 export type Step = {
   title: string;
@@ -8,10 +9,19 @@ export type Step = {
 };
 
 export type Question = {
+  id?: string;
   question: string;
   options: string[];
   correctAnswerIndex: number;
   steps?: string | Step[];
+  reviewState?: ReviewState;
+};
+
+export type ReviewItem = {
+  messageId: string;
+  questionIndex: number;
+  question: Question;
+  title: string;
 };
 
 type UIContextType = {
@@ -26,8 +36,11 @@ type UIContextType = {
   practiceTopic: string | null;
   practiceMessageId: string | null;
   practiceQuestions: Question[];
+  practiceMode: "practice" | "review";
+  practiceReviewItems: ReviewItem[];
   setPracticeQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
   openPracticePanel: (topic: string, questions: Question[], messageId?: string) => void;
+  openReviewPanel: (items: ReviewItem[]) => void;
   closePracticePanel: () => void;
   
   // Callback management for tools like calculator to insert values into active inputs
@@ -45,6 +58,11 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [practiceTopic, setPracticeTopic] = useState<string | null>(null);
   const [practiceMessageId, setPracticeMessageId] = useState<string | null>(null);
   const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
+  const [practiceMode, setPracticeMode] =
+    useState<"practice" | "review">("practice");
+  const [practiceReviewItems, setPracticeReviewItems] = useState<ReviewItem[]>(
+    [],
+  );
 
   const callbacks = useRef<Record<string, (val: string) => void>>({});
 
@@ -53,9 +71,21 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const openPracticePanel = useCallback((topic: string, questions: Question[], messageId?: string) => {
+    setPracticeMode("practice");
+    setPracticeReviewItems([]);
     setPracticeTopic(topic);
     setPracticeMessageId(messageId || null);
     setPracticeQuestions(questions);
+    setIsPracticePanelOpen(true);
+  }, []);
+
+  const openReviewPanel = useCallback((items: ReviewItem[]) => {
+    if (items.length === 0) return;
+    setPracticeMode("review");
+    setPracticeReviewItems(items);
+    setPracticeTopic("Mistake review");
+    setPracticeMessageId(null);
+    setPracticeQuestions(items.map((item) => item.question));
     setIsPracticePanelOpen(true);
   }, []);
 
@@ -65,6 +95,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setPracticeTopic(null);
       setPracticeMessageId(null);
       setPracticeQuestions([]);
+      setPracticeMode("practice");
+      setPracticeReviewItems([]);
     }, 300); // clear after animation
   }, []);
 
@@ -92,8 +124,11 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       practiceTopic,
       practiceMessageId,
       practiceQuestions,
+      practiceMode,
+      practiceReviewItems,
       setPracticeQuestions,
       openPracticePanel,
+      openReviewPanel,
       closePracticePanel,
       registerInsertCallback,
       unregisterInsertCallback,

@@ -9,11 +9,24 @@ import { useUI } from "@/context/UIContext";
 import Image from "next/image";
 import Link from "next/link";
 import AccountButton from "@/components/auth/AccountButton";
+import DailyGoal from "@/components/learning/DailyGoal";
+import { trackEvent } from "@/lib/analytics";
 
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
-  const { chats, activeChatId, createNewChat, switchChat, deleteChat } = useChatContext();
-  const { isMobileSidebarOpen, setMobileSidebarOpen } = useUI();
+  const {
+    chats,
+    activeChatId,
+    createNewChat,
+    switchChat,
+    deleteChat,
+    dueReviewItems,
+  } = useChatContext();
+  const {
+    isMobileSidebarOpen,
+    setMobileSidebarOpen,
+    openReviewPanel,
+  } = useUI();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -39,6 +52,21 @@ export default function Sidebar() {
   const handlePracticeTestsClick = () => {
     setMobileSidebarOpen(false);
     router.push("/practice-tests");
+  };
+
+  const handleOpenReview = () => {
+    const reviewBatch = dueReviewItems.slice(0, 5);
+    if (reviewBatch.length === 0) {
+      handlePracticeTestsClick();
+      return;
+    }
+    trackEvent("review_queue_started", {
+      question_count: reviewBatch.length,
+      source: "daily_goal",
+    });
+    openReviewPanel(reviewBatch);
+    setMobileSidebarOpen(false);
+    if (pathname !== "/") router.push("/");
   };
 
   const sidebarContent = (
@@ -117,11 +145,27 @@ export default function Sidebar() {
 
         <button 
           onClick={handlePracticeTestsClick}
-          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnPracticeTests ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
-          title="Practice Tests"
+          className={`relative w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnPracticeTests ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+          title={
+            dueReviewItems.length > 0
+              ? `Practice Tests — ${dueReviewItems.length} due for review`
+              : "Practice Tests"
+          }
         >
           <BookOpen className={`w-5 h-5 transition-colors shrink-0 ${isOnPracticeTests ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
           {isExpanded && <span className="font-medium text-sm truncate">Practice Tests</span>}
+          {dueReviewItems.length > 0 && (
+            <span
+              className={`flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white ${
+                isExpanded
+                  ? "ml-auto"
+                  : "absolute right-1 top-1"
+              }`}
+              aria-label={`${dueReviewItems.length} due for review`}
+            >
+              {dueReviewItems.length > 9 ? "9+" : dueReviewItems.length}
+            </span>
+          )}
         </button>
 
         {/* Recent Chats Section */}
@@ -165,6 +209,14 @@ export default function Sidebar() {
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2">
+        <DailyGoal
+          isExpanded={isExpanded}
+          dueReviewCount={dueReviewItems.length}
+          onStartSolve={handleNewChat}
+          onOpenPractice={handlePracticeTestsClick}
+          onOpenReview={handleOpenReview}
+        />
+
         <AccountButton isExpanded={isExpanded} />
 
         <button 

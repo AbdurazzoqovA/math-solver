@@ -47,7 +47,7 @@ export function ChatConversation({
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 via-background/60 to-transparent pt-20 pb-8 px-4 z-10">
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-background/90 via-background/60 to-transparent px-4 pb-8 pt-20">
         <div className="pointer-events-auto w-full max-w-4xl xl:max-w-5xl mx-auto md:px-4">
           <ChatInput onSubmit={onSubmit} disabled={isLoading} />
         </div>

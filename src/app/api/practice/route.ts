@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/captcha';
+import { generateGeminiText } from '@/lib/gemini';
 
 const PRACTICE_PROMPT = `You are MathSolver, an expert AI math tutor. 
 Generate exactly 4 multiple-choice practice questions based on the provided math topic or problem.
@@ -47,50 +48,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.AZURE_OPENAI_API_KEY;
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-
-    if (!apiKey || !endpoint) {
-      console.error('Missing Azure OpenAI environment variables');
-      return NextResponse.json(
-        { error: 'Server configuration error.' },
-        { status: 500 }
-      );
-    }
-
-    const payload = {
+    const content = await generateGeminiText({
+      systemInstruction: PRACTICE_PROMPT,
       messages: [
-        { role: 'system', content: PRACTICE_PROMPT },
-        { role: 'user', content: `Generate 4 practice questions for this topic/problem: ${topic}` }
+        {
+          role: 'user',
+          text: `Generate 4 practice questions for this topic/problem: ${topic}`,
+        },
       ],
       temperature: 0.7,
-      max_tokens: 3000,
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': apiKey,
-      },
-      body: JSON.stringify(payload),
+      maxOutputTokens: 3000,
+      responseMimeType: 'application/json',
     });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Azure OpenAI API Error:', response.status, errorData);
-      return NextResponse.json(
-        { error: 'Failed to communicate with AI provider.' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content returned from Azure OpenAI');
-    }
 
     try {
       // 1. Remove potential markdown wrappers
@@ -121,7 +90,7 @@ export async function POST(req: Request) {
         return NextResponse.json(parsed);
       }
       
-    } catch (parseError) {
+    } catch {
       console.error('Failed to parse AI JSON response:', content);
       return NextResponse.json(
         { error: 'Failed to parse AI response.', details: content },
