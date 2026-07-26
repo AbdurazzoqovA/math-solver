@@ -7,7 +7,7 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 - **Framework:** Next.js 16.1.6 (App Router), React 19.2, React Compiler (`babel-plugin-react-compiler`), TypeScript.
 - **Styling:** Tailwind CSS v4, `@tailwindcss/typography`, `framer-motion`, `lucide-react`, `next-themes`.
 - **Math:** KaTeX + `react-markdown` + `remark-math` + `rehype-katex`; `mathlive` for input; `react-resizable-panels` for split view.
-- **Build/host:** Docker (`Dockerfile`, Next `output: "standalone"`) → **Google Cloud Run** (`deploy.sh`; project `axial-willow-428621-n4`, `us-central1`, 4Gi/2CPU, max 20 instances).
+- **Build/host:** Docker (`Dockerfile`, `cloudbuild.yaml`, Next `output: "standalone"`) → Artifact Registry → **Google Cloud Run** (`deploy.sh`; project `axial-willow-428621-n4`, `us-central1`, 4Gi/2CPU, max 20 instances).
 
 ## External services / models
 
@@ -25,7 +25,7 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 
 Referenced: server-only `GOOGLE_CLOUD_API_KEY`; optional `GEMINI_MODEL` override (default `gemini-3.1-flash-lite`); server-only `PRESSROOM_API_KEY` for the blog; and Turnstile site + secret keys. Legacy Azure values may remain in owner-side deployment configuration but are no longer read by the application.
 
-Optional Firebase Web app values: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`. These public identifiers are listed in `.env.example`; they are not service-account credentials. Next embeds them at build time, so Docker/Cloud Build must receive them rather than only setting Cloud Run runtime env vars. `deploy.sh` loads the values from ignored local deployment configuration and updates the Cloud Run build environment while preserving existing runtime variables such as `PRESSROOM_API_KEY`.
+Optional Firebase Web app values: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`. These public identifiers are listed in `.env.example`; they are not service-account credentials. Next embeds them at build time, so Docker must receive them as build arguments rather than only setting Cloud Run runtime env vars. `deploy.sh` loads the values from ignored local configuration, supplies them to `cloudbuild.yaml`, and deploys the tagged image while preserving existing runtime variables such as `PRESSROOM_API_KEY`.
 
 ⚠️ **Security debt (fix before scaling traffic):** `deploy.sh` is safe to track and reads required values from ignored local `.env` files, but those values should still be rotated into Cloud Run secret management / Secret Manager before scaling traffic. Never print, echo, or commit them.
 

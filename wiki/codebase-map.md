@@ -91,7 +91,8 @@ src/
 
 # root
 Dockerfile                 # standalone Next.js image for Cloud Run
-deploy.sh                  # Cloud Run deploy — ⚠️ contains plaintext secrets, rotate & move out
+cloudbuild.yaml            # Docker build with explicit Firebase public build arguments
+deploy.sh                  # env-driven Cloud Build + tagged Cloud Run image deployment
 next.config.ts             # output: "standalone", React Compiler
 package.json               # deps & scripts
 firebase.json              # Firestore rules/emulator configuration

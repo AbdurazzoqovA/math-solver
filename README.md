@@ -129,8 +129,9 @@ as event parameters. The event table and dashboard funnel are documented in
 six Firebase values as build arguments, so production builds must pass them
 during the image build; setting them only on the running Cloud Run container is
 too late. `deploy.sh` loads the six values from ignored local deployment
-configuration and passes them to Cloud Build; it preserves
-existing Cloud Run runtime variables such as `PRESSROOM_API_KEY`.
+configuration, passes them to `cloudbuild.yaml` as Docker build arguments, and
+deploys the tagged Artifact Registry image. Existing Cloud Run runtime
+variables such as `PRESSROOM_API_KEY` are preserved.
 
 ## Verification
 

@@ -84,5 +84,8 @@ Moved the Blog link from the sidebar's primary navigation to its compact bottom 
 ## [2026-07-26] change | Hardened Cloud Run deployment configuration
 Replaced the secret-bearing local deployment helper with a tracked, env-driven Cloud Run deployment script. It loads Firebase's six public build-time values from ignored local configuration, sends them through the Cloud Build environment, and updates runtime values—including the server-only Pressroom key—without committing them.
 
+## [2026-07-26] change | Passed Firebase config into production Docker builds
+Replaced Cloud Run source-build environment flags with an explicit Cloud Build Docker step that supplies all six Firebase public values as Docker build arguments. Deployments now push a commit-tagged Artifact Registry image and deploy that image while preserving server runtime configuration.
+
 ## [2026-07-26] lint | Corrected MathGPT video infrastructure prerequisites
 Verified that Firebase Authentication and live verified-owner Firestore persistence already provide MathSolver's account and database foundation. Corrected [[mathgpt-video-research]] to reuse Firebase identity and Firestore for video quota/job state; the remaining additions are server-side token verification and atomic quota enforcement, an asynchronous render queue/worker, and private video storage/delivery.

@@ -27,10 +27,6 @@ load_env_file "$repo_dir/.env.local"
 load_env_file "$repo_dir/.env.development.local"
 
 for required_variable in \
-  GOOGLE_CLOUD_API_KEY \
-  TURNSTILE_SECRET_KEY \
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY \
-  PRESSROOM_API_KEY \
   NEXT_PUBLIC_FIREBASE_API_KEY \
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
   NEXT_PUBLIC_FIREBASE_PROJECT_ID \
@@ -40,14 +36,22 @@ for required_variable in \
   require_env "$required_variable"
 done
 
+cloud_project="axial-willow-428621-n4"
+cloud_region="us-central1"
+image_tag="${DEPLOY_IMAGE_TAG:-$(git -C "$repo_dir" rev-parse --short HEAD)}"
+image_uri="${cloud_region}-docker.pkg.dev/${cloud_project}/cloud-run-source-deploy/mathsolver:${image_tag}"
+
+gcloud builds submit "$repo_dir" \
+  --project "$cloud_project" \
+  --config "$repo_dir/cloudbuild.yaml" \
+  --substitutions "_IMAGE_URI=${image_uri},_NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN},_NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID},_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET},_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID},_NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}"
+
 gcloud run deploy mathsolver \
-  --source "$repo_dir" \
-  --region us-central1 \
+  --image "$image_uri" \
+  --region "$cloud_region" \
   --platform managed \
   --allow-unauthenticated \
   --memory 4Gi \
   --cpu 2 \
   --max-instances 20 \
-  --project axial-willow-428621-n4 \
-  --update-build-env-vars "NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN},NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID},NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET},NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID},NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}" \
-  --update-env-vars "GOOGLE_CLOUD_API_KEY=${GOOGLE_CLOUD_API_KEY},TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY},NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY},PRESSROOM_API_KEY=${PRESSROOM_API_KEY}"
+  --project "$cloud_project"
