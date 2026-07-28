@@ -33,6 +33,7 @@ ACTIVE_STATUSES = {
 }
 TERMINAL_STATUSES = {"ready", "unsupported", "failed"}
 MAX_EXTERNAL_UNSUPPORTED_ATTEMPTS = 2
+DEFAULT_DAILY_VIDEO_LIMIT = 10
 
 
 class UnsupportedLesson(RuntimeError):
@@ -288,9 +289,33 @@ def _finish_without_charge(
             return
         charged = bool(job.get("quotaCharged"))
         quota = quota_snapshot.to_dict() if quota_snapshot.exists else {}
-        used = max(0, int((quota or {}).get("used", 0)) - (1 if charged else 0))
-        limit = max(1, int((quota or {}).get("limit", 5)))
         now = int(time.time() * 1000)
+        period_key = time.strftime("%Y-%m-%d", time.gmtime(now / 1000))
+        stored_period_key = (quota or {}).get("periodKey")
+        used = (
+            max(0, int((quota or {}).get("used", 0)))
+            if stored_period_key == period_key
+            else 0
+        )
+        configured_limit = max(
+            1,
+            int(
+                os.environ.get(
+                    "VIDEO_FREE_LIMIT",
+                    str(DEFAULT_DAILY_VIDEO_LIMIT),
+                )
+            ),
+        )
+        limit = max(
+            configured_limit,
+            int((quota or {}).get("limit", configured_limit)),
+        )
+        should_refund = (
+            charged
+            and job.get("quotaPeriodKey") == period_key
+            and stored_period_key == period_key
+        )
+        used = max(0, used - (1 if should_refund else 0))
         transaction.update(
             job_reference,
             {
@@ -313,7 +338,12 @@ def _finish_without_charge(
         )
         transaction.set(
             quota_reference,
-            {"used": used, "limit": limit, "updatedAt": now},
+            {
+                "used": used,
+                "limit": limit,
+                "periodKey": period_key,
+                "updatedAt": now,
+            },
             merge=True,
         )
 

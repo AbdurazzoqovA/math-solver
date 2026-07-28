@@ -105,6 +105,10 @@ export function isVideoJobDocument(value: unknown): value is VideoJobDocument {
     Number.isInteger(value.attempt) &&
     value.attempt >= 1 &&
     typeof value.quotaCharged === "boolean" &&
+    (!("quotaPeriodKey" in value) ||
+      value.quotaPeriodKey === undefined ||
+      (typeof value.quotaPeriodKey === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(value.quotaPeriodKey))) &&
     typeof value.createdAt === "number" &&
     typeof value.updatedAt === "number" &&
     typeof value.expiresAt === "number" &&

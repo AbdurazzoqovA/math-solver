@@ -292,15 +292,16 @@ export default function VideoLibraryPage() {
               </div>
               <p className="ml-[52px] mt-2 max-w-2xl text-[15px] text-muted-foreground md:text-base">
                 Rewatch your private video explanations. Each one plays
-                continuously, with optional Practice pauses. Lessons remain
-                available for 14 days.
+                continuously, with optional Practice pauses. You can create up
+                to 10 free videos each day, and lessons remain available for 14
+                days.
               </p>
             </div>
             {user && canSyncNotebook && (
               <div className="flex items-center gap-2">
                 {quota && (
                   <span className="rounded-full border border-black/8 bg-white px-3 py-2 text-xs font-semibold text-muted-foreground dark:border-white/8 dark:bg-zinc-900">
-                    {quota.remaining} of {quota.limit} free videos left
+                    {quota.remaining} of {quota.limit} free videos left today
                   </span>
                 )}
                 <button

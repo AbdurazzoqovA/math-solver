@@ -13,21 +13,20 @@ import type {
 } from "@/lib/video/types";
 import { isVideoJobDocument } from "@/lib/video/validation";
 import { createPlaybackManifest } from "@/lib/video/storage";
+import {
+  DEFAULT_DAILY_VIDEO_LIMIT,
+  normalizeDailyVideoQuota,
+  type DailyVideoQuota,
+} from "@/lib/video/quota";
 
 const JOB_RETENTION_MS = 14 * 24 * 60 * 60 * 1_000;
-const DEFAULT_FREE_VIDEO_LIMIT = 5;
 const MAX_UNSUPPORTED_ATTEMPTS = 2;
-
-type VideoQuota = {
-  used: number;
-  limit: number;
-};
 
 function getFreeVideoLimit(): number {
   const configured = Number(process.env.VIDEO_FREE_LIMIT);
   return Number.isInteger(configured) && configured > 0
     ? configured
-    : DEFAULT_FREE_VIDEO_LIMIT;
+    : DEFAULT_DAILY_VIDEO_LIMIT;
 }
 
 function buildJobId(uid: string, requestKey: string): string {
@@ -37,30 +36,16 @@ function buildJobId(uid: string, requestKey: string): string {
     .slice(0, 40);
 }
 
-function quotaFromData(value: unknown): VideoQuota {
-  const limit = getFreeVideoLimit();
-  if (!value || typeof value !== "object") return { used: 0, limit };
-  const record = value as Record<string, unknown>;
-  const used =
-    typeof record.used === "number" &&
-    Number.isInteger(record.used) &&
-    record.used >= 0
-      ? record.used
-      : 0;
-  const storedLimit =
-    typeof record.limit === "number" &&
-    Number.isInteger(record.limit) &&
-    record.limit > 0
-      ? record.limit
-      : limit;
-  return { used, limit: storedLimit };
+function quotaFromData(value: unknown, now = Date.now()): DailyVideoQuota {
+  return normalizeDailyVideoQuota(value, getFreeVideoLimit(), now);
 }
 
-function publicQuota(quota: VideoQuota): PublicVideoQuota {
+function publicQuota(quota: DailyVideoQuota): PublicVideoQuota {
   return {
     used: quota.used,
     limit: quota.limit,
     remaining: Math.max(0, quota.limit - quota.used),
+    resetsAt: quota.resetsAt,
   };
 }
 
@@ -87,7 +72,7 @@ export async function createOrRestartVideoJob(
       transaction.get(jobRef),
       transaction.get(quotaRef),
     ]);
-    const quota = quotaFromData(quotaSnapshot.data());
+    const quota = quotaFromData(quotaSnapshot.data(), now);
     const existingData = jobSnapshot.data();
     const existing = isVideoJobDocument(existingData) ? existingData : null;
 
@@ -105,7 +90,7 @@ export async function createOrRestartVideoJob(
     const needsQuotaCharge = !existing?.quotaCharged;
     if (needsQuotaCharge && quota.used >= quota.limit) {
       throw new VideoJobServiceError(
-        `You have used all ${quota.limit} free video explanations.`,
+        `You have used all ${quota.limit} free video explanations for today.`,
         402,
         "free_video_limit_reached",
       );
@@ -124,6 +109,7 @@ export async function createOrRestartVideoJob(
       stageLabel: "Waiting for the video studio",
       attempt,
       quotaCharged: true,
+      quotaPeriodKey: quota.periodKey,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       expiresAt: now + JOB_RETENTION_MS,
@@ -140,6 +126,7 @@ export async function createOrRestartVideoJob(
         {
           used: quota.used + 1,
           limit: quota.limit,
+          periodKey: quota.periodKey,
           updatedAt: now,
         },
         { merge: true },
@@ -167,12 +154,13 @@ export async function markVideoJobDispatchFailure(
     const value = jobSnapshot.data();
     if (!isVideoJobDocument(value) || value.attempt !== attempt) return;
 
+    const now = Date.now();
     transaction.update(jobRef, {
       status: "failed",
       progress: 0,
       stageLabel: "The video studio could not start",
       quotaCharged: false,
-      updatedAt: Date.now(),
+      updatedAt: now,
       error: {
         code: "queue_unavailable",
         message:
@@ -181,13 +169,16 @@ export async function markVideoJobDispatchFailure(
       },
     });
 
-    const quota = quotaFromData(quotaSnapshot.data());
+    const quota = quotaFromData(quotaSnapshot.data(), now);
+    const shouldRefund =
+      value.quotaCharged && value.quotaPeriodKey === quota.periodKey;
     transaction.set(
       quotaRef,
       {
-        used: Math.max(0, quota.used - 1),
+        used: Math.max(0, quota.used - (shouldRefund ? 1 : 0)),
         limit: quota.limit,
-        updatedAt: Date.now(),
+        periodKey: quota.periodKey,
+        updatedAt: now,
       },
       { merge: true },
     );

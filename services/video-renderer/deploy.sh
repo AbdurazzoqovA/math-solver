@@ -73,7 +73,7 @@ gcloud run services add-iam-policy-binding "$renderer_service" \
 if [[ "${VIDEO_UPDATE_WEB_SERVICE:-true}" == "true" ]]; then
   gcloud run services update mathsolver \
     --region "$cloud_region" \
-    --update-env-vars "FIREBASE_ADMIN_PROJECT_ID=${firebase_project},GOOGLE_CLOUD_PROJECT=${cloud_project},VIDEO_STORAGE_BUCKET=${bucket_name},VIDEO_QUEUE_MODE=cloud-tasks,VIDEO_QUEUE_PROJECT=${cloud_project},VIDEO_QUEUE_LOCATION=${cloud_region},VIDEO_QUEUE_NAME=${queue_name},VIDEO_RENDERER_URL=${renderer_url},VIDEO_TASK_SERVICE_ACCOUNT=${task_account},VIDEO_FREE_LIMIT=5" \
+    --update-env-vars "FIREBASE_ADMIN_PROJECT_ID=${firebase_project},GOOGLE_CLOUD_PROJECT=${cloud_project},VIDEO_STORAGE_BUCKET=${bucket_name},VIDEO_QUEUE_MODE=cloud-tasks,VIDEO_QUEUE_PROJECT=${cloud_project},VIDEO_QUEUE_LOCATION=${cloud_region},VIDEO_QUEUE_NAME=${queue_name},VIDEO_RENDERER_URL=${renderer_url},VIDEO_TASK_SERVICE_ACCOUNT=${task_account},VIDEO_FREE_LIMIT=10" \
     --project "$cloud_project"
   printf 'The MathSolver service now has the video runtime configuration.\n'
 else

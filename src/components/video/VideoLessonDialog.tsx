@@ -283,7 +283,7 @@ export default function VideoLessonDialog({
               </p>
               {job && (
                 <p className="text-[11px] text-muted-foreground">
-                  {job.quota.remaining} of {job.quota.limit} free lessons left
+                  {job.quota.remaining} of {job.quota.limit} free lessons left today
                 </p>
               )}
             </div>
@@ -354,7 +354,7 @@ function LoadingState({
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {Math.round(progress)}%{remaining === undefined ? "" : ` · ${remaining} free lessons remaining`}
+        {Math.round(progress)}%{remaining === undefined ? "" : ` · ${remaining} free lessons remaining today`}
       </p>
     </div>
   );

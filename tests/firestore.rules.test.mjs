@@ -173,7 +173,13 @@ test("video jobs and quota counters are server-only", async () => {
   await assertFails(getDoc(jobRef));
   await assertFails(setDoc(jobRef, { status: "ready" }));
   await assertFails(getDoc(quotaRef));
-  await assertFails(setDoc(quotaRef, { used: 0, limit: 5 }));
+  await assertFails(
+    setDoc(quotaRef, {
+      used: 0,
+      limit: 10,
+      periodKey: "2026-07-29",
+    }),
+  );
 });
 
 test("notification tokens and their ownership registry are server-only", async () => {

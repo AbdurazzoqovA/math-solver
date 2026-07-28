@@ -29,7 +29,7 @@ The exact renderer and models are not public. The visual style—black canvas, L
 
 This is a hybrid: the LLM decides **what to teach and show**, while ordinary rendering code decides **what every pixel and frame looks like**. It is much faster, cheaper, and more consistent than diffusion-style generative video.
 
-## Why five free videos can be economical
+## Why 10 free videos per day can be economical
 
 Illustrative cost for a 60–90 second, 480p/24 fps explanation:
 
@@ -48,7 +48,7 @@ The range depends on model/provider, output length, retries, cache hits, and vie
 - Mux basic on-demand input is free, storage starts at $0.0024 per video minute/month, and the first 100,000 delivery minutes/month are free.
 - Cloud Tasks includes the first million operations/month for free.
 
-At this range, five trial videos cost roughly $0.10–$0.50 per user—reasonable acquisition spend for a product selling an Unlimited subscription. Quotas, short 480p videos, caching, retention/deletion rules, and server-side abuse protection matter more than raw video bandwidth.
+At this range, a learner who uses all 10 daily videos costs roughly $0.20–$1.00 for that day. This is financeable during early product validation but makes monitoring, caching, retention/deletion rules, and server-side abuse protection important before traffic scales.
 
 ## MathSolver production integration
 
@@ -58,7 +58,7 @@ The web integration implemented on 2026-07-28 reuses the existing identity and d
 - Cloud Firestore is live in `nam5`, with verified-account owner isolation already tested for the private notebook.
 - The Firebase UID owns server-only entitlement and video-job records in Firestore.
 - The Next.js API verifies a fresh ID token with revocation checking and requires `email_verified`.
-- A transaction creates a deterministic job and reserves one of five lifetime free lessons; duplicate requests are idempotent, and failed/unsupported renders refund the allowance.
+- A transaction creates a deterministic job and reserves one of 10 free lessons in the current UTC-day bucket; duplicate requests are idempotent, and failed/unsupported renders refund only the matching daily bucket.
 - Cloud Tasks invokes a private, separately scaled Cloud Run renderer with OIDC.
 - The worker asks Gemini for a schema-constrained pedagogy plan, runs a separate mathematical review, creates short Gemini TTS phrases, rejects narration below the transcription-similarity gate, and feeds only validated typed data to hand-written Manim primitives.
 - Private GCS stores independent H.264/AAC clips, WebVTT captions, JPEG posters, and one manifest for 14 days. The authorized API validates every object prefix and returns 45-minute signed playback URLs.

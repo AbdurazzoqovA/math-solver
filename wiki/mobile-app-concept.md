@@ -139,7 +139,7 @@ Camera as the primary input; offline notebook + cached videos; widgets; push; sh
 ## 7. Monetization
 
 - **Free forever:** unlimited scans, unlimited full steps, follow-up chat, practice + mistake review, notebook sync. (The pledge is inviolable — it is the brand.)
-- **Video quota (the tunable lever):** 3 free videos/day; +1 per rewarded ad view (capped ~3/day — Gauth-proven pressure valve that keeps "free" honest); referral credits (+videos for invites — the share loop). MathGPT's 5/day free anchor says don't be stingier than ~3 + earnable.
+- **Video quota (the tunable lever):** the shipped shared backend now grants every verified account 10 free videos per UTC day. Rewarded-ad or referral credits remain optional future pressure valves only if measured cost/abuse requires them; do not silently reduce the live allowance when adding monetization.
 - **Pro — $8.99/mo or $49.99/yr (annual-first framing "≈$4.17/mo"), 7-day trial:** unlimited videos (fair-use), priority rendering, Check-My-Work unlimited, exam packs, Live Tutor minutes (e.g. 60/mo then credit top-ups), offline video library. Undercuts Photomath ($69.99/yr), Gauth ($11.99/mo), MathGPT annual ($83.88/yr); sits above impulse-junk weekly pricing.
 - **Anti-dark-pattern policy as marketing:** no card-up-front trial, pre-renewal reminder notification, one-tap cancel surfaced in settings, transparent regional pricing. The FTC-Chegg settlement made this compliance; we make it copy.
 - **Dual billing rails:** StoreKit/Play IAP + Stripe web checkout via US external-purchase links (post-Epic ruling; commission question still in flux — keep both). Our web traffic makes web-first annual sales unusually viable.

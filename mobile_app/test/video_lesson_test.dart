@@ -11,7 +11,7 @@ void main() {
       'createdAt': 1000,
       'updatedAt': 2000,
       'expiresAt': 3000,
-      'quota': {'used': 2, 'limit': 5, 'remaining': 3},
+      'quota': {'used': 2, 'limit': 10, 'remaining': 8},
       'lesson': {
         'lessonId': 'lesson-1',
         'title': 'Factor the quadratic',
@@ -66,7 +66,7 @@ void main() {
 
     expect(job.status, VideoJobStatus.ready);
     expect(job.status.isTerminal, isTrue);
-    expect(job.quota.remaining, 3);
+    expect(job.quota.remaining, 8);
     expect(job.lesson?.clips.single.durationSeconds, 12.5);
     expect(job.lesson?.interactions.single.options.first.id, 'a');
     expect(job.lesson?.transferCheck.problem, 'x² - 7x + 12 = 0');

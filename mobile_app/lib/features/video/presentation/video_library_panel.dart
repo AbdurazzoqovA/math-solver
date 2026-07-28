@@ -86,7 +86,7 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
           children: [
             Expanded(
               child: Text(
-                '${library.quota.remaining} free videos left',
+                '${library.quota.remaining} free videos left today',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -411,7 +411,7 @@ class _SignedInEmpty extends StatelessWidget {
             ),
             if (remaining != null) ...[
               const SizedBox(height: 8),
-              Text('$remaining free lessons available'),
+              Text('$remaining free lessons available today'),
             ],
             const SizedBox(height: 16),
             TextButton.icon(

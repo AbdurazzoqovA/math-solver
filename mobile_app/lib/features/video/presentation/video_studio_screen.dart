@@ -537,7 +537,7 @@ class _QuotaBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
-        '$remaining free',
+        '$remaining free today',
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: AppTheme.ink,
           fontWeight: FontWeight.w700,

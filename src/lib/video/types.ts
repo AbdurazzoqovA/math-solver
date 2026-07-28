@@ -89,6 +89,7 @@ export type VideoJobDocument = {
   stageLabel: string;
   attempt: number;
   quotaCharged: boolean;
+  quotaPeriodKey?: string;
   createdAt: number;
   updatedAt: number;
   expiresAt: number;
@@ -110,6 +111,7 @@ export type PublicVideoJob = {
     used: number;
     limit: number;
     remaining: number;
+    resetsAt: number;
   };
   lesson?: PlaybackVideoLessonManifest;
 };
@@ -134,6 +136,7 @@ export type PublicVideoQuota = {
   used: number;
   limit: number;
   remaining: number;
+  resetsAt: number;
 };
 
 export type CreateVideoJobInput = {
