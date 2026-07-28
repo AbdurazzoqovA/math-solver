@@ -152,3 +152,50 @@ test("an unverified account cannot access cloud notebook data", async () => {
   await assertFails(getDoc(chatRef));
   await assertFails(setDoc(deletionRef, { deletedAt: 300 }));
 });
+
+test("video jobs and quota counters are server-only", async () => {
+  const ownerDb = verifiedContext("owner").firestore();
+  const jobRef = doc(
+    ownerDb,
+    "users",
+    "owner",
+    "videoJobs",
+    "job-1",
+  );
+  const quotaRef = doc(
+    ownerDb,
+    "users",
+    "owner",
+    "entitlements",
+    "video",
+  );
+
+  await assertFails(getDoc(jobRef));
+  await assertFails(setDoc(jobRef, { status: "ready" }));
+  await assertFails(getDoc(quotaRef));
+  await assertFails(setDoc(quotaRef, { used: 0, limit: 5 }));
+});
+
+test("notification tokens and their ownership registry are server-only", async () => {
+  const ownerDb = verifiedContext("owner").firestore();
+  const deviceRef = doc(
+    ownerDb,
+    "users",
+    "owner",
+    "devices",
+    "token-hash",
+  );
+  const registryRef = doc(ownerDb, "mobileDevices", "token-hash");
+
+  await assertFails(getDoc(deviceRef));
+  await assertFails(
+    setDoc(deviceRef, {
+      token: "private-delivery-token",
+      platform: "ios",
+      appVersion: "1.0.0",
+      updatedAt: 100,
+    }),
+  );
+  await assertFails(getDoc(registryRef));
+  await assertFails(setDoc(registryRef, { uid: "owner", updatedAt: 100 }));
+});

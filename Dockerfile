@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # --- Dependencies stage ---
 FROM base AS deps
@@ -44,6 +44,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Next's file tracer can omit this runtime-loaded Cloud Tasks descriptor.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@google-cloud/tasks/build/protos/protos.json ./node_modules/@google-cloud/tasks/build/protos/protos.json
 
 USER nextjs
 

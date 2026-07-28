@@ -9,14 +9,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google-cloud/tasks": "^6.2.3",
     "@types/katex": "^0.16.8",
     "clsx": "^2.1.1",
     "firebase": "^12.16.0",
+    "firebase-admin": "^14.2.0",
     "framer-motion": "^12.36.0",
     "katex": "^0.16.38",
     "lucide-react": "^0.577.0",
     "mathlive": "^0.109.0",
-    "next": "16.1.6",
+    "next": "16.2.12",
     "next-themes": "^0.4.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -35,8 +37,14 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.24",
+      "sharp": "0.35.3"
+    }
   }
 }

@@ -24,12 +24,14 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 ## Fast facts (so you don't have to grep)
 
 - **Stack:** Next.js 16 (App Router, React 19, React Compiler), TypeScript, Tailwind v4. Math via KaTeX + `react-markdown` + `remark-math`/`rehype-katex`; input via `mathlive`.
+- **Mobile:** standalone Flutter 3.44/Dart 3.12 iOS/Android client in `mobile_app/`; never mix its source into the Next.js root. The App-Check-aware `/api/mobile/v1/*` client includes camera crop/worksheet capture, Check My Work, verified streamed steps, practice/review, Firestore notebook sync, private visual lessons with offline/share/push, and opt-in no-content analytics. Store credentials, native social sign-in, billing, and later device-only surfaces remain release/roadmap work.
 - **Solver:** Google **Gemini 3.1 flash-lite** — `src/app/api/solve/route.ts`, streamed through `src/lib/gemini.ts`. Prompt `MATH_TUTOR_PROMPT` forces `**Step N:**` format.
 - **OCR (photo/PDF/drawing → text):** Google **Gemini 3.1 flash-lite** — `src/app/api/ocr/route.ts`. Extracts the expression only; does not solve.
 - **Practice quizzes:** Gemini 3.1 flash-lite — `src/app/api/practice/route.ts` + `/steps`.
+- **Interactive visual lessons:** verified accounts get five private, asynchronous micro-lessons from the latest completed solution — `src/app/api/video/jobs`, `src/components/video`, and `src/lib/video`. Cloud Tasks calls the private `services/video-renderer` Cloud Run worker, which uses typed Gemini plan/review, verified phrase TTS, Manim/FFmpeg, and private signed GCS playback.
 - **State:** `src/context/ChatContext.tsx` (local-first chats, mistake queue, optional Firestore sync), `src/context/LearningProgressContext.tsx` (local daily goal/streak), `src/context/AuthContext.tsx` (optional Firebase Email/Password or Google account), `src/context/UIContext.tsx` (panels/calculator/practice/review).
 - **Routes:** `/` (solver + landing), `/calculator` + 43 static calculator pages across eight categories, `/blog` + dynamic Pressroom articles, `/practice-tests` (noindex), `/privacy`, `/terms`.
-- **Hosting:** Google Cloud Run via `deploy.sh` + `Dockerfile` (`output: "standalone"`).
+- **Hosting:** the Next.js app runs on Google Cloud Run via `deploy.sh` + `Dockerfile` (`output: "standalone"`). Visual lessons use a separate private Cloud Run renderer, Cloud Tasks, and a private regional GCS bucket configured from `infra/video/`.
 - **Analytics:** GA4 (`G-YG1NPYM8BS`) plus the no-content retention event contract in `src/lib/analytics.ts`; never attach math content, identity fields, or notebook IDs.
 - **Blog:** Pressroom server API (`PRESSROOM_API_KEY`) → dynamic `/blog` and `/blog/[slug]`, cached for five minutes. The key must remain server-only.
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { BookOpen, Calculator, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { BookOpen, Calculator, Clapperboard, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import { useChatContext } from "@/context/ChatContext";
@@ -10,8 +10,15 @@ import Image from "next/image";
 import Link from "next/link";
 import AccountButton from "@/components/auth/AccountButton";
 
+const subscribeToHydration = () => () => {};
+
 export default function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
+  const isThemeReady = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const {
     chats,
     activeChatId,
@@ -21,10 +28,11 @@ export default function Sidebar() {
     dueReviewItems,
   } = useChatContext();
   const { isMobileSidebarOpen, setMobileSidebarOpen } = useUI();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const isOnPracticeTests = pathname === "/practice-tests";
+  const isOnVideoLibrary = pathname === "/video-library";
   const isOnCalculators = pathname.startsWith("/calculator");
 
   // Sort chats by most recently updated
@@ -46,6 +54,11 @@ export default function Sidebar() {
   const handlePracticeTestsClick = () => {
     setMobileSidebarOpen(false);
     router.push("/practice-tests");
+  };
+
+  const handleVideoLibraryClick = () => {
+    setMobileSidebarOpen(false);
+    router.push("/video-library");
   };
 
   const sidebarContent = (
@@ -98,7 +111,7 @@ export default function Sidebar() {
 
       {/* New Chat Button */}
       <div className={`mt-2 mb-4 transition-all duration-300 flex ${isExpanded ? 'px-4' : 'md:justify-center md:w-full justify-center'}`}>
-        <button 
+        <button
           onClick={handleNewChat}
           className={`flex items-center justify-center gap-3 bg-white dark:bg-zinc-800 text-foreground transition-all shadow-sm border border-black/5 dark:border-white/5 group hover:shadow-md hover:border-black/10 dark:hover:border-white/10 ${isExpanded ? 'w-full px-4 py-3 rounded-2xl hover:bg-black/[0.02] dark:hover:bg-white/[0.02]' : 'md:w-11 md:h-11 w-full px-4 py-3 md:px-0 md:py-0 rounded-[1.25rem] shadow-[0_2px_10px_rgb(0,0,0,0.06)]'}`} 
           title="New Chat"
@@ -121,6 +134,15 @@ export default function Sidebar() {
           <Calculator className={`w-5 h-5 transition-colors shrink-0 ${isOnCalculators ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
           {isExpanded && <span className="font-medium text-sm truncate">Calculators</span>}
         </Link>
+
+        <button
+          onClick={handleVideoLibraryClick}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4' : 'justify-center'} ${isOnVideoLibrary ? 'text-primary-600 dark:text-primary-400 bg-primary-500/10 font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+          title="Video Library"
+        >
+          <Clapperboard className={`w-5 h-5 transition-colors shrink-0 ${isOnVideoLibrary ? 'text-primary-500' : 'group-hover:text-primary-500'}`} />
+          {isExpanded && <span className="font-medium text-sm truncate">Video Library</span>}
+        </button>
 
         <button 
           onClick={handlePracticeTestsClick}
@@ -191,11 +213,21 @@ export default function Sidebar() {
         <AccountButton isExpanded={isExpanded} />
 
         <button 
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() =>
+            setTheme(resolvedTheme === "dark" ? "light" : "dark")
+          }
           className={`w-full flex items-center p-3 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group ${isExpanded ? 'justify-start px-4 gap-3' : 'justify-center'}`}
           title="Toggle Theme"
         >
-          {theme === "dark" ? <Moon className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" /> : <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />}
+          {isThemeReady ? (
+            resolvedTheme === "dark" ? (
+              <Moon className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />
+            ) : (
+              <Sun className="w-5 h-5 shrink-0 group-hover:text-primary-500 transition-colors" />
+            )
+          ) : (
+            <span className="h-5 w-5 shrink-0" aria-hidden="true" />
+          )}
           {isExpanded && <span className="font-medium text-sm truncate">Theme</span>}
         </button>
 

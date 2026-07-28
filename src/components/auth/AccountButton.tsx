@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
@@ -51,6 +51,19 @@ export default function AccountButton({
   } = useAuth();
   const { cloudSyncState } = useChatContext();
 
+  useEffect(() => {
+    if (!isFirebaseEnabled) return;
+    const openFromFeature = () => {
+      clearAuthFeedback();
+      setAuthMode(user ? "verify" : "sign-in");
+      setIsMenuOpen(false);
+      setIsAuthDialogOpen(true);
+    };
+    window.addEventListener("mathsolver:open-auth", openFromFeature);
+    return () =>
+      window.removeEventListener("mathsolver:open-auth", openFromFeature);
+  }, [clearAuthFeedback, isFirebaseEnabled, user]);
+
   if (!isFirebaseEnabled) return null;
 
   const displayName = user?.displayName || user?.email || "Your account";
@@ -76,6 +89,7 @@ export default function AccountButton({
   const closeDialog = () => {
     setIsAuthDialogOpen(false);
     setPassword("");
+    window.dispatchEvent(new Event("mathsolver:auth-dialog-closed"));
   };
 
   const handleMainClick = () => {

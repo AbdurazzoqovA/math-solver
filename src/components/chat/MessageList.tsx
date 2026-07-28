@@ -6,6 +6,7 @@ import {
   FileText,
   Loader2,
   RefreshCw,
+  Video,
 } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -14,7 +15,7 @@ import 'katex/dist/katex.min.css';
 import { useUI, Question } from "@/context/UIContext";
 import { useChatContext } from "@/context/ChatContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   buildStepExplanationPrompt,
@@ -23,6 +24,10 @@ import {
   SIMILAR_PROBLEM_PROMPT,
 } from "@/lib/post-solution-actions";
 import { preprocessMathMarkdown } from "@/lib/math-markdown";
+import VideoLessonDialog, {
+  type VideoLessonRequest,
+} from "@/components/video/VideoLessonDialog";
+import { getProblemForAssistantMessage } from "@/lib/video/problem-context";
 
 export type PracticeAttempt = {
   id: string;
@@ -53,7 +58,8 @@ export default function MessageList({
   isLoading?: boolean;
 }) {
   const { openPracticePanel } = useUI();
-  const { savePracticeToMessage, sendMessage } = useChatContext();
+  const { activeChatId, savePracticeToMessage, sendMessage } =
+    useChatContext();
   const { getToken } = useTurnstile();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
   const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
@@ -61,6 +67,23 @@ export default function MessageList({
     messageId: string;
     message: string;
   } | null>(null);
+  const [videoRequest, setVideoRequest] =
+    useState<VideoLessonRequest | null>(null);
+  const [isVideoLessonSuspended, setIsVideoLessonSuspended] =
+    useState(false);
+
+  useEffect(() => {
+    const resumeVideoLesson = () => setIsVideoLessonSuspended(false);
+    window.addEventListener(
+      "mathsolver:auth-dialog-closed",
+      resumeVideoLesson,
+    );
+    return () =>
+      window.removeEventListener(
+        "mathsolver:auth-dialog-closed",
+        resumeVideoLesson,
+      );
+  }, []);
 
   const latestAssistantMessageId = [...messages]
     .reverse()
@@ -120,6 +143,24 @@ export default function MessageList({
     } finally {
       setPendingFollowUp(null);
     }
+  };
+
+  const handleVideoClick = (message: Message) => {
+    const problem = getProblemForAssistantMessage(messages, message.id);
+    if (!problem) return;
+    setIsVideoLessonSuspended(false);
+    setVideoRequest({
+      requestKey: `${activeChatId ?? "local"}:${message.id}`,
+      problem,
+      solution: message.content,
+    });
+  };
+
+  const handleVideoAuthRequest = () => {
+    setIsVideoLessonSuspended(true);
+    window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("mathsolver:open-auth"));
+    });
   };
 
   return (
@@ -292,6 +333,19 @@ export default function MessageList({
 
                       <button
                         type="button"
+                        onClick={() => handleVideoClick(message)}
+                        disabled={
+                          pendingFollowUp !== null ||
+                          loadingMessageId !== null
+                        }
+                        className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-teal-500/50 bg-teal-50 px-3.5 py-2 text-sm font-semibold text-teal-800 transition-colors hover:border-teal-500 hover:bg-teal-100 disabled:pointer-events-none disabled:opacity-55 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-300 dark:hover:border-teal-400/60 dark:hover:bg-teal-500/15"
+                      >
+                        <Video className="h-4 w-4" aria-hidden="true" />
+                        Generate video explanation
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() =>
                           message.practiceTest
                             ? handleOpenSavedPractice(
@@ -393,6 +447,15 @@ export default function MessageList({
           </div>
         );
       })}
+
+      <VideoLessonDialog
+        request={isVideoLessonSuspended ? null : videoRequest}
+        onClose={() => {
+          setIsVideoLessonSuspended(false);
+          setVideoRequest(null);
+        }}
+        onRequestAuth={handleVideoAuthRequest}
+      />
 
       {/* Loading Skeleton */}
       {isLoading && messages[messages.length - 1]?.role === 'user' && (

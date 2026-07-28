@@ -92,18 +92,19 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 4. **Exam-prep tracks (SAT/ACT/AP/GCSE)** — external deadline → multi-month daily use. Pairs with exam-hub SEO pages.
 5. **PWA + streak-reminder push** — installable; prompt install right after a solved problem, never on load (iOS needs home-screen install first).
 6. **One-tap follow-ups on every solution (shipped 2026-07-26)** — the latest completed solution offers one scalable numbered-step picker plus "similar problem" and "quiz me" actions. The first two reuse contextual chat; the third reuses saved/generated practice. This targets the strategy's 3+ interactions-per-session goal without a new model or API.
-7. **Mastery dashboard + weekly email** — per-topic progress ("Quadratics: mastered — next: factoring").
+7. **Video explanations with optional interaction (implemented web + mobile 2026-07-28)** — verified accounts receive five private worked explanations with meaningful math animation. Chapters autoplay continuously by default, captions live outside the math canvas, and corrective checks/transfer appear only when the learner opts into Practice pauses. Mobile adds speed/full-screen controls, offline cache, native sharing, and content-free push-on-ready. The allowance controls acquisition cost without restricting unlimited text solving. Validate explanation completion plus opt-in checkpoint/transfer outcomes against text-only solutions before treating watch time as success. See [[mathgpt-video-research]].
+8. **Mastery dashboard + weekly email** — per-topic progress ("Quadratics: mastered — next: factoring").
 - **Skipped:** community/leaderboards — Brainly owns peer Q&A (350M MAU); expensive to bootstrap. Revisit only at large scale.
 
 ---
 
 ## Roadmap
 
-**Now (wks 1–4):** the first 43 calculator pages, graphing tool, core 47-URL sitemap, Pressroom blog surface, persisted practice scores, one-tap solution follow-ups, production-ready auth journey, and mistake review are shipped. Firebase Auth/Web app/domain setup is complete; Firestore exists in `nam5`; verified-owner CRUD and isolation tests pass live. Privacy-conscious retention events cover return, first mistake saved, review entry/outcome/completion/removal, and distinct learning activity without sending math content or identity fields. The visible daily-goal/streak control was removed after UX review. Next: publish the first Pressroom topic explainers; submit and inspect calculator/blog URLs in Search Console; ship 4–6 alternative/comparison pages; then inspect the retention funnel before investing in mastery or reminders.
+**Now (wks 1–4):** the web acquisition/retention foundation and code-controlled mobile learning loop are implemented and the gateway/renderer/rules are deployed. Mobile covers camera crop/worksheet OCR, hint-first steps, independent verification/reporting, handwritten Check My Work, private continuous video with optional practice pauses plus offline/share/push, verified notebook merge, quizzes, and 1→3→7→14 review behind native App Check. Privacy-conscious events stay opt-in/no-content. Next: complete store credentials and real-device QA, observe then enforce App Check, validate Check My Work and visual lessons with real learners, publish the first Pressroom topic explainers, submit calculator/blog URLs in Search Console, and ship 4–6 alternative/comparison pages.
 
 **Next (mo 1–3):** use review/streak behavior to decide whether cross-device progress sync and topic-level mastery are justified; add course folders; build the quality-gated worked-example library; grow the Pressroom feed into interlinked topic clusters; add a PWA install prompt after successful solves; replace the in-memory rate limiter.
 
-**Later (mo 3–6+):** exam-prep tracks with progress; mastery dashboard + weekly email; push notifications (timed to evening homework hours); answer-verification / "checked" badge; localization of top calculator pages.
+**Later (mo 3–6+):** exam-prep tracks with progress; mastery dashboard + weekly email; policy-approved reminder timing beyond the implemented video-ready push; Pencil/widgets/Live Tutor; and localization of top calculator pages. The mobile answer-verification state and checked/disagreement badge are already implemented.
 
 ---
 
@@ -113,6 +114,7 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 - **Returning-visitor rate** (GA4) — near-zero today; streaks + notebook should push 7-day return above 20%.
 - **Solves per session** — ~1 today; follow-up buttons + practice prompts should push toward 3+.
 - **Practice completion** — share of solutions that become a started (and finished) practice test.
+- **Visual lesson learning** — generation success/latency, lesson start→completion, concept-check correctness, and transfer correctness. Compare with text-only and passive-video cohorts; watch time alone is not a learning metric.
 - **Accuracy complaints** per 1,000 solves — one wrong answer at homework crunch is a permanent churn event.
 - **Seasonality** — edtech peaks Sept/Jan/March, troughs in summer. The May→July 2026 growth happened in the trough, so September should amplify it. Plan exam-season pushes (May AP/finals, SAT dates) as re-activation moments.
 

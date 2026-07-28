@@ -53,5 +53,26 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['deletedAt'])
         && request.resource.data.deletedAt is int;
     }
+
+    // Video jobs and quota documents are server-only. The web player accesses
+    // them through authenticated API routes, which prevents clients from
+    // changing quota counters or learning private object paths.
+    match /users/{userId}/videoJobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId}/entitlements/{entitlementId} {
+      allow read, write: if false;
+    }
+
+    // FCM device registrations contain private delivery tokens and are only
+    // accessed by authenticated server routes and the private renderer.
+    match /users/{userId}/devices/{deviceId} {
+      allow read, write: if false;
+    }
+
+    match /mobileDevices/{deviceId} {
+      allow read, write: if false;
+    }
   }
 }

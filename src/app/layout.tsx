@@ -78,6 +78,17 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <Script
+          id="website-structured-data"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteStructuredData).replace(
+              /</g,
+              "\\u003c",
+            ),
+          }}
+        />
+        <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-YG1NPYM8BS"
           strategy="afterInteractive"
         />
@@ -91,15 +102,6 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(websiteStructuredData).replace(
-              /</g,
-              "\\u003c",
-            ),
-          }}
-        />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TurnstileProvider>
             <AuthProvider>

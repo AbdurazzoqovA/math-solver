@@ -39,6 +39,7 @@ export default function PrivacyPolicyPage() {
             <li><strong>Input Data:</strong> The text, equations, and images of math problems you upload or type into our solver for the purpose of receiving step-by-step solutions.</li>
             <li><strong>Optional Account Data:</strong> If you choose to create an account or sign in with Google, we receive your Firebase user identifier and email address. Google sign-in can also provide basic profile information such as your name.</li>
             <li><strong>Notebook Data:</strong> Signed-out chats are stored in your browser. If you sign in, chat text, extracted OCR text, solutions, generated practice tests, and practice-attempt results are also stored in your private cloud notebook. Uploaded image previews remain stored only in the browser in the current sync version.</li>
+            <li><strong>Visual Lesson Data:</strong> If a verified account requests a visual lesson, we process the selected math problem and completed solution to plan, review, narrate, and render the lesson. The generated clips, captions, posters, and lesson manifest are kept in private cloud storage for up to 14 days and can be deleted earlier from the lesson window. We also keep account-level job and free-allowance records needed to operate the feature and prevent duplicate charges.</li>
             <li><strong>Usage Data:</strong> Information about how you use our website, including pages visited, learning features used, review outcomes, and time spent on the site. Math problems, answer choices, uploaded images, email addresses, and notebook identifiers are not included in our learning-event parameters.</li>
             <li><strong>Device Data:</strong> We may automatically collect device information, such as your IP address, browser type, operating system, and geographic location (at the city or country level).</li>
           </ul>
@@ -48,6 +49,7 @@ export default function PrivacyPolicyPage() {
           <ul className="list-disc pl-6 mb-4 space-y-2">
             <li>To provide, maintain, and improve our AI math solving services.</li>
             <li>To process and analyze the math problems you submit to generate accurate step-by-step solutions.</li>
+            <li>To generate requested visual lessons, including an AI-generated narration, synchronized math animation, captions, and optional understanding checks.</li>
             <li>To authenticate an optional account and synchronize your notebook and practice history across devices.</li>
             <li>To analyze usage patterns to enhance user experience and optimize our website infrastructure.</li>
             <li>To respond to your inquiries or support requests.</li>
@@ -60,7 +62,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">5. Third-Party Services</h2>
           <p className="mb-4">
-            We use service providers to operate MathSolver. These include Google Gemini for solutions, practice content, and OCR; Google Firebase Authentication and Cloud Firestore for optional account and notebook sync; Pressroom for published blog content; Cloudflare Turnstile for abuse protection; and Google Analytics for usage analytics.
+            We use service providers to operate MathSolver. These include Google Gemini for solutions, practice content, OCR, visual-lesson planning, narration, and quality review; Google Firebase Authentication and Cloud Firestore for optional accounts, notebook sync, visual-lesson jobs, and allowance records; Google Cloud Run, Cloud Tasks, and private Google Cloud Storage for rendering and temporary playback; Pressroom for published blog content; Cloudflare Turnstile for abuse protection; and Google Analytics for usage analytics.
           </p>
 
           <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">6. Data Security</h2>

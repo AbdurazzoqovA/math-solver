@@ -5,7 +5,7 @@ import {
   doc,
   getDocs,
   writeBatch,
-} from "firebase/firestore";
+} from "firebase/firestore/lite";
 import type { Chat } from "@/context/ChatContext";
 import type { Message } from "@/components/chat/MessageList";
 import { getFirebaseClient } from "@/lib/firebase-client";

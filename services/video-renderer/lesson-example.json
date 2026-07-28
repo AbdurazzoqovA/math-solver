@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 2,
+  "supported": true,
+  "unsupportedReason": null,
+  "title": "See why 3x + 5 = 20 gives x = 5",
+  "problem": "3x + 5 = 20",
+  "finalAnswerLatex": "x = 5",
+  "learningGoal": "Choose inverse operations by reading the structure of an equation, while preserving equality.",
+  "teachingApproach": "Treat equality as balance, connect each visible change to notation, contrast a one-sided change, and generalize the undoing strategy.",
+  "clips": [
+    {
+      "id": "read-the-structure",
+      "step": 1,
+      "teachingRole": "orient",
+      "title": "Read before calculating",
+      "bigIdea": "The equation describes three equal unknown groups with five extra units.",
+      "segments": [
+        {
+          "purpose": "notice",
+          "narration": "Before calculating, notice that three equal x groups and five extra units balance a total of twenty.",
+          "annotation": "Notice the structure: 3 groups, then +5",
+          "motionSeconds": 1.1,
+          "visual": {
+            "kind": "balance",
+            "action": "construct",
+            "latex": "3x + 5 = 20",
+            "leftLabel": "3x + 5",
+            "rightLabel": "20",
+            "balanced": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "equality-is-balance",
+      "step": 2,
+      "teachingRole": "concept",
+      "title": "Equality must survive every move",
+      "bigIdea": "An operation is valid only when it preserves the equal value of both sides.",
+      "segments": [
+        {
+          "purpose": "explain-why",
+          "narration": "The equals sign is a promise that both sides have the same value, so every move must preserve that promise.",
+          "annotation": "Equal means same value",
+          "motionSeconds": 1.0,
+          "visual": {
+            "kind": "balance",
+            "action": "highlight",
+            "latex": "3x + 5 = 20",
+            "leftLabel": "same value",
+            "rightLabel": "same value",
+            "balanced": true
+          }
+        },
+        {
+          "purpose": "connect",
+          "narration": "Removing five units from each pan is the picture; subtracting five from both sides is the matching algebra.",
+          "annotation": "One idea in two representations",
+          "motionSeconds": 1.2,
+          "visual": {
+            "kind": "equation",
+            "action": "compare",
+            "latex": "3x + 5\\;\\longrightarrow\\;3x",
+            "primaryLabel": "Balance picture",
+            "focusLatex": "+ 5",
+            "secondaryLatex": "3x + 5 - 5 = 20 - 5",
+            "secondaryLabel": "Algebra",
+            "secondaryFocusLatex": "- 5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "undo-the-outer-operation",
+      "step": 3,
+      "teachingRole": "strategy",
+      "title": "Undo in reverse order",
+      "bigIdea": "Remove the outer added quantity before separating the equal x groups.",
+      "segments": [
+        {
+          "purpose": "demonstrate",
+          "narration": "Five was added after the three groups were formed, so undo that outer addition first on both sides.",
+          "annotation": "Undo the outside operation first",
+          "motionSeconds": 1.1,
+          "visual": {
+            "kind": "balance",
+            "action": "transform",
+            "latex": "3x = 15",
+            "leftLabel": "3x",
+            "rightLabel": "15",
+            "balanced": true
+          }
+        },
+        {
+          "purpose": "connect",
+          "narration": "The balance now says three equal x groups share fifteen units.",
+          "annotation": "3 equal groups share 15",
+          "motionSeconds": 0.9,
+          "visual": {
+            "kind": "geometry",
+            "action": "construct",
+            "latex": "3x = 15",
+            "shapes": [
+              {
+                "type": "rectangle",
+                "center": {"x": -3.0, "y": 0.0},
+                "width": 2.0,
+                "height": 1.4,
+                "label": "x",
+                "color": "blue"
+              },
+              {
+                "type": "rectangle",
+                "center": {"x": 0.0, "y": 0.0},
+                "width": 2.0,
+                "height": 1.4,
+                "label": "x",
+                "color": "teal"
+              },
+              {
+                "type": "rectangle",
+                "center": {"x": 3.0, "y": 0.0},
+                "width": 2.0,
+                "height": 1.4,
+                "label": "x",
+                "color": "green"
+              }
+            ]
+          }
+        },
+        {
+          "purpose": "demonstrate",
+          "narration": "Splitting fifteen equally across three groups gives five in each group, so x equals five.",
+          "annotation": "15 ÷ 3 = 5 per group",
+          "motionSeconds": 1.0,
+          "visual": {
+            "kind": "equation",
+            "action": "transform",
+            "latex": "\\frac{3x}{3} = \\frac{15}{3}\\quad\\Longrightarrow\\quad x = 5",
+            "focusLatex": "x = 5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "avoid-one-sided-changes",
+      "step": 4,
+      "teachingRole": "misconception",
+      "title": "A tempting move breaks equality",
+      "bigIdea": "Changing only one side produces a different, false equation.",
+      "segments": [
+        {
+          "purpose": "contrast",
+          "narration": "Subtracting five only on the right changes the promise; subtracting five on both sides preserves the same equation.",
+          "annotation": "Test whether equality is preserved",
+          "motionSeconds": 1.2,
+          "visual": {
+            "kind": "equation",
+            "action": "compare",
+            "latex": "3x + 5 = 15",
+            "primaryLabel": "Breaks equality",
+            "focusLatex": "= 15",
+            "secondaryLatex": "3x + 5 - 5 = 20 - 5",
+            "secondaryLabel": "Preserves equality",
+            "secondaryFocusLatex": "- 5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "name-the-strategy",
+      "step": 5,
+      "teachingRole": "connection",
+      "title": "The reusable pattern",
+      "bigIdea": "Solving isolates the unknown by undoing operations in reverse order.",
+      "segments": [
+        {
+          "purpose": "connect",
+          "narration": "The reusable strategy is not subtract then divide blindly; it is undo the operations surrounding x in reverse order.",
+          "annotation": "Read structure → undo in reverse",
+          "motionSeconds": 1.0,
+          "visual": {
+            "kind": "equation",
+            "action": "highlight",
+            "latex": "x\\;\\xrightarrow{\\times 3}\\;3x\\;\\xrightarrow{+5}\\;3x+5",
+            "emphasisLatex": "\\text{solve by following the arrows backward}",
+            "focusLatex": "3x+5"
+          }
+        }
+      ]
+    },
+    {
+      "id": "verify-and-transfer",
+      "step": 6,
+      "teachingRole": "verify-generalize",
+      "title": "Check it, then recognize it",
+      "bigIdea": "Substitution verifies this answer, while structure reveals the same method in a new equation.",
+      "segments": [
+        {
+          "purpose": "verify",
+          "narration": "Putting five into the original expression gives twenty, so the value satisfies the equation we started with.",
+          "annotation": "Verify in the original equation",
+          "motionSeconds": 0.9,
+          "visual": {
+            "kind": "equation",
+            "action": "highlight",
+            "latex": "3(5) + 5 = 20",
+            "emphasisLatex": "20 = 20",
+            "focusLatex": "3(5) + 5"
+          }
+        },
+        {
+          "purpose": "generalize",
+          "narration": "In four x plus three equals nineteen, the numbers change but the same clue says to undo the added three first.",
+          "annotation": "Same structure, new numbers",
+          "motionSeconds": 1.1,
+          "visual": {
+            "kind": "equation",
+            "action": "compare",
+            "latex": "3x + 5 = 20",
+            "primaryLabel": "Learned example",
+            "focusLatex": "+ 5",
+            "secondaryLatex": "4x + 3 = 19",
+            "secondaryLabel": "New example",
+            "secondaryFocusLatex": "+ 3"
+          }
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    {
+      "id": "preserve-equality",
+      "afterClip": "equality-is-balance",
+      "eyebrow": "Check the idea",
+      "problem": null,
+      "prompt": "Why must the same operation be applied to both sides?",
+      "options": [
+        {
+          "id": "same-value",
+          "label": "To preserve their equal value"
+        },
+        {
+          "id": "shorter-work",
+          "label": "Only to make the work shorter"
+        }
+      ],
+      "correctOptionId": "same-value",
+      "correctFeedback": "Correct. Matching operations preserve the equality represented by the equation.",
+      "incorrectFeedback": "Think about the two balanced pans: changing one pan alone destroys the equality."
+    }
+  ],
+  "transferCheck": {
+    "id": "linear-transfer",
+    "afterClip": "verify-and-transfer",
+    "eyebrow": "Recognize the strategy",
+    "problem": "4x + 3 = 19",
+    "prompt": "What should you undo first, and why?",
+    "options": [
+      {
+        "id": "subtract-three",
+        "label": "Subtract 3 from both sides because +3 is the outer operation"
+      },
+      {
+        "id": "divide-four",
+        "label": "Divide only the left side by 4 because x has coefficient 4"
+      }
+    ],
+    "correctOptionId": "subtract-three",
+    "correctFeedback": "Yes. Read the structure and undo the outer addition while preserving equality.",
+    "incorrectFeedback": "Follow the operations around x backward, and preserve equality on both sides."
+  },
+  "completion": {
+    "title": "You saw the idea behind the operations.",
+    "body": "The method is to read the equation's structure, preserve equality, undo operations in reverse, and verify in the original."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "rule": [
+    {
+      "action": {
+        "type": "Delete"
+      },
+      "condition": {
+        "age": 14,
+        "matchesPrefix": ["video-lessons/"]
+      }
+    },
+    {
+      "action": {
+        "type": "AbortIncompleteMultipartUpload"
+      },
+      "condition": {
+        "age": 1,
+        "matchesPrefix": ["video-lessons/"]
+      }
+    }
+  ]
+}

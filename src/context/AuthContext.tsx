@@ -54,6 +54,7 @@ type AuthContextValue = {
   resendVerificationEmail: () => Promise<boolean>;
   refreshEmailVerification: () => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<boolean>;
+  getAuthToken: () => Promise<string | null>;
   signOut: () => Promise<void>;
   clearAuthFeedback: () => void;
 };
@@ -402,6 +403,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const getAuthToken = useCallback(async () => {
+    const client = getFirebaseClient();
+    const currentUser = client?.auth.currentUser;
+    if (!currentUser || !currentUser.emailVerified) return null;
+    try {
+      return await getIdToken(currentUser);
+    } catch {
+      setAuthError("Your session could not be verified. Sign in again.");
+      return null;
+    }
+  }, []);
+
   const clearAuthFeedback = useCallback(() => {
     setAuthError(null);
     setAuthNotice(null);
@@ -426,6 +439,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resendVerificationEmail,
       refreshEmailVerification,
       sendPasswordReset,
+      getAuthToken,
       signOut,
       clearAuthFeedback,
     }),
@@ -441,6 +455,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshEmailVerification,
       resendVerificationEmail,
       sendPasswordReset,
+      getAuthToken,
       signInWithEmail,
       signInWithGoogle,
       signOut,

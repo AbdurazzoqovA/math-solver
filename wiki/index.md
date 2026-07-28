@@ -12,7 +12,7 @@ Catalog of the MathSolver knowledge base. Entry point for agents: read this, the
 | [[growth-strategy]] | Market position, gap analysis, SEO plan, retention roadmap. Distilled from the July 2026 research. |
 | [[calculator-pages]] | Shipped calculator routes, keyword map, reusable architecture, SEO contract, and launch checks. |
 | [[mathgpt-video-research]] | Verified public behavior, likely architecture, cost model, and a Firebase-aware plan for explanation videos. |
-| [[mobile-app-concept]] | The iOS/Android app plan: July 2026 market/user/tech research digest, positioning, product concept, monetization, GTM, roadmap. Plan only — no code. |
+| [[mobile-app-concept]] | The iOS/Android direction: July 2026 market research, positioning, roadmap, and status of the standalone Flutter implementation in `mobile_app/`. |
 
 ## Special files
 
