@@ -16,7 +16,7 @@ Build a **camera-first AI math tutor** whose signature is the thing launching on
 - **The incumbents are wounded simultaneously.** Chegg (Mathway): revenue −48% YoY, 45% layoffs, running Academic Services "for cash flow" ([CNBC](https://www.cnbc.com/2025/10/27/chegg-slashes-45percent-of-workforce-blames-new-realities-of-ai.html), [Business Wire](https://www.businesswire.com/news/home/20260209620934/en/Chegg-Reports-2025-Fourth-Quarter-and-Full-Year-Financial-Results)). Photomath: maintained but feature-frozen since the Google acquisition — no chat, no voice, no generated video ([9to5Google](https://9to5google.com/2024/02/29/photomath-google-app/)). Microsoft Math Solver retired July 2025. Symbolab idles under Learneo.
 - **The real ceiling is free chatbots, and it's beatable on math-native UX.** ChatGPT Study Mode (free, July 2025), Gemini Guided Learning + free Gemini Live camera tutoring set the $0 baseline ([OpenAI](https://openai.com/index/chatgpt-study-mode/), [blog.google](https://blog.google/products/gemini/guided-learning-google-gemini/)). They are generalists: clumsy math input, no verified answers, no curriculum practice loop, no narrated video. "ChatGPT for everything, MathSolver for math" is the winnable slot.
 - **Our video launch is genuinely early.** No incumbent at scale ships per-problem generated narrated video (Photomath's tutorials are canned; Gauth's whiteboard is ephemeral; OpenAI/Google chose *interactive* visuals over narrated video). The only direct competitor is MathGPT (~2M users, 5 free videos/day, $9.99/mo unlimited) ([math-gpt.org](https://math-gpt.org/)). Expect fast-follow within quarters — the window is now.
-- **Seasonality dictates the calendar.** Student AI usage collapses in summer and snaps back in September (+21% student traffic) with a second spike in April–May exam season ([Sherwood](https://sherwood.news/tech/chatgpt-use-is-picking-up-again-just-as-students-head-back-to-school/)). September 2026 is too close to ship a great app; catch it on web + shorts distribution, ship the app into the fall, be polished by January and dominant by May.
+- **Seasonality dictates the calendar.** Student AI usage collapses in summer and snaps back in September (+21% student traffic) with a second spike in April–May exam season ([Sherwood](https://sherwood.news/tech/chatgpt-use-is-picking-up-again-just-as-students-head-back-to-school/)). September 2026 is too close to ship a great app; catch it on web, ship the app into the fall, be polished by January and dominant by May.
 
 ## 2. Research digest
 
@@ -52,7 +52,7 @@ Learning-science backing: a PNAS RCT shows raw answer-engines *hurt* exam perfor
 
 ### Business benchmarks
 
-Education is one of the best-converting app categories: median download→trial 7.1%, trial→paid ~30–45%, annual plans 59–66% of subscriptions; hard-ish paywalls with 7+ day trials outperform ([RevenueCat State of Subscription Apps 2026](https://www.revenuecat.com/state-of-subscription-apps-2026-education/)). AI apps churn ~30% faster than non-AI — retention loops are existential. Price anchors: $9.99/mo cluster (Photomath/Mathway/MathGPT/Brainly), $11.99 Gauth, $4 Khanmigo floor. US iOS CPI $1.5–3.5; Apple Ads median CPA ~$2.76 with the best D7 retention of paid channels. Web-to-app smart banners convert 17–35% of clicks — our SEO traffic is a zero-CPI install channel nobody else in the category has.
+Education is one of the best-converting app categories: median download→trial 7.1%, trial→paid ~30–45%, annual plans 59–66% of subscriptions; hard-ish paywalls with 7+ day trials outperform ([RevenueCat State of Subscription Apps 2026](https://www.revenuecat.com/state-of-subscription-apps-2026-education/)). AI apps churn ~30% faster than non-AI — retention loops are existential. Price anchors: $9.99/mo cluster (Photomath/Mathway/MathGPT/Brainly), $11.99 Gauth, $4 Khanmigo floor. US iOS CPI $1.5–3.5; Apple Ads median CPA ~$2.76 with the best D7 retention of paid channels.
 
 ## 3. Positioning
 
@@ -130,7 +130,6 @@ Camera as the primary input; offline notebook + cached videos; widgets; push; sh
 
 ## 8. Go-to-market
 
-- **Phase 0 — now, before any app exists (web-side):** (a) smart banner + QR + deferred deep links on math-solver.io so tomorrow's video-launch traffic pre-registers app interest (waitlist → launch-day install base); (b) **the shorts factory** — the video engine doubles as a content machine: 3–5 faceless TikTok/Shorts/Reels accounts posting daily generated problem-videos (hook first 2s, answer revealed in-app; TurboLearn's playbook reached 5M students this way — [Plutus](https://growwithplutus.com/blog/turbolearn-app-tiktok-strategy)); needs a hook-writing + visual-identity layer over raw renders to avoid AI-slop blindness; (c) capture the September spike on web, harvest emails/waitlist.
 - **Launch (fall 2026):** App Store featuring pitch (native camera + generated video is featuring-bait); Apple Ads on "math solver / photomath / mathway" (median CPA ~$2.76, best-retention paid channel); ASO on long-tail "math solver with steps free / video math solver"; comparison landing pages (`/photomath-alternative` etc., already in the web plan) funnel to installs; referral credits live from day one.
 - **The Knowt maneuver, standing:** a competitor's paywall tightening or Gauth ban-law event is a distribution moment — keep switch-friendly onboarding ("import your problems, everything free here") ready to run within days.
 - **Calendar:** ship v1 Oct–Nov 2026 → measure/iterate through January exam season (second traffic spike) → exam packs + Live Tutor polished for March–May AP/finals wave. Judge cohorts seasonally; never on summer data.
@@ -147,14 +146,14 @@ Camera as the primary input; offline notebook + cached videos; widgets; push; sh
 
 | Phase | When | Scope |
 |---|---|---|
-| **0 — Runway (web)** | Aug–Sep 2026 | Video launch lands; smart banners + QR + waitlist; shorts factory live; backend hardening (token verify, quotas, distributed rate limit, App Check); accuracy-verification service v1 (benefits web immediately) |
+| **0 — Runway (web)** | Aug–Sep 2026 | Video launch lands; backend hardening (token verify, quotas, distributed rate limit, App Check); accuracy-verification service v1 (benefits web immediately) |
 | **1 — MVP (10–14 wks)** | ship Oct–Nov 2026 | Camera solve (single problem) + typed/draw input; verified hint-first steps; follow-up chat; video w/ quota + player + share cards; notebook incl. guest→Firebase sync; practice + mistake review; quiet streak + warm-up; paywall (RevenueCat, dual rails); push; iOS first, Android fast-follow |
 | **2 — Differentiate** | Dec 2026–Feb 2027 | Check My Work out of beta; worksheet multi-problem mode; widgets; exam packs v1 (one exam, e.g. Digital SAT); Live Tutor beta (voice+camera+whiteboard+recap video); teacher page + classroom mode pilot |
 | **3 — Moat** | Mar–Jun 2027 | Exam packs full (AP/ACT/GCSE) for May season; iPad + Pencil scratchpad; on-device offline solver tier; localization of top markets (the unserved Microsoft-Math-Solver demand); tutor-credit economy |
 
 ## 11. Metrics & kill criteria
 
-Activation: install→first solved <60s median; install→first video ≥35%. Loop health: D1 ≥ 35%, D7 ≥ 15% (school weeks), solves/session ≥3, video→practice continuation ≥25%. Trust: wrong-answer reports <5/1,000 solves; verification-pass rate visible internally. Revenue: trial and paid checkpoints from §7; rewarded-ad fill for free-video top-ups. Growth: web→app conversion of mobile-web visitors ≥3%; ≥1 shorts account >10K followers by January. **Re-plan triggers:** D7 <8% after two school-month cohorts (loop is broken — stop adding features, fix retention); video watch-through <40% (format wrong); CPI-payback >12 months on paid channels (go organic-only).
+Activation: install→first solved <60s median; install→first video ≥35%. Loop health: D1 ≥ 35%, D7 ≥ 15% (school weeks), solves/session ≥3, video→practice continuation ≥25%. Trust: wrong-answer reports <5/1,000 solves; verification-pass rate visible internally. Revenue: trial and paid checkpoints from §7; rewarded-ad fill for free-video top-ups. **Re-plan triggers:** D7 <8% after two school-month cohorts (loop is broken — stop adding features, fix retention); video watch-through <40% (format wrong); CPI-payback >12 months on paid channels (go organic-only).
 
 ## 12. Risks & falsifiable bets
 
