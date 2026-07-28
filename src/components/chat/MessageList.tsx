@@ -15,7 +15,7 @@ import 'katex/dist/katex.min.css';
 import { useUI, Question } from "@/context/UIContext";
 import { useChatContext } from "@/context/ChatContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import {
   buildStepExplanationPrompt,
@@ -28,6 +28,8 @@ import VideoLessonDialog, {
   type VideoLessonRequest,
 } from "@/components/video/VideoLessonDialog";
 import { getProblemForAssistantMessage } from "@/lib/video/problem-context";
+import InlineVideoLesson from "@/components/video/InlineVideoLesson";
+import type { PublicVideoJob } from "@/lib/video/types";
 
 export type PracticeAttempt = {
   id: string;
@@ -48,6 +50,10 @@ export type Message = {
     questions: Question[];
     attempts?: PracticeAttempt[];
   };
+  videoJob?: {
+    id: string;
+    updatedAt: number;
+  };
 };
 
 export default function MessageList({
@@ -58,8 +64,12 @@ export default function MessageList({
   isLoading?: boolean;
 }) {
   const { openPracticePanel } = useUI();
-  const { activeChatId, savePracticeToMessage, sendMessage } =
-    useChatContext();
+  const {
+    activeChatId,
+    savePracticeToMessage,
+    saveVideoJobToMessage,
+    sendMessage,
+  } = useChatContext();
   const { getToken } = useTurnstile();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
   const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
@@ -69,6 +79,9 @@ export default function MessageList({
   } | null>(null);
   const [videoRequest, setVideoRequest] =
     useState<VideoLessonRequest | null>(null);
+  const [videoMessageId, setVideoMessageId] = useState<string | null>(
+    null,
+  );
   const [isVideoLessonSuspended, setIsVideoLessonSuspended] =
     useState(false);
 
@@ -149,12 +162,36 @@ export default function MessageList({
     const problem = getProblemForAssistantMessage(messages, message.id);
     if (!problem) return;
     setIsVideoLessonSuspended(false);
+    setVideoMessageId(message.id);
     setVideoRequest({
       requestKey: `${activeChatId ?? "local"}:${message.id}`,
       problem,
       solution: message.content,
     });
   };
+
+  const handleVideoJobAttached = useCallback(
+    (job: PublicVideoJob) => {
+      if (!videoMessageId) return;
+      saveVideoJobToMessage(videoMessageId, {
+        id: job.id,
+        updatedAt: job.updatedAt,
+      });
+    },
+    [saveVideoJobToMessage, videoMessageId],
+  );
+
+  const handleVideoDeleted = useCallback(
+    (jobId: string) => {
+      if (!videoMessageId) return;
+      const message = messages.find(
+        (candidate) => candidate.id === videoMessageId,
+      );
+      if (message?.videoJob?.id !== jobId) return;
+      saveVideoJobToMessage(videoMessageId, undefined);
+    },
+    [messages, saveVideoJobToMessage, videoMessageId],
+  );
 
   const handleVideoAuthRequest = () => {
     setIsVideoLessonSuspended(true);
@@ -341,7 +378,9 @@ export default function MessageList({
                         className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-teal-500/50 bg-teal-50 px-3.5 py-2 text-sm font-semibold text-teal-800 transition-colors hover:border-teal-500 hover:bg-teal-100 disabled:pointer-events-none disabled:opacity-55 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-300 dark:hover:border-teal-400/60 dark:hover:bg-teal-500/15"
                       >
                         <Video className="h-4 w-4" aria-hidden="true" />
-                        Generate video explanation
+                        {message.videoJob
+                          ? "Reopen video explanation"
+                          : "Generate video explanation"}
                       </button>
 
                       <button
@@ -441,6 +480,14 @@ export default function MessageList({
                   </div>
                 ) : null}
 
+                {message.videoJob && (
+                  <InlineVideoLesson
+                    messageId={message.id}
+                    jobId={message.videoJob.id}
+                    jobVersion={message.videoJob.updatedAt}
+                  />
+                )}
+
               </div>
             </div>
             )}
@@ -453,8 +500,11 @@ export default function MessageList({
         onClose={() => {
           setIsVideoLessonSuspended(false);
           setVideoRequest(null);
+          setVideoMessageId(null);
         }}
         onRequestAuth={handleVideoAuthRequest}
+        onJobAttached={handleVideoJobAttached}
+        onDeleted={handleVideoDeleted}
       />
 
       {/* Loading Skeleton */}

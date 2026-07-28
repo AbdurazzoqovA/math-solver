@@ -67,6 +67,15 @@ type ChatContextType = {
       attempts?: PracticeAttempt[];
     },
   ) => void;
+  saveVideoJobToMessage: (
+    messageId: string,
+    videoJob:
+      | {
+          id: string;
+          updatedAt: number;
+        }
+      | undefined,
+  ) => void;
   savePracticeAttempt: (
     messageId: string,
     attempt: PracticeAttempt,
@@ -378,6 +387,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const saveVideoJobToMessage = useCallback(
+    (
+      messageId: string,
+      videoJob:
+        | {
+            id: string;
+            updatedAt: number;
+          }
+        | undefined,
+    ) => {
+      setChats((previousChats) =>
+        previousChats.map((chat) => {
+          const targetMessage = chat.messages.find(
+            (message) => message.id === messageId,
+          );
+          if (!targetMessage) return chat;
+          if (
+            targetMessage.videoJob?.id === videoJob?.id &&
+            targetMessage.videoJob?.updatedAt === videoJob?.updatedAt
+          ) {
+            return chat;
+          }
+
+          return {
+            ...chat,
+            updatedAt: Date.now(),
+            messages: chat.messages.map((message) =>
+              message.id === messageId
+                ? { ...message, videoJob }
+                : message,
+            ),
+          };
+        }),
+      );
+    },
+    [],
+  );
+
   const savePracticeAttempt = useCallback(
     (messageId: string, attempt: PracticeAttempt) => {
       setChats((prev) =>
@@ -628,6 +675,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         deleteChat,
         sendMessage,
         savePracticeToMessage,
+        saveVideoJobToMessage,
         savePracticeAttempt,
         saveQuestionReviewState,
       }}

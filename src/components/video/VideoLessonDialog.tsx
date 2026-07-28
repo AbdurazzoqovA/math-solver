@@ -34,6 +34,8 @@ type VideoLessonDialogProps = {
   jobId?: string | null;
   onClose: () => void;
   onRequestAuth: () => void;
+  onJobAttached?: (job: PublicVideoJob) => void;
+  onDeleted?: (jobId: string) => void;
 };
 
 const TERMINAL_STATUSES = new Set(["ready", "failed", "unsupported"]);
@@ -59,6 +61,8 @@ export default function VideoLessonDialog({
   jobId = null,
   onClose,
   onRequestAuth,
+  onJobAttached,
+  onDeleted,
 }: VideoLessonDialogProps) {
   const {
     user,
@@ -122,6 +126,7 @@ export default function VideoLessonDialog({
         }
         if (!active) return;
         setJob(nextJob);
+        onJobAttached?.(nextJob);
 
         while (!TERMINAL_STATUSES.has(nextJob.status)) {
           const shouldContinue = await delay(
@@ -177,6 +182,7 @@ export default function VideoLessonDialog({
     isAuthReady,
     isFirebaseEnabled,
     jobId,
+    onJobAttached,
     request,
     retryNonce,
     user,
@@ -192,6 +198,7 @@ export default function VideoLessonDialog({
     setError(null);
     try {
       await deleteVideoJob(job.id, token);
+      onDeleted?.(job.id);
       onClose();
     } catch (caught) {
       setError({

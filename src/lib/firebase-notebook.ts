@@ -41,6 +41,14 @@ function sanitizeMessageForCloud(message: Message): Message {
     sanitized.practiceTest = message.practiceTest;
   }
 
+  if (
+    message.videoJob &&
+    /^[a-f0-9]{40}$/.test(message.videoJob.id) &&
+    Number.isFinite(message.videoJob.updatedAt)
+  ) {
+    sanitized.videoJob = message.videoJob;
+  }
+
   return sanitized;
 }
 

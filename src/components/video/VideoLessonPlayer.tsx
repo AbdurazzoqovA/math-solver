@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Brain,
   Captions,
@@ -28,6 +28,7 @@ type VideoLessonPlayerProps = {
 export default function VideoLessonPlayer({
   lesson,
 }: VideoLessonPlayerProps) {
+  const titleId = useId();
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerShellRef = useRef<HTMLDivElement>(null);
   const shouldAutoPlayNextRef = useRef(false);
@@ -278,14 +279,14 @@ export default function VideoLessonPlayer({
           : "Resume video";
 
   return (
-    <section aria-labelledby="video-lesson-title" className="flex min-h-0 flex-1 flex-col">
+    <section aria-labelledby={titleId} className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-1 sm:px-7">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-teal-600 dark:text-teal-400">
             Video explanation
           </p>
           <h2
-            id="video-lesson-title"
+            id={titleId}
             className="mt-1 text-lg font-bold tracking-tight text-foreground sm:text-2xl"
           >
             {lesson.title}
@@ -386,7 +387,7 @@ export default function VideoLessonPlayer({
             src={clip.videoUrl}
             poster={clip.posterUrl}
             playsInline
-            preload="auto"
+            preload="metadata"
             crossOrigin="anonymous"
             onClick={togglePlayback}
             onDoubleClick={() => void toggleFullscreen()}

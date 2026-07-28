@@ -182,3 +182,6 @@ Traced the owner's exact `2x+3y = 1`, `3y-12x=99` failure to a transient missing
 
 ## [2026-07-29] change | Raised visual lessons to 10 per UTC day
 Replaced the five-video lifetime entitlement with 10 free generations per verified account per UTC day across web and mobile. The server normalizes stale/missing quota periods on read and reservation, exposes the next reset time, upgrades older five-video records, and stamps each charged job with its period so a renderer/dispatch failure after midnight cannot refund the next day's bucket. Updated production/local configuration defaults, quota copy, tests, and visual-lesson architecture documentation.
+
+## [2026-07-29] change | Attached generated videos to their chat answers
+Added a persistent inline video attachment to the originating assistant answer. It appears as generation progress, polls independently when the modal closes, and becomes the complete continuous player when ready. Notebook sync stores only the private job ID/version; signed manifests are freshly authorized on chat reopen, missing/deleted jobs detach cleanly, and repeated generation reuses or restarts the deterministic job without duplicating quota charges.
