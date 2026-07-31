@@ -1,12 +1,34 @@
+import 'package:flutter/foundation.dart';
+
 abstract final class AppConfig {
   static const apiBaseUrl = String.fromEnvironment(
     'MATHSOLVER_API_BASE_URL',
     defaultValue: 'https://math-solver.io',
   );
 
-  static const firebaseApiKey = String.fromEnvironment(
+  static const _legacyFirebaseApiKey = String.fromEnvironment(
     'MATHSOLVER_FIREBASE_API_KEY',
   );
+
+  static const _firebaseIosApiKey = String.fromEnvironment(
+    'MATHSOLVER_FIREBASE_IOS_API_KEY',
+  );
+
+  static const _firebaseAndroidApiKey = String.fromEnvironment(
+    'MATHSOLVER_FIREBASE_ANDROID_API_KEY',
+  );
+
+  static String get firebaseApiKey {
+    if (defaultTargetPlatform == TargetPlatform.iOS &&
+        _firebaseIosApiKey.trim().isNotEmpty) {
+      return _firebaseIosApiKey;
+    }
+    if (defaultTargetPlatform == TargetPlatform.android &&
+        _firebaseAndroidApiKey.trim().isNotEmpty) {
+      return _firebaseAndroidApiKey;
+    }
+    return _legacyFirebaseApiKey;
+  }
 
   static const firebaseProjectId = String.fromEnvironment(
     'MATHSOLVER_FIREBASE_PROJECT_ID',

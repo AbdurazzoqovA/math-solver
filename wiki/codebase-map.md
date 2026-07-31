@@ -53,7 +53,7 @@ src/
       GraphingCalculator.tsx # reusable safe canvas plotter with multi-function controls
       MathFormula.tsx      # server-side KaTeX renderer for static formula content
     practice/
-      PracticePanel.tsx    # quiz/review runner: answers, steps, mistake schedule, completion
+      PracticePanel.tsx    # quiz/review runner: normalized Markdown/KaTeX, answers, steps, mistake schedule, completion
       PracticeTestsPage.tsx# saved tests, best score, due mistake-review entry point
     auth/
       AccountButton.tsx    # Email/Password + Google auth dialog, account menu, sync status
@@ -76,7 +76,7 @@ src/
     LearningProgressContext.tsx # guest/account local activity record and return measurement
     UIContext.tsx          # panel/calculator/practice/review UI state; calculator injection registry
   lib/
-    captcha.ts             # Turnstile verify + in-memory per-IP rate limit (60/hr) [not distributed]
+    captcha.ts             # configurable Turnstile validation; video creation requires action/hostname and fails closed
     calculators.ts         # typed registry facade, Algebra/precalc definitions, categories, validation
     calculus-calculators.ts# 8 Calculus definitions, intent instructions, SEO copy, examples, links
     linear-algebra-calculators.ts # 6 matrix/vector definitions, input hints, intent instructions
@@ -97,6 +97,7 @@ src/
     firebase-admin.ts      # server-only ID-token verification + cross-project Admin clients
     video/
       client.ts            # authenticated browser job API
+      create-job-handler.ts# shared verified-user creation; strict web Turnstile or preverified mobile App Check
       jobs.ts              # idempotent Firestore jobs, 10-per-UTC-day quota, refund/delete
       quota.ts             # pure daily-bucket normalization/reset math
       queue.ts             # Cloud Tasks OIDC dispatch; secret-gated local direct mode
@@ -107,7 +108,10 @@ src/
   types/custom-elements.d.ts # MathLive custom element typings
 
 mobile_app/                  # standalone Flutter iOS/Android client; no web source mixed in
+  assets/fonts/              # bundled Manrope 500–800 (OFL) — brand display/heading/button face
+  tool/                      # fetch ignored native Firebase config + run Flutter with local defines
   lib/
+    dev/                     # gallery_main.dart: dev-only screenshot/state harness for simulator QA (not shipped)
     core/
       analytics/             # opt-in, no-content Firebase Analytics adapter
       auth/                  # full verified Email/Password REST journey + secure refresh

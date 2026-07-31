@@ -1,6 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 
+const _superscripts = {
+  '0': '⁰',
+  '1': '¹',
+  '2': '²',
+  '3': '³',
+  '4': '⁴',
+  '5': '⁵',
+  '6': '⁶',
+  '7': '⁷',
+  '8': '⁸',
+  '9': '⁹',
+  'n': 'ⁿ',
+  '-': '⁻',
+};
+
+/// One-line plain-text rendering of a problem for list tiles: strips LaTeX
+/// delimiters and maps common tokens to readable unicode. Not a full
+/// renderer — unknown commands simply lose their backslash.
+String plainMathPreview(String value) {
+  var text = value.replaceAll('\n', ' ').replaceAll(RegExp(r'\${1,2}'), '');
+  text = text.replaceAllMapped(
+    RegExp(r'\^\{?([0-9n\-]{1,3})\}?'),
+    (match) => match
+        .group(1)!
+        .split('')
+        .map((c) => _superscripts[c] ?? c)
+        .join(),
+  );
+  text = text
+      .replaceAllMapped(
+        RegExp(r'\\frac\{([^{}]+)\}\{([^{}]+)\}'),
+        (match) => '${match.group(1)}/${match.group(2)}',
+      )
+      .replaceAll(r'\sqrt', '√')
+      .replaceAll(r'\pm', '±')
+      .replaceAll(r'\cdot', '·')
+      .replaceAll(r'\times', '×')
+      .replaceAll(r'\div', '÷')
+      .replaceAll(r'\pi', 'π')
+      .replaceAll(r'\theta', 'θ')
+      .replaceAll(r'\infty', '∞')
+      .replaceAll(r'\left', '')
+      .replaceAll(r'\right', '')
+      .replaceAllMapped(RegExp(r'\\([a-zA-Z]+)'), (match) => match.group(1)!)
+      .replaceAll('{', '')
+      .replaceAll('}', '');
+  return text.replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
 class MathText extends StatelessWidget {
   const MathText(
     this.data, {
@@ -26,8 +75,7 @@ class MathText extends StatelessWidget {
           if (block.isMath)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+              child: _ScrollableEquation(
                 child: Math.tex(
                   block.value,
                   mathStyle: MathStyle.display,
@@ -80,6 +128,76 @@ class MathText extends StatelessWidget {
       blocks.add(_MathBlock(value: value.substring(cursor), isMath: false));
     }
     return blocks;
+  }
+}
+
+/// Horizontal scroller for wide display equations with a right-edge fade so
+/// truncation is visibly "more to see" instead of looking clipped.
+class _ScrollableEquation extends StatefulWidget {
+  const _ScrollableEquation({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ScrollableEquation> createState() => _ScrollableEquationState();
+}
+
+class _ScrollableEquationState extends State<_ScrollableEquation> {
+  final _controller = ScrollController();
+  var _showEndHint = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_update);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _update());
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_update);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _update() {
+    if (!_controller.hasClients) return;
+    final position = _controller.position;
+    final showEndHint =
+        position.maxScrollExtent > 0 &&
+        position.pixels < position.maxScrollExtent - 4;
+    if (showEndHint != _showEndHint) {
+      setState(() => _showEndHint = showEndHint);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scroller = NotificationListener<SizeChangedLayoutNotification>(
+      onNotification: (_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _update());
+        return false;
+      },
+      child: SizeChangedLayoutNotifier(
+        child: SingleChildScrollView(
+          controller: _controller,
+          scrollDirection: Axis.horizontal,
+          child: widget.child,
+        ),
+      ),
+    );
+    if (!_showEndHint) {
+      return scroller;
+    }
+    // Fade the content itself so the hint works on any card color.
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Colors.white, Colors.white, Colors.transparent],
+        stops: [0, 0.88, 1],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: scroller,
+    );
   }
 }
 

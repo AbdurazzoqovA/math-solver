@@ -12,7 +12,10 @@ validated.
 
 ## 1. Build configuration
 
-- Supply `MATHSOLVER_FIREBASE_API_KEY` through CI or `--dart-define`.
+- Supply `MATHSOLVER_FIREBASE_IOS_API_KEY` and
+  `MATHSOLVER_FIREBASE_ANDROID_API_KEY` through CI or an ignored
+  `--dart-define-from-file` JSON. The legacy `MATHSOLVER_FIREBASE_API_KEY`
+  remains a compatibility fallback.
 - Optionally set `MATHSOLVER_API_BASE_URL`; production defaults to
   `https://math-solver.io`.
 - Register Firebase App Check debug tokens for simulator/CI builds. Release

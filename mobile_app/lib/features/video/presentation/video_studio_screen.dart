@@ -353,23 +353,33 @@ class _VideoSignIn extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    Positioned(
-                      right: -24,
-                      top: -22,
-                      child: Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          color: AppTheme.mint.withValues(alpha: 0.22),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
                     const Center(
                       child: Icon(
                         Icons.play_circle_fill_rounded,
                         color: Colors.white,
                         size: 84,
+                      ),
+                    ),
+                    Positioned(
+                      left: 22,
+                      right: 22,
+                      bottom: 56,
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.28),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.4,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     const Positioned(

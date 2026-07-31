@@ -19,7 +19,7 @@ Each object in the array must follow this strict schema:
 
 CRITICAL JSON RULES:
 1. You MUST double-escape ALL LaTeX backslashes. For example, write \\\\cdot instead of \\cdot, \\\\frac instead of \\frac, \\\\neq instead of \\neq, etc. This is essential for the output to be valid JSON.
-2. For line breaks in any string, use double-escaped newlines: \\\\n
+2. For line breaks in any string, use the standard JSON newline escape \\n (one backslash in the JSON source). Use \\n\\n when Markdown should start a new paragraph. Never double-escape a newline as \\\\n.
 3. Do not include raw unescaped newlines in your string properties.
 4. You MUST use standard markdown math delimiters. For inline math, use $ ... $. For block math, use $$ ... $$. Do NOT use \\( ... \\) or \\[ ... \\].`;
 

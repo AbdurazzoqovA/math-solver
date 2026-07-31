@@ -248,7 +248,7 @@ class _SolutionTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      record.problem.replaceAll('\n', ' '),
+                      plainMathPreview(record.problem),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium,
@@ -494,7 +494,7 @@ class _SavedActionBar extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: onVideo,
               icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Make video'),
+              label: const Text('Watch'),
             ),
           ),
           const SizedBox(width: 8),

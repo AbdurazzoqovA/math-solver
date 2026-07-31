@@ -38,30 +38,45 @@ Standalone Flutter app for iOS and Android. Everything mobile-specific lives in
 
 ```bash
 flutter pub get
-flutter run
+node tool/configure_firebase.mjs
+./tool/run_with_firebase.sh
 ```
+
+The configuration command uses the ignored Firebase Admin credential from the
+repository's local environment only to download the already-registered iOS and
+Android SDK configs. It extracts their public platform API keys into ignored,
+mode-`0600` local files; it never copies the service-account private key. The
+run wrapper supplies those values through `--dart-define-from-file`.
+
+After configuration, opening and running `ios/Runner.xcworkspace` directly in
+Xcode also receives the local Firebase defines through
+`ios/Flutter/FirebaseLocal.xcconfig`. Run `flutter run` without the wrapper only
+when intentionally testing the guest/unconfigured experience.
 
 The production API is the default. Point a debug build at another backend with:
 
 ```bash
-flutter run \
+./tool/run_with_firebase.sh \
   --dart-define=MATHSOLVER_API_BASE_URL=http://localhost:3000
 ```
 
 For an iOS simulator, use the Mac host address instead of `localhost` when
 needed. Android Emulator commonly uses `http://10.0.2.2:3000`.
 
-To enable verified account and private video flows, pass the Firebase Web API
-key as build configuration:
+For CI/release builds, inject the platform keys directly or provide an ignored
+JSON file with the same names:
 
 ```bash
 flutter run \
-  --dart-define=MATHSOLVER_FIREBASE_API_KEY=your_public_web_api_key
+  --dart-define=MATHSOLVER_FIREBASE_IOS_API_KEY=your_public_ios_api_key \
+  --dart-define=MATHSOLVER_FIREBASE_ANDROID_API_KEY=your_public_android_api_key
 ```
 
-Do not hard-code the value or add it to a tracked file. A build without the key
-keeps guest solving fully usable and presents an honest preview of account-only
-video benefits.
+The older `MATHSOLVER_FIREBASE_API_KEY` remains a fallback for existing CI
+configuration, but platform-specific keys avoid iOS/Android application
+restriction mismatches. Do not hard-code any key or add it to a tracked file. A
+build without a matching key keeps guest solving fully usable and presents an
+honest preview of account-only video benefits.
 
 Firebase's public project/app identifiers are checked in; the API key is not.
 Debug App Check uses debug providers, while release builds use platform

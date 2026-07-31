@@ -30,10 +30,16 @@ const smokeSolution =
   process.env.VIDEO_SMOKE_SOLUTION ??
   "**Step 1:** Subtract 3 from both sides to preserve equality.\\n\\n**Step 2:** x + 3 - 3 = 7 - 3, so x = 4.\\n\\n**Check:** 4 + 3 = 7.";
 const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+const turnstileToken = process.env.VIDEO_SMOKE_TURNSTILE_TOKEN;
 
 if (!apiKey) {
   throw new Error(
     "NEXT_PUBLIC_FIREBASE_API_KEY is required; run with node --env-file=.env.local.",
+  );
+}
+if (!turnstileToken) {
+  throw new Error(
+    "VIDEO_SMOKE_TURNSTILE_TOKEN is required. Supply one fresh, single-use token from the production widget.",
   );
 }
 
@@ -134,6 +140,7 @@ try {
       requestKey: `production-smoke-${randomUUID()}`,
       problem: smokeProblem,
       solution: smokeSolution,
+      captchaToken: turnstileToken,
     }),
   });
   if (

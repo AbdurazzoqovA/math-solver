@@ -281,10 +281,11 @@ class _AccountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     if (account.isSignedIn) {
+      final mintForeground = AppTheme.onMintCard(colors);
       return Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppTheme.mint,
+          color: AppTheme.mintCard(colors),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
@@ -299,10 +300,10 @@ class _AccountCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Verified account',
                     style: TextStyle(
-                      color: AppTheme.ink,
+                      color: mintForeground,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -312,7 +313,7 @@ class _AccountCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: AppTheme.ink.withValues(alpha: 0.68),
+                      color: mintForeground.withValues(alpha: 0.68),
                     ),
                   ),
                 ],
@@ -323,7 +324,7 @@ class _AccountCard extends StatelessWidget {
                 await videoApi.disableReadyNotifications();
                 await account.signOut();
               },
-              style: TextButton.styleFrom(foregroundColor: AppTheme.ink),
+              style: TextButton.styleFrom(foregroundColor: mintForeground),
               child: const Text('Sign out'),
             ),
           ],

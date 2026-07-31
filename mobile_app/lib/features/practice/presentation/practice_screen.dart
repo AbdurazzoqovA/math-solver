@@ -79,7 +79,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: AppTheme.mint,
+                    color: AppTheme.mintCard(colors),
                     borderRadius: BorderRadius.circular(28),
                   ),
                   child: Column(
@@ -87,13 +87,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.wb_sunny_outlined, color: AppTheme.ink),
+                          Icon(
+                            Icons.wb_sunny_outlined,
+                            color: AppTheme.onMintCard(colors),
+                          ),
                           const SizedBox(width: 9),
                           Text(
                             'Daily warm-up',
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: AppTheme.ink,
+                                  color: AppTheme.onMintCard(colors),
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
@@ -106,9 +109,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             : dueReviews.isEmpty
                             ? 'Four quick questions based on your latest solution.'
                             : '${dueReviews.length} due review${dueReviews.length == 1 ? '' : 's'} plus fresh practice.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyLarge?.copyWith(color: AppTheme.ink),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.onMintCard(colors),
+                        ),
                       ),
                       const SizedBox(height: 18),
                       FilledButton(
@@ -116,8 +119,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             ? null
                             : _startPractice,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.ink,
-                          foregroundColor: Colors.white,
+                          backgroundColor:
+                              colors.brightness == Brightness.dark
+                              ? AppTheme.mint
+                              : AppTheme.ink,
+                          foregroundColor:
+                              colors.brightness == Brightness.dark
+                              ? AppTheme.ink
+                              : Colors.white,
                         ),
                         child: _isLoading
                             ? const SizedBox(

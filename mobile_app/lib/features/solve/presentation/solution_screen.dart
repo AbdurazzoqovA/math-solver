@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/auth/account_controller.dart';
 import '../../../core/network/mathsolver_api.dart';
@@ -213,7 +214,10 @@ class _SolutionScreenState extends State<SolutionScreen> {
                           onRetry: _solve,
                         ),
                       for (var index = 0; index < visibleCount; index++) ...[
-                        _StepCard(step: parsed.steps[index]),
+                        _EnterAnimation(
+                          key: ValueKey('step-$index'),
+                          child: _StepCard(step: parsed.steps[index]),
+                        ),
                         const SizedBox(height: 12),
                       ],
                       if (_status == _SolveStatus.streaming &&
@@ -222,7 +226,10 @@ class _SolutionScreenState extends State<SolutionScreen> {
                       if (canRevealMore && _status == _SolveStatus.ready) ...[
                         const SizedBox(height: 8),
                         FilledButton.icon(
-                          onPressed: () => setState(() => _revealedSteps++),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _revealedSteps++);
+                          },
                           icon: const Icon(Icons.arrow_downward_rounded),
                           label: Text(
                             visibleCount == 0
@@ -233,11 +240,17 @@ class _SolutionScreenState extends State<SolutionScreen> {
                       ],
                       if (showFinal) ...[
                         const SizedBox(height: 10),
-                        _FinalAnswer(answer: parsed.finalAnswer),
+                        _EnterAnimation(
+                          key: const ValueKey('final-answer'),
+                          child: _FinalAnswer(answer: parsed.finalAnswer),
+                        ),
                       ],
                       if (_verification != null) ...[
                         const SizedBox(height: 14),
-                        _VerificationCard(verification: _verification!),
+                        _EnterAnimation(
+                          key: const ValueKey('verification'),
+                          child: _VerificationCard(verification: _verification!),
+                        ),
                       ],
                       if (_status == _SolveStatus.ready) ...[
                         const SizedBox(height: 18),
@@ -401,6 +414,29 @@ class _SolutionScreenState extends State<SolutionScreen> {
             {'role': 'assistant', 'content': _rawSolution},
             {'role': 'user', 'content': followUp},
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EnterAnimation extends StatelessWidget {
+  const _EnterAnimation({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 340),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, 14 * (1 - value)),
+          child: child,
         ),
       ),
     );
@@ -788,11 +824,31 @@ class _SolutionActionDock extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 2,
+            flex: 5,
             child: FilledButton.icon(
               onPressed: onVideo,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
               icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Make video'),
+              label: const Text('Watch'),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            flex: 4,
+            child: FilledButton.tonalIcon(
+              onPressed: isCreatingPractice ? null : onPractice,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              icon: isCreatingPractice
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.bolt_rounded),
+              label: const Text('Try it'),
             ),
           ),
           const SizedBox(width: 7),
@@ -801,22 +857,9 @@ class _SolutionActionDock extends StatelessWidget {
             onPressed: onAsk,
             style: IconButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              minimumSize: const Size(52, 52),
             ),
             icon: const Icon(Icons.chat_bubble_outline_rounded),
-          ),
-          const SizedBox(width: 5),
-          IconButton(
-            tooltip: 'Practice this idea',
-            onPressed: isCreatingPractice ? null : onPractice,
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-            ),
-            icon: isCreatingPractice
-                ? const SizedBox.square(
-                    dimension: 19,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.bolt_rounded),
           ),
         ],
       ),

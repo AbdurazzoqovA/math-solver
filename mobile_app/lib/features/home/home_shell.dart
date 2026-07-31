@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../core/auth/account_controller.dart';
@@ -31,20 +33,28 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   var _selectedIndex = 0;
 
-  static const _destinations = [
-    NavigationDestination(
+  List<NavigationDestination> _destinations(int dueReviews) => [
+    const NavigationDestination(
       icon: Icon(Icons.home_outlined),
       selectedIcon: Icon(Icons.home_rounded),
       label: 'Home',
     ),
-    NavigationDestination(
+    const NavigationDestination(
       icon: Icon(Icons.bookmarks_outlined),
       selectedIcon: Icon(Icons.bookmarks_rounded),
       label: 'Library',
     ),
     NavigationDestination(
-      icon: Icon(Icons.bolt_outlined),
-      selectedIcon: Icon(Icons.bolt_rounded),
+      icon: Badge(
+        isLabelVisible: dueReviews > 0,
+        label: Text('$dueReviews'),
+        child: const Icon(Icons.bolt_outlined),
+      ),
+      selectedIcon: Badge(
+        isLabelVisible: dueReviews > 0,
+        label: Text('$dueReviews'),
+        child: const Icon(Icons.bolt_rounded),
+      ),
       label: 'Practice',
     ),
   ];
@@ -116,15 +126,18 @@ class _HomeShellState extends State<HomeShell> {
                             ),
                           ),
                         ),
-                        destinations: _destinations
-                            .map(
-                              (item) => NavigationRailDestination(
-                                icon: item.icon,
-                                selectedIcon: item.selectedIcon,
-                                label: Text(item.label),
-                              ),
-                            )
-                            .toList(growable: false),
+                        destinations:
+                            _destinations(
+                                  widget.controller.dueReviewItems.length,
+                                )
+                                .map(
+                                  (item) => NavigationRailDestination(
+                                    icon: item.icon,
+                                    selectedIcon: item.selectedIcon,
+                                    label: Text(item.label),
+                                  ),
+                                )
+                                .toList(growable: false),
                       ),
                     ),
                   ),
@@ -142,9 +155,6 @@ class _HomeShellState extends State<HomeShell> {
             minimum: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerLowest.withValues(alpha: 0.96),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
@@ -156,10 +166,23 @@ class _HomeShellState extends State<HomeShell> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(28),
-                child: NavigationBar(
-                  selectedIndex: _selectedIndex,
-                  onDestinationSelected: _select,
-                  destinations: _destinations,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: ColoredBox(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerLowest.withValues(alpha: 0.8),
+                    child: ListenableBuilder(
+                      listenable: widget.controller,
+                      builder: (context, _) => NavigationBar(
+                        selectedIndex: _selectedIndex,
+                        onDestinationSelected: _select,
+                        destinations: _destinations(
+                          widget.controller.dueReviewItems.length,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

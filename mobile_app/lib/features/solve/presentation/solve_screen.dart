@@ -10,6 +10,7 @@ import '../../../core/auth/account_controller.dart';
 import '../../../core/network/mathsolver_api.dart';
 import '../../../core/network/video_lesson_api.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/math_text.dart';
 import '../../../core/widgets/screen_layout.dart';
 import '../../../core/widgets/text_entry_sheet.dart';
 import '../../app/app_controller.dart';
@@ -565,7 +566,7 @@ class _ScanHero extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         clipBehavior: Clip.antiAlias,
         child: Ink(
-          height: 214,
+          height: 210,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -577,15 +578,28 @@ class _ScanHero extends StatelessWidget {
             onTap: isBusy ? null : onTap,
             child: Stack(
               children: [
+                // Viewfinder framing a faint problem: the scan story in one glance.
                 Positioned(
-                  right: -34,
-                  top: -46,
-                  child: Container(
-                    width: 178,
-                    height: 178,
-                    decoration: BoxDecoration(
-                      color: AppTheme.mint.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
+                  right: 22,
+                  top: 26,
+                  child: SizedBox(
+                    width: 158,
+                    height: 96,
+                    child: CustomPaint(
+                      painter: _ViewfinderPainter(
+                        color: Colors.white.withValues(alpha: 0.55),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '2x² − 7x + 3 = 0',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.62),
+                                fontSize: 15,
+                                letterSpacing: 0.2,
+                              ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -649,6 +663,49 @@ class _ScanHero extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ViewfinderPainter extends CustomPainter {
+  const _ViewfinderPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round;
+    const radius = 18.0;
+    const arm = 16.0;
+    final w = size.width;
+    final h = size.height;
+
+    Path corner(Offset origin, double dx, double dy) {
+      // Rounded L-bracket: arm → quarter arc → arm, mirrored per corner.
+      final path = Path()
+        ..moveTo(origin.dx + dx * (radius + arm), origin.dy)
+        ..lineTo(origin.dx + dx * radius, origin.dy)
+        ..quadraticBezierTo(
+          origin.dx,
+          origin.dy,
+          origin.dx,
+          origin.dy + dy * radius,
+        )
+        ..lineTo(origin.dx, origin.dy + dy * (radius + arm));
+      return path;
+    }
+
+    canvas.drawPath(corner(Offset.zero, 1, 1), paint);
+    canvas.drawPath(corner(Offset(w, 0), -1, 1), paint);
+    canvas.drawPath(corner(Offset(0, h), 1, -1), paint);
+    canvas.drawPath(corner(Offset(w, h), -1, -1), paint);
+  }
+
+  @override
+  bool shouldRepaint(_ViewfinderPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _QuickInputCard extends StatelessWidget {
@@ -720,10 +777,42 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label),
+    final colors = Theme.of(context).colorScheme;
+    final enabled = onTap != null;
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 21,
+                color: enabled ? colors.primary : colors.outline,
+              ),
+              const SizedBox(width: 9),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontSize: 14.5,
+                      color: enabled ? colors.onSurface : colors.outline,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -766,8 +855,11 @@ class _VideoPromise extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final background = AppTheme.mintCard(colors);
+    final foreground = AppTheme.onMintCard(colors);
     return Material(
-      color: AppTheme.mint,
+      color: background,
       borderRadius: BorderRadius.circular(26),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -780,7 +872,9 @@ class _VideoPromise extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colors.brightness == Brightness.dark
+                      ? AppTheme.mint
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 alignment: Alignment.center,
@@ -799,7 +893,7 @@ class _VideoPromise extends StatelessWidget {
                       'Watch your exact problem',
                       style: Theme.of(
                         context,
-                      ).textTheme.titleMedium?.copyWith(color: AppTheme.ink),
+                      ).textTheme.titleMedium?.copyWith(color: foreground),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -807,7 +901,7 @@ class _VideoPromise extends StatelessWidget {
                           ? 'Solve once to create a private animated lesson.'
                           : 'Turn your latest solution into a narrated video.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.ink.withValues(alpha: 0.72),
+                        color: foreground.withValues(alpha: 0.72),
                       ),
                     ),
                   ],
@@ -817,7 +911,7 @@ class _VideoPromise extends StatelessWidget {
                 onTap == null
                     ? Icons.lock_outline_rounded
                     : Icons.arrow_forward_rounded,
-                color: AppTheme.ink,
+                color: foreground,
               ),
             ],
           ),
@@ -865,14 +959,14 @@ class _RecentSolution extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      record.problem.replaceAll('\n', ' '),
+                      plainMathPreview(record.problem),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${record.source.label} · saved today',
+                      '${record.source.label} · ${_savedLabel(record.createdAt)}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
@@ -887,6 +981,31 @@ class _RecentSolution extends StatelessWidget {
       ),
     );
   }
+}
+
+String _savedLabel(DateTime value) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(value.year, value.month, value.day);
+  if (day == today) return 'saved today';
+  if (day == today.subtract(const Duration(days: 1))) {
+    return 'saved yesterday';
+  }
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return 'saved ${months[value.month - 1]} ${value.day}';
 }
 
 class _NoRecent extends StatelessWidget {

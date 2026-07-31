@@ -17,9 +17,11 @@ function rejection(message: string, code: string) {
 
 export async function mobileAppCheckFailure(
   request: Request,
+  options: { required?: boolean } = {},
 ): Promise<Response | null> {
   const token = request.headers.get(APP_CHECK_HEADER)?.trim();
-  const enforced = process.env.MOBILE_APP_CHECK_ENFORCED === "true";
+  const enforced =
+    options.required || process.env.MOBILE_APP_CHECK_ENFORCED === "true";
 
   if (!token) {
     return enforced

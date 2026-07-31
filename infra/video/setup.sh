@@ -10,7 +10,11 @@ bucket_name="${VIDEO_STORAGE_BUCKET:-${cloud_project}-mathsolver-video}"
 renderer_service="${VIDEO_RENDERER_SERVICE:-mathsolver-video-renderer}"
 renderer_account_name="mathsolver-video-renderer"
 task_account_name="mathsolver-video-tasks"
-secret_name="${VIDEO_GEMINI_SECRET:-mathsolver-gemini-api-key}"
+renderer_secret_name="${VIDEO_GEMINI_SECRET:-mathsolver-gemini-api-key}"
+web_secret_name="${WEB_GEMINI_SECRET:-mathsolver-web-gemini-api-key}"
+turnstile_secret_name="${TURNSTILE_SECRET_NAME:-mathsolver-turnstile-secret}"
+renderer_storage_role_id="mathsolverVideoRendererStorage"
+web_storage_role_id="mathsolverVideoWebStorage"
 renderer_account="${renderer_account_name}@${cloud_project}.iam.gserviceaccount.com"
 task_account="${task_account_name}@${cloud_project}.iam.gserviceaccount.com"
 
@@ -33,7 +37,59 @@ ensure_service_account() {
   fi
 }
 
+ensure_project_role() {
+  local role_id="$1"
+  local title="$2"
+  local description="$3"
+  local permissions="$4"
+  if gcloud iam roles describe "$role_id" \
+    --project "$cloud_project" >/dev/null 2>&1; then
+    gcloud iam roles update "$role_id" \
+      --project "$cloud_project" \
+      --title "$title" \
+      --description "$description" \
+      --permissions "$permissions" \
+      --stage GA
+  else
+    gcloud iam roles create "$role_id" \
+      --project "$cloud_project" \
+      --title "$title" \
+      --description "$description" \
+      --permissions "$permissions" \
+      --stage GA
+  fi
+}
+
+ensure_secret() {
+  local secret_name="$1"
+  if ! gcloud secrets describe "$secret_name" \
+    --project "$cloud_project" >/dev/null 2>&1; then
+    gcloud secrets create "$secret_name" \
+      --replication-policy automatic \
+      --project "$cloud_project"
+  fi
+}
+
+remove_bucket_role_if_present() {
+  local member="$1"
+  local role="$2"
+  if gcloud storage buckets get-iam-policy "gs://${bucket_name}" \
+    --format json \
+    --project "$cloud_project" |
+    jq -e \
+      --arg member "$member" \
+      --arg role "$role" \
+      'any(.bindings[]?; .role == $role and any(.members[]?; . == $member))' \
+      >/dev/null; then
+    gcloud storage buckets remove-iam-policy-binding "gs://${bucket_name}" \
+      --member "$member" \
+      --role "$role" \
+      --project "$cloud_project"
+  fi
+}
+
 require_tool gcloud
+require_tool jq
 
 gcloud services enable \
   artifactregistry.googleapis.com \
@@ -80,14 +136,31 @@ gcloud storage buckets update "gs://${bucket_name}" \
   --uniform-bucket-level-access \
   --project "$cloud_project"
 
+ensure_project_role \
+  "$renderer_storage_role_id" \
+  "MathSolver Video Renderer Storage" \
+  "Create, replace, read, list, and clean up private video lesson objects." \
+  "storage.objects.create,storage.objects.delete,storage.objects.get,storage.objects.list,storage.objects.update"
+ensure_project_role \
+  "$web_storage_role_id" \
+  "MathSolver Video Web Storage" \
+  "Read, list, sign, and delete account-authorized private video lesson objects." \
+  "storage.objects.delete,storage.objects.get,storage.objects.list"
+
 gcloud storage buckets add-iam-policy-binding "gs://${bucket_name}" \
   --member "serviceAccount:${renderer_account}" \
-  --role roles/storage.objectAdmin \
+  --role "projects/${cloud_project}/roles/${renderer_storage_role_id}" \
   --project "$cloud_project"
 gcloud storage buckets add-iam-policy-binding "gs://${bucket_name}" \
   --member "serviceAccount:${web_account}" \
-  --role roles/storage.objectAdmin \
+  --role "projects/${cloud_project}/roles/${web_storage_role_id}" \
   --project "$cloud_project"
+remove_bucket_role_if_present \
+  "serviceAccount:${renderer_account}" \
+  "roles/storage.objectAdmin"
+remove_bucket_role_if_present \
+  "serviceAccount:${web_account}" \
+  "roles/storage.objectAdmin"
 
 if ! gcloud tasks queues describe "$queue_name" \
   --location "$cloud_region" \
@@ -138,14 +211,19 @@ gcloud iam service-accounts add-iam-policy-binding "$task_account" \
   --role roles/iam.serviceAccountTokenCreator \
   --project "$cloud_project"
 
-if ! gcloud secrets describe "$secret_name" \
-  --project "$cloud_project" >/dev/null 2>&1; then
-  gcloud secrets create "$secret_name" \
-    --replication-policy automatic \
-    --project "$cloud_project"
-fi
-gcloud secrets add-iam-policy-binding "$secret_name" \
+ensure_secret "$renderer_secret_name"
+ensure_secret "$web_secret_name"
+ensure_secret "$turnstile_secret_name"
+gcloud secrets add-iam-policy-binding "$renderer_secret_name" \
   --member "serviceAccount:${renderer_account}" \
+  --role roles/secretmanager.secretAccessor \
+  --project "$cloud_project"
+gcloud secrets add-iam-policy-binding "$web_secret_name" \
+  --member "serviceAccount:${web_account}" \
+  --role roles/secretmanager.secretAccessor \
+  --project "$cloud_project"
+gcloud secrets add-iam-policy-binding "$turnstile_secret_name" \
+  --member "serviceAccount:${web_account}" \
   --role roles/secretmanager.secretAccessor \
   --project "$cloud_project"
 
@@ -155,7 +233,7 @@ if ! gcloud firestore fields ttls update deleteAt \
   --enable-ttl \
   --async \
   --project "$firebase_project"; then
-  printf 'Managed Firestore TTL is unavailable; per-job Cloud Tasks cleanup remains authoritative.\\n' >&2
+  printf 'Managed Firestore TTL is unavailable; per-job Cloud Tasks cleanup remains authoritative.\n' >&2
 fi
 
 printf 'Video infrastructure is configured.\n'
@@ -163,6 +241,8 @@ printf 'Bucket: gs://%s\n' "$bucket_name"
 printf 'Queue: %s/%s\n' "$cloud_region" "$queue_name"
 printf 'Renderer service account: %s\n' "$renderer_account"
 printf 'Task service account: %s\n' "$task_account"
-printf 'Before deploying, add the Gemini key as a version of Secret Manager secret %s.\n' "$secret_name"
+printf 'Before deploying, add a restricted renderer Gemini key to secret %s.\n' "$renderer_secret_name"
+printf 'Add a separate restricted web Gemini key to secret %s.\n' "$web_secret_name"
+printf 'Add the Turnstile server secret to Secret Manager secret %s.\n' "$turnstile_secret_name"
 printf 'The renderer deployment script will keep the Cloud Run service private.\n'
 printf 'Renderer service name: %s\n' "$renderer_service"

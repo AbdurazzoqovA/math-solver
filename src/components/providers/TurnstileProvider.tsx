@@ -42,6 +42,7 @@ declare global {
           retry?: "auto" | "never";
           "retry-interval"?: number;
           "refresh-expired"?: "auto" | "manual" | "never";
+          action?: string;
         }
       ) => string;
       reset: (widgetId: string) => void;
@@ -78,8 +79,8 @@ export default function TurnstileProvider({
 
     // If script is already loaded
     if (window.turnstile) {
-      setScriptReady(true);
-      return;
+      const readyTimer = window.setTimeout(() => setScriptReady(true), 0);
+      return () => window.clearTimeout(readyTimer);
     }
 
     // Set up global callback for explicit render mode
@@ -136,6 +137,7 @@ export default function TurnstileProvider({
         retry: "auto",
         "retry-interval": 5000,
         "refresh-expired": "auto",
+        action: "mathsolver_request",
         callback: (token: string) => {
           tokenRef.current = token;
         },

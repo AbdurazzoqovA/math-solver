@@ -23,6 +23,26 @@ require_env() {
   fi
 }
 
+latest_enabled_secret_version() {
+  local secret_name="$1"
+  local configured_version="$2"
+  local version="$configured_version"
+
+  if [[ -z "$version" ]]; then
+    version="$(gcloud secrets versions list "$secret_name" \
+      --project "$cloud_project" \
+      --filter='state=ENABLED' \
+      --sort-by='~createTime' \
+      --format='value(name)' \
+      --limit 1)"
+  fi
+  if [[ -z "$version" ]]; then
+    printf 'Secret %s has no enabled version.\n' "$secret_name" >&2
+    exit 1
+  fi
+  printf '%s' "$version"
+}
+
 load_env_file "$repo_dir/.env.local"
 load_env_file "$repo_dir/.env.development.local"
 
@@ -32,25 +52,38 @@ for required_variable in \
   NEXT_PUBLIC_FIREBASE_PROJECT_ID \
   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
-  NEXT_PUBLIC_FIREBASE_APP_ID; do
+  NEXT_PUBLIC_FIREBASE_APP_ID \
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY; do
   require_env "$required_variable"
 done
 
 cloud_project="axial-willow-428621-n4"
 cloud_region="us-central1"
+web_gemini_secret="${WEB_GEMINI_SECRET:-mathsolver-web-gemini-api-key}"
+turnstile_secret="${TURNSTILE_SECRET_NAME:-mathsolver-turnstile-secret}"
+web_gemini_secret_version="$(latest_enabled_secret_version \
+  "$web_gemini_secret" \
+  "${WEB_GEMINI_SECRET_VERSION:-}")"
+turnstile_secret_version="$(latest_enabled_secret_version \
+  "$turnstile_secret" \
+  "${TURNSTILE_SECRET_VERSION:-}")"
 image_tag="${DEPLOY_IMAGE_TAG:-$(git -C "$repo_dir" rev-parse --short HEAD)}"
 image_uri="${cloud_region}-docker.pkg.dev/${cloud_project}/cloud-run-source-deploy/mathsolver:${image_tag}"
 
-gcloud builds submit "$repo_dir" \
-  --project "$cloud_project" \
-  --config "$repo_dir/cloudbuild.yaml" \
-  --substitutions "_IMAGE_URI=${image_uri},_NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN},_NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID},_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET},_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID},_NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}"
+if [[ "${DEPLOY_SKIP_BUILD:-false}" != "true" ]]; then
+  gcloud builds submit "$repo_dir" \
+    --project "$cloud_project" \
+    --config "$repo_dir/cloudbuild.yaml" \
+    --substitutions "_IMAGE_URI=${image_uri},_NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN},_NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID},_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET},_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID},_NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}"
+fi
 
 gcloud run deploy mathsolver \
   --image "$image_uri" \
   --region "$cloud_region" \
   --platform managed \
   --allow-unauthenticated \
+  --remove-env-vars "GOOGLE_CLOUD_API_KEY,TURNSTILE_SECRET_KEY" \
+  --update-secrets "GOOGLE_CLOUD_API_KEY=${web_gemini_secret}:${web_gemini_secret_version},TURNSTILE_SECRET_KEY=${turnstile_secret}:${turnstile_secret_version}" \
   --memory 4Gi \
   --cpu 2 \
   --max-instances 20 \

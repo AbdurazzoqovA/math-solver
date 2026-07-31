@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
 abstract final class AppTheme {
   static const ink = Color(0xFF172033);
@@ -7,6 +8,26 @@ abstract final class AppTheme {
   static const mint = Color(0xFFBDF3D5);
   static const coral = Color(0xFFFF876F);
   static const canvas = Color(0xFFF8F8F5);
+
+  /// Brand voice: headings, titles, buttons. Body copy stays on the platform
+  /// font for long-form reading.
+  static const displayFamily = 'Manrope';
+
+  /// Large mint surfaces glow on the dark canvas, so dark mode swaps them for
+  /// a deep mint tint with light foreground. Small mint chips stay unchanged.
+  static Color mintCard(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark ? const Color(0xFF1D3A2D) : mint;
+
+  static Color onMintCard(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark ? const Color(0xFFCDEEDB) : ink;
+
+  static Color coralCard(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFF43261E)
+      : const Color(0xFFFFE1D6);
+
+  static Color onCoralCard(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark ? const Color(0xFFFFD9CC) : ink;
 
   static ThemeData light() => _theme(Brightness.light);
 
@@ -50,33 +71,44 @@ abstract final class AppTheme {
 
     final textTheme = base.textTheme.copyWith(
       displaySmall: base.textTheme.displaySmall?.copyWith(
+        fontFamily: displayFamily,
         fontSize: 40,
-        height: 1.02,
+        height: 1.04,
         fontWeight: FontWeight.w800,
-        letterSpacing: -1.55,
+        letterSpacing: -1.2,
         color: scheme.onSurface,
       ),
       headlineMedium: base.textTheme.headlineMedium?.copyWith(
+        fontFamily: displayFamily,
         fontSize: 30,
         height: 1.08,
         fontWeight: FontWeight.w800,
-        letterSpacing: -0.9,
+        letterSpacing: -0.7,
         color: scheme.onSurface,
       ),
       headlineSmall: base.textTheme.headlineSmall?.copyWith(
+        fontFamily: displayFamily,
         fontSize: 23,
         height: 1.15,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.45,
-        color: scheme.onSurface,
-      ),
-      titleLarge: base.textTheme.titleLarge?.copyWith(
-        fontSize: 21,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.35,
         color: scheme.onSurface,
       ),
+      titleLarge: base.textTheme.titleLarge?.copyWith(
+        fontFamily: displayFamily,
+        fontSize: 21,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.25,
+        color: scheme.onSurface,
+      ),
       titleMedium: base.textTheme.titleMedium?.copyWith(
+        fontFamily: displayFamily,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.1,
+        color: scheme.onSurface,
+      ),
+      titleSmall: base.textTheme.titleSmall?.copyWith(
+        fontFamily: displayFamily,
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
@@ -90,9 +122,18 @@ abstract final class AppTheme {
         color: scheme.onSurface,
       ),
       labelLarge: base.textTheme.labelLarge?.copyWith(
+        fontFamily: displayFamily,
         fontSize: 15,
         fontWeight: FontWeight.w700,
         letterSpacing: 0,
+      ),
+      labelMedium: base.textTheme.labelMedium?.copyWith(
+        fontFamily: displayFamily,
+        fontWeight: FontWeight.w600,
+      ),
+      labelSmall: base.textTheme.labelSmall?.copyWith(
+        fontFamily: displayFamily,
+        fontWeight: FontWeight.w700,
       ),
     );
 
@@ -113,6 +154,9 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         foregroundColor: scheme.onSurface,
         titleTextStyle: textTheme.titleLarge,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
       cardTheme: CardThemeData(
         elevation: 0,

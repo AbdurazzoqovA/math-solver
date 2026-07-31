@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CameraCaptureScreen extends StatefulWidget {
   const CameraCaptureScreen({
@@ -108,6 +107,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
       return;
     }
     setState(() => _isCapturing = true);
+    HapticFeedback.mediumImpact();
     try {
       final file = await camera.takePicture();
       final bytes = await file.readAsBytes();

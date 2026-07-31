@@ -124,6 +124,11 @@ class _ReviewResult extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final hasMistake = result.status == WorkCheckStatus.hasMistake;
     final isCorrect = result.status == WorkCheckStatus.correct;
+    final heroForeground = isCorrect
+        ? AppTheme.onMintCard(colors)
+        : hasMistake
+        ? AppTheme.onCoralCard(colors)
+        : colors.onSurface;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       children: [
@@ -131,9 +136,9 @@ class _ReviewResult extends StatelessWidget {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: isCorrect
-                ? AppTheme.mint
+                ? AppTheme.mintCard(colors)
                 : hasMistake
-                ? const Color(0xFFFFE1D6)
+                ? AppTheme.coralCard(colors)
                 : colors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(28),
           ),
@@ -147,7 +152,7 @@ class _ReviewResult extends StatelessWidget {
                     ? Icons.search_rounded
                     : Icons.photo_camera_back_outlined,
                 size: 34,
-                color: AppTheme.ink,
+                color: heroForeground,
               ),
               const SizedBox(height: 14),
               Text(
@@ -158,20 +163,20 @@ class _ReviewResult extends StatelessWidget {
                     : 'Some writing is unclear.',
                 style: Theme.of(
                   context,
-                ).textTheme.headlineSmall?.copyWith(color: AppTheme.ink),
+                ).textTheme.headlineSmall?.copyWith(color: heroForeground),
               ),
               const SizedBox(height: 7),
               Text(
                 result.summary,
                 style: Theme.of(
                   context,
-                ).textTheme.bodyLarge?.copyWith(color: AppTheme.ink),
+                ).textTheme.bodyLarge?.copyWith(color: heroForeground),
               ),
               const SizedBox(height: 12),
               Text(
                 'AI review · ${(result.confidence * 100).round()}% confidence',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppTheme.ink.withValues(alpha: 0.68),
+                  color: heroForeground.withValues(alpha: 0.68),
                 ),
               ),
             ],
@@ -249,15 +254,21 @@ class _WorkLineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final statusColor = switch (line.status) {
-      WorkLineStatus.correct => AppTheme.mint,
-      WorkLineStatus.incorrect => const Color(0xFFFFE1D6),
+      WorkLineStatus.correct => AppTheme.mintCard(colors),
+      WorkLineStatus.incorrect => AppTheme.coralCard(colors),
       WorkLineStatus.unclear => colors.surfaceContainerHigh,
+    };
+    final foreground = switch (line.status) {
+      WorkLineStatus.correct => AppTheme.onMintCard(colors),
+      WorkLineStatus.incorrect => AppTheme.onCoralCard(colors),
+      WorkLineStatus.unclear => colors.onSurface,
     };
     final icon = switch (line.status) {
       WorkLineStatus.correct => Icons.check_rounded,
       WorkLineStatus.incorrect => Icons.close_rounded,
       WorkLineStatus.unclear => Icons.question_mark_rounded,
     };
+    final isDark = colors.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
@@ -276,12 +287,16 @@ class _WorkLineCard extends StatelessWidget {
               Container(
                 width: 34,
                 height: 34,
-                decoration: const BoxDecoration(
-                  color: Colors.white70,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.white70,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Icon(icon, size: 20, color: AppTheme.ink),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: isDark ? Colors.white : AppTheme.ink,
+                ),
               ),
               const SizedBox(width: 11),
               Expanded(child: MathText(line.transcription)),
@@ -293,7 +308,7 @@ class _WorkLineCard extends StatelessWidget {
               line.explanation,
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: AppTheme.ink),
+              ).textTheme.bodyMedium?.copyWith(color: foreground),
             ),
           ],
           if (line.correction?.isNotEmpty ?? false) ...[
@@ -301,7 +316,7 @@ class _WorkLineCard extends StatelessWidget {
             Text(
               'Try this:',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppTheme.ink,
+                color: foreground,
                 fontWeight: FontWeight.w800,
               ),
             ),

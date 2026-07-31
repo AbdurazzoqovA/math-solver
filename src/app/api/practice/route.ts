@@ -25,7 +25,7 @@ Each object must follow this strict schema:
 
 CRITICAL JSON RULES:
 1. You MUST double-escape ALL LaTeX backslashes. For example, write \\\\cdot instead of \\cdot, \\\\frac instead of \\frac, \\\\neq instead of \\neq, etc. This is essential for the output to be valid JSON.
-2. For line breaks in any string, use double-escaped newlines: \\\\n
+2. For line breaks in any string, use the standard JSON newline escape \\n (one backslash in the JSON source). Use \\n\\n when Markdown should start a new paragraph. Never double-escape a newline as \\\\n.
 3. Do not include raw unescaped newlines in your string properties.`;
 
 export async function POST(req: Request) {

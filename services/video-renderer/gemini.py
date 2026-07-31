@@ -238,7 +238,7 @@ def transcribe_audio(audio: bytes, *, mime_type: str = "audio/wav") -> str:
     }
     response = requests.post(
         url,
-        params={"key": _api_key()},
+        headers={"x-goog-api-key": _api_key()},
         json=payload,
         timeout=(15, 150),
     )

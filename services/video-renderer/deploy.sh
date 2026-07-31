@@ -15,11 +15,16 @@ secret_name="${VIDEO_GEMINI_SECRET:-mathsolver-gemini-api-key}"
 image_tag="${VIDEO_IMAGE_TAG:-$(git -C "$repo_dir" rev-parse --short HEAD)}"
 image_uri="${cloud_region}-docker.pkg.dev/${cloud_project}/cloud-run-source-deploy/${renderer_service}:${image_tag}"
 
-if [[ -z "$(gcloud secrets versions list "$secret_name" \
-  --project "$cloud_project" \
-  --filter='state=ENABLED' \
-  --format='value(name)' \
-  --limit 1)" ]]; then
+secret_version="${VIDEO_GEMINI_SECRET_VERSION:-}"
+if [[ -z "$secret_version" ]]; then
+  secret_version="$(gcloud secrets versions list "$secret_name" \
+    --project "$cloud_project" \
+    --filter='state=ENABLED' \
+    --sort-by='~createTime' \
+    --format='value(name)' \
+    --limit 1)"
+fi
+if [[ -z "$secret_version" ]]; then
   printf 'Secret %s has no enabled version. Add the Gemini API key first.\n' \
     "$secret_name" >&2
   exit 1
@@ -43,7 +48,7 @@ gcloud run deploy "$renderer_service" \
   --max-instances 3 \
   --timeout 900 \
   --set-env-vars "FIREBASE_ADMIN_PROJECT_ID=${firebase_project},VIDEO_STORAGE_BUCKET=${bucket_name},VIDEO_STORAGE_PROJECT=${cloud_project},VIDEO_PLAN_ATTEMPTS=2,VIDEO_TTS_ATTEMPTS=5,VIDEO_TTS_WORKERS=1,VIDEO_TTS_PROVIDER=gemini,VIDEO_VOICE_QA=true" \
-  --set-secrets "GOOGLE_CLOUD_API_KEY=${secret_name}:latest" \
+  --set-secrets "GOOGLE_CLOUD_API_KEY=${secret_name}:${secret_version}" \
   --project "$cloud_project"
 
 latest_revision="$(gcloud run services describe "$renderer_service" \

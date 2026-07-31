@@ -5,7 +5,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
-import { preprocessMathMarkdown } from "../src/lib/math-markdown.ts";
+import {
+  preprocessMathMarkdown,
+  preprocessPracticeMarkdown,
+} from "../src/lib/math-markdown.ts";
 
 function renderMathMarkdown(content) {
   return renderToStaticMarkup(
@@ -73,4 +76,26 @@ test("normalizes alternate inline and block LaTeX delimiters", () => {
 
   assert.ok((html.match(/class="katex"/g) ?? []).length >= 2);
   assert.doesNotMatch(html, /\\\(|\\\)|\\\[|\\\]/);
+});
+
+test("normalizes legacy practice newlines without damaging LaTeX commands", () => {
+  const content = String.raw`Given the system:\nEq 1: \(2x + 3y = 1\)\nEq 2: $-12x + 3y = 99$\nWhich operation makes $y \neq 0$ while $\nabla f$ is unchanged?`;
+  const processed = preprocessPracticeMarkdown(content);
+  const html = renderToStaticMarkup(
+    createElement(
+      ReactMarkdown,
+      {
+        remarkPlugins: [remarkMath],
+        rehypePlugins: [rehypeKatex],
+      },
+      processed,
+    ),
+  );
+
+  assert.match(processed, /system:\n\nEq 1:/);
+  assert.match(processed, /\$2x \+ 3y = 1\$/);
+  assert.match(processed, /y \\neq 0/);
+  assert.match(processed, /\\nabla f/);
+  assert.doesNotMatch(html, /\\nEq|\\nWhich/);
+  assert.ok((html.match(/class="katex"/g) ?? []).length >= 4);
 });

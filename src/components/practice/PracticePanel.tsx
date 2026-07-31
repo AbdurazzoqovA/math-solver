@@ -16,6 +16,7 @@ import {
 } from "@/lib/learning-progress";
 import { trackEvent } from "@/lib/analytics";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
+import { preprocessPracticeMarkdown } from "@/lib/math-markdown";
 
 export default function PracticePanel() {
   const {
@@ -363,7 +364,7 @@ export default function PracticePanel() {
               {/* Question */}
               <div className="prose dark:prose-invert max-w-none text-[1.1rem] text-foreground prose-p:my-0 prose-p:leading-relaxed prose-math:text-primary-600 dark:prose-math:text-primary-400 font-medium mb-6">
                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                  {currentQ.question}
+                  {preprocessPracticeMarkdown(currentQ.question)}
                 </ReactMarkdown>
               </div>
 
@@ -410,7 +411,7 @@ export default function PracticePanel() {
                        </div>
                        <div className={`prose md:prose-sm dark:prose-invert max-w-none m-0 prose-p:m-0 flex-1 leading-relaxed ${isQuestionComplete && !isCorrectAnswer ? 'prose-math:text-muted-foreground opacity-70 text-[0.95rem]' : 'text-[0.95rem] text-inherit prose-math:text-inherit dark:prose-math:text-inherit'}`}>
                          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                           {opt}
+                           {preprocessPracticeMarkdown(opt)}
                          </ReactMarkdown>
                        </div>
                     </button>
@@ -472,7 +473,7 @@ export default function PracticePanel() {
                      // Legacy Support for older practice tests
                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-math:text-primary-600 dark:prose-math:text-primary-400">
                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                         {currentQ.steps}
+                         {preprocessPracticeMarkdown(currentQ.steps)}
                        </ReactMarkdown>
                      </div>
                   ) : (
@@ -500,7 +501,7 @@ export default function PracticePanel() {
                                <div className="p-4 pt-1 bg-white dark:bg-zinc-900 border-t border-transparent text-[15px]">
                                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:m-0 prose-math:text-primary-600 dark:prose-math:text-primary-400">
                                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                                     {step.explanation}
+                                     {preprocessPracticeMarkdown(step.explanation)}
                                    </ReactMarkdown>
                                  </div>
                                </div>

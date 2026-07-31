@@ -1,6 +1,9 @@
 const CURRENCY_AMOUNT_PATTERN =
   /(?<![\\$])\$(?!\$)(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?=\s|[.,!?;:)]|$)/g;
 
+const PRACTICE_MATH_SPAN_PATTERN =
+  /\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|(?<!\\)\$(?!\$)(?:\\.|[^$\\])*(?<!\\)\$/g;
+
 function isEscaped(content: string, index: number) {
   let backslashCount = 0;
 
@@ -74,4 +77,29 @@ export function preprocessMathMarkdown(content: string) {
         ? match
         : `\\${match}`,
   );
+}
+
+/**
+ * Practice responses generated under the former JSON prompt can contain the
+ * two visible characters `\\n` instead of a real newline. Decode those legacy
+ * separators outside math spans, then apply the shared delimiter and currency
+ * normalization. Keeping math spans intact avoids corrupting commands such as
+ * `\\neq` and `\\nabla`.
+ */
+export function preprocessPracticeMarkdown(content: string) {
+  let normalized = "";
+  let previousIndex = 0;
+
+  for (const match of content.matchAll(PRACTICE_MATH_SPAN_PATTERN)) {
+    const matchIndex = match.index;
+    normalized += content
+      .slice(previousIndex, matchIndex)
+      .replace(/\\n/g, "\n\n");
+    normalized += match[0];
+    previousIndex = matchIndex + match[0].length;
+  }
+
+  normalized += content.slice(previousIndex).replace(/\\n/g, "\n\n");
+
+  return preprocessMathMarkdown(normalized);
 }

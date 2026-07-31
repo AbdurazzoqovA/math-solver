@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/widgets/math_text.dart';
 import '../domain/practice_set.dart';
@@ -34,6 +35,11 @@ class _QuizScreenState extends State<QuizScreen> {
       return;
     }
     final correct = _selectedIndex == _question.correctAnswerIndex;
+    if (correct) {
+      HapticFeedback.lightImpact();
+    } else {
+      HapticFeedback.mediumImpact();
+    }
     setState(() {
       _hasChecked = true;
       if (correct) {
@@ -82,27 +88,56 @@ class _QuizScreenState extends State<QuizScreen> {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 240),
-              child: _isComplete
-                  ? _Completion(
-                      key: const ValueKey('complete'),
-                      score: _score,
-                      total: widget.practice.questions.length,
-                      onDone: () => Navigator.pop(context),
-                    )
-                  : _QuestionView(
-                      key: ValueKey(_questionIndex),
-                      question: _question,
-                      selectedIndex: _selectedIndex,
-                      hasChecked: _hasChecked,
-                      onSelected: (index) {
-                        if (!_hasChecked) {
-                          setState(() => _selectedIndex = index);
-                        }
-                      },
-                      onPrimary: _hasChecked ? _next : _checkAnswer,
+            child: Column(
+              children: [
+                if (!_isComplete)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        begin: 0,
+                        end:
+                            (_questionIndex + (_hasChecked ? 1 : 0)) /
+                            widget.practice.questions.length,
+                      ),
+                      duration: const Duration(milliseconds: 420),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, _) => LinearProgressIndicator(
+                        value: value,
+                        minHeight: 5,
+                        borderRadius: BorderRadius.circular(99),
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                      ),
                     ),
+                  ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    child: _isComplete
+                        ? _Completion(
+                            key: const ValueKey('complete'),
+                            score: _score,
+                            total: widget.practice.questions.length,
+                            onDone: () => Navigator.pop(context),
+                          )
+                        : _QuestionView(
+                            key: ValueKey(_questionIndex),
+                            question: _question,
+                            onSelected: (index) {
+                              if (!_hasChecked) {
+                                HapticFeedback.selectionClick();
+                                setState(() => _selectedIndex = index);
+                              }
+                            },
+                            selectedIndex: _selectedIndex,
+                            hasChecked: _hasChecked,
+                            onPrimary: _hasChecked ? _next : _checkAnswer,
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -133,17 +168,10 @@ class _QuestionView extends StatelessWidget {
     final isCorrect =
         hasChecked && selectedIndex == question.correctAnswerIndex;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LinearProgressIndicator(
-            value: hasChecked ? 1 : 0.5,
-            minHeight: 5,
-            borderRadius: BorderRadius.circular(99),
-            backgroundColor: colors.surfaceContainerHighest,
-          ),
-          const SizedBox(height: 28),
           Text(
             'Try it without looking back.',
             style: Theme.of(
