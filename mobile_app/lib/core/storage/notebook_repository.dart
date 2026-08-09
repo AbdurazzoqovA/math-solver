@@ -30,6 +30,8 @@ abstract interface class NotebookRepository {
   Future<bool> readAnalyticsEnabled();
 
   Future<void> writeAnalyticsEnabled(bool value);
+
+  Future<void> clearLearningData();
 }
 
 class SharedPreferencesNotebookRepository implements NotebookRepository {
@@ -136,5 +138,15 @@ class SharedPreferencesNotebookRepository implements NotebookRepository {
   @override
   Future<void> writeAnalyticsEnabled(bool value) async {
     await (await _preferences).setBool(_analyticsEnabledKey, value);
+  }
+
+  @override
+  Future<void> clearLearningData() async {
+    final preferences = await _preferences;
+    await Future.wait([
+      preferences.remove(_solutionsKey),
+      preferences.remove(_reviewItemsKey),
+      preferences.remove(_analyticsEnabledKey),
+    ]);
   }
 }

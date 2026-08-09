@@ -55,8 +55,10 @@ export function normalizeDailyVideoQuota(
   }
 
   const record = value as Record<string, unknown>;
-  const storedLimit = positiveInteger(record.limit);
-  const limit = Math.max(safeConfiguredLimit, storedLimit ?? 0);
+  // The configured allowance is authoritative. Persisted records are usage
+  // buckets, not paid entitlements, so an older or malformed higher value
+  // must never silently grant more than the product's daily allowance.
+  const limit = safeConfiguredLimit;
   const used =
     record.periodKey === period.key &&
     typeof record.used === "number" &&

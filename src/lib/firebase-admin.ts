@@ -69,11 +69,33 @@ export function getAdminFirestore() {
   return getFirestore(getFirebaseAdminApp());
 }
 
-function readBearerToken(request: Request): string {
+type VerifiedRequestMessages = {
+  authenticationRequired: string;
+  invalidSession: string;
+  emailVerificationRequired: string;
+};
+
+const VIDEO_AUTH_MESSAGES: VerifiedRequestMessages = {
+  authenticationRequired: "Sign in to generate a video explanation.",
+  invalidSession: "Your session expired. Sign in again and retry.",
+  emailVerificationRequired:
+    "Verify your email before generating a video explanation.",
+};
+
+const ACCOUNT_AUTH_MESSAGES: VerifiedRequestMessages = {
+  authenticationRequired: "Sign in to manage your account.",
+  invalidSession: "Your session expired. Sign in again and retry.",
+  emailVerificationRequired: "Verify your email before managing your account.",
+};
+
+function readBearerToken(
+  request: Request,
+  messages: VerifiedRequestMessages,
+): string {
   const authorization = request.headers.get("authorization");
   if (!authorization?.startsWith("Bearer ")) {
     throw new VideoAuthError(
-      "Sign in to generate a video explanation.",
+      messages.authenticationRequired,
       401,
       "authentication_required",
     );
@@ -82,7 +104,7 @@ function readBearerToken(request: Request): string {
   const token = authorization.slice("Bearer ".length).trim();
   if (!token) {
     throw new VideoAuthError(
-      "Sign in to generate a video explanation.",
+      messages.authenticationRequired,
       401,
       "authentication_required",
     );
@@ -90,17 +112,18 @@ function readBearerToken(request: Request): string {
   return token;
 }
 
-export async function verifyVideoRequest(
+async function verifyVerifiedRequest(
   request: Request,
+  messages: VerifiedRequestMessages,
 ): Promise<DecodedIdToken> {
-  const token = readBearerToken(request);
+  const token = readBearerToken(request, messages);
 
   let decoded: DecodedIdToken;
   try {
     decoded = await getAdminAuth().verifyIdToken(token, true);
   } catch {
     throw new VideoAuthError(
-      "Your session expired. Sign in again and retry.",
+      messages.invalidSession,
       401,
       "invalid_session",
     );
@@ -108,11 +131,23 @@ export async function verifyVideoRequest(
 
   if (decoded.email_verified !== true) {
     throw new VideoAuthError(
-      "Verify your email before generating a video explanation.",
+      messages.emailVerificationRequired,
       403,
       "email_verification_required",
     );
   }
 
   return decoded;
+}
+
+export function verifyVideoRequest(
+  request: Request,
+): Promise<DecodedIdToken> {
+  return verifyVerifiedRequest(request, VIDEO_AUTH_MESSAGES);
+}
+
+export function verifyAccountRequest(
+  request: Request,
+): Promise<DecodedIdToken> {
+  return verifyVerifiedRequest(request, ACCOUNT_AUTH_MESSAGES);
 }

@@ -9,6 +9,7 @@ import {
   useEffect,
 } from "react";
 import { X } from "lucide-react";
+import type { MathfieldElement } from "mathlive";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type SegDef = { type: "text"; id: string } | { type: "math"; id: string };
@@ -76,16 +77,16 @@ function MathChip({
   onReady: (id: string, h: ChipHandle | null) => void;
 }) {
   const boxRef = useRef<HTMLSpanElement>(null);
-  const mfRef = useRef<any>(null);
 
   useEffect(() => {
     let mounted = true;
+    let mathfield: MathfieldElement | null = null;
+    const box = boxRef.current;
     import("mathlive").then((ml) => {
-      if (!mounted || !boxRef.current) return;
+      if (!mounted || !box) return;
 
       const mf = new ml.MathfieldElement();
       mf.mathVirtualKeyboardPolicy = "manual";
-      (mf as any).virtualKeyboardMode = "off";
 
       Object.assign(mf.style, {
         display: "inline-block",
@@ -102,8 +103,8 @@ function MathChip({
       mf.addEventListener("focus", () => onFocus(id));
       mf.addEventListener("blur", () => onBlur());
 
-      boxRef.current.appendChild(mf);
-      mfRef.current = mf;
+      box.appendChild(mf);
+      mathfield = mf;
 
       // Must be after appendChild — injects CSS directly into Shadow DOM
       // This is the only reliable way to hide MathLive's toolbar icons
@@ -114,7 +115,7 @@ function MathChip({
       }
 
       // Remove hamburger menu (must be after mount)
-      try { (mf as any).menuItems = []; } catch {}
+      mf.menuItems = [];
 
       onReady(id, {
         insertLatex: (l) => {
@@ -131,8 +132,8 @@ function MathChip({
       mounted = false;
       onReady(id, null);
       try {
-        if (boxRef.current && mfRef.current) {
-          boxRef.current.removeChild(mfRef.current);
+        if (box && mathfield?.parentNode === box) {
+          box.removeChild(mathfield);
         }
       } catch {}
     };
@@ -283,13 +284,6 @@ const InlineMathInput = forwardRef<
       }, 150);
     }
   }, []);
-
-  const insertLatexInFocused = useCallback(
-    (l: string) => {
-      if (focusedMath) chipHandles.current[focusedMath]?.insertLatex(l);
-    },
-    [focusedMath]
-  );
 
   const hasFocusedMath = useCallback(() => focusedMath !== null, [focusedMath]);
 

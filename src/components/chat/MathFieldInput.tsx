@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import type { MathfieldElement } from "mathlive";
 
 export interface MathFieldHandle {
   insertLatex: (latex: string) => void;
@@ -13,16 +14,23 @@ const MathFieldInput = forwardRef<MathFieldHandle, {
   onChange?: (latex: string) => void;
 }>(({ initialValue = "", onChange }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mfRef = useRef<any>(null);
-  const initialized = useRef(false);
+  const mfRef = useRef<MathfieldElement>(null);
+  const initialValueRef = useRef(initialValue);
+  const onChangeRef = useRef(onChange);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let mounted = true;
+    let mathfield: MathfieldElement | null = null;
 
     // Dynamically import mathlive to avoid SSR issues
     import("mathlive").then((ml) => {
-      if (!containerRef.current) return;
+      if (!mounted) return;
 
       // Create math-field element programmatically
       const mf = new ml.MathfieldElement();
@@ -38,27 +46,26 @@ const MathFieldInput = forwardRef<MathFieldHandle, {
       // Disable the default virtual keyboard - we use our own
       mf.mathVirtualKeyboardPolicy = "manual";
       
-      if (initialValue) {
-        mf.setValue(initialValue);
+      if (initialValueRef.current) {
+        mf.setValue(initialValueRef.current);
       }
 
       mf.addEventListener("input", () => {
-        onChange?.(mf.getValue());
+        onChangeRef.current?.(mf.getValue());
       });
 
-      containerRef.current.appendChild(mf);
+      container.appendChild(mf);
       mfRef.current = mf;
+      mathfield = mf;
 
       // Focus after mount
       setTimeout(() => mf.focus(), 150);
     });
 
     return () => {
-      // Cleanup
-      if (containerRef.current && mfRef.current) {
-        try {
-          containerRef.current.removeChild(mfRef.current);
-        } catch (_) {}
+      mounted = false;
+      if (mathfield?.parentNode === container) {
+        container.removeChild(mathfield);
       }
     };
   }, []);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateRequest } from '@/lib/captcha';
+import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
 
 const ACCEPTED_TYPES = [
   'image/jpeg',
@@ -13,10 +13,14 @@ const ACCEPTED_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-export async function POST(req: Request) {
+export async function POST(
+  req: Request,
+  _context?: { params: Promise<unknown> },
+  validationOptions: RequestValidationOptions = {},
+) {
   try {
     // ── Captcha / rate-limit gate ──
-    const validation = await validateRequest(req);
+    const validation = await validateRequest(req, validationOptions);
     if (!validation.allowed) {
       return NextResponse.json(
         { error: validation.error },
@@ -79,7 +83,7 @@ async function recognizeWithGemini(base64: string, mimeType: string, source?: st
     throw new Error('Missing GOOGLE_CLOUD_API_KEY environment variable');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
   const systemInstructionText = source === 'drawing' 
     ? 'You are a math expression recognizer. The user has drawn a math problem by hand on a digital canvas. Your job is to accurately interpret the hand-drawn mathematical expression and output it as clean text.\n\nRules:\n- Output ONLY the mathematical expression/equation, nothing else.\n- Use standard math notation. For complex expressions use LaTeX.\n- Do NOT solve the problem.\n- Do NOT add explanations or commentary.\n- Be very careful with superscripts (exponents), subscripts, fractions, and operators.\n- If you see something like "2x²=4" write it as "2x^2 = 4" or in LaTeX as "2x^{2} = 4".\n- If multiple expressions are drawn, separate them with newlines.'
@@ -89,6 +93,7 @@ async function recognizeWithGemini(base64: string, mimeType: string, source?: st
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
       systemInstruction: {
@@ -121,8 +126,7 @@ async function recognizeWithGemini(base64: string, mimeType: string, source?: st
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error('Gemini recognition failed:', response.status, errText);
+    console.error('Gemini recognition failed with status', response.status);
     throw new Error('Failed to recognize math expression');
   }
 

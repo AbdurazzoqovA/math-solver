@@ -1,7 +1,11 @@
 import { POST as handlePractice } from "@/app/api/practice/route";
-import { withMobileAppCheck } from "@/lib/mobile-request";
+import { mobileAppCheckFailure } from "@/lib/mobile-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const POST = withMobileAppCheck(handlePractice);
+export async function POST(request: Request) {
+  const failure = await mobileAppCheckFailure(request);
+  return failure ??
+    handlePractice(request, undefined, { captchaAlreadyVerified: true });
+}

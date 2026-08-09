@@ -26,7 +26,6 @@ export default function DraggableCalculator() {
   const calculateText = (expr: string) => {
     try {
       const safeExpr = expr.replace(/×/g, "*").replace(/÷/g, "/");
-      // eslint-disable-next-line no-new-func
       const result = new Function(`return ${safeExpr}`)();
       if (Number.isFinite(result)) {
         return String(result);

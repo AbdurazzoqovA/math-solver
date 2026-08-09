@@ -12,7 +12,6 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  var _ageConfirmed = false;
   var _isCompleting = false;
 
   @override
@@ -84,8 +83,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         child: _FeatureTile(
                           icon: Icons.play_arrow_rounded,
                           color: colors.primaryContainer,
-                          title: 'Your video',
-                          body: 'Animated & narrated',
+                          title: '10 videos daily',
+                          body: 'Free, no subscription',
                         ),
                       ),
                     ],
@@ -94,16 +93,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Material(
                     color: colors.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(20),
-                    child: CheckboxListTile(
-                      value: _ageConfirmed,
-                      onChanged: (value) {
-                        setState(() => _ageConfirmed = value ?? false);
-                      },
-                      controlAffinity: ListTileControlAffinity.leading,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.school_rounded,
+                        color: colors.primary,
                       ),
-                      title: const Text('I am 13 or older'),
+                      title: const Text('Made for learning math'),
                       subtitle: const Text(
                         'Camera access is requested only when you tap Scan.',
                       ),
@@ -114,9 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       key: const Key('onboarding-continue'),
-                      onPressed: !_ageConfirmed || _isCompleting
-                          ? null
-                          : _complete,
+                      onPressed: _isCompleting ? null : _complete,
                       child: _isCompleting
                           ? const SizedBox.square(
                               dimension: 22,
@@ -128,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 12),
                   Center(
                     child: Text(
-                      'No account required · no trial traps',
+                      'Core features are free and unlimited · no subscription',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
                       ),

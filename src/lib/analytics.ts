@@ -18,11 +18,7 @@ export function trackEvent(
   const analyticsWindow = window as AnalyticsWindow;
   if (typeof analyticsWindow.gtag === "function") {
     analyticsWindow.gtag("event", eventName, parameters);
-    return;
   }
-
-  analyticsWindow.dataLayer ??= [];
-  analyticsWindow.dataLayer.push(["event", eventName, parameters]);
 }
 
 export function getDaysAwayBucket(daysAway: number): string {

@@ -235,3 +235,24 @@ Traced mobile video creation's `app_check_required` failure to Firebase iOS app 
 ## [2026-08-05] change | Redesigned the mobile video loading state
 
 Replaced the static AI-sparkle video placeholder with a motion-first render preview: three pulsing storyboard frames, a traveling playhead, determinate progress, animated stage copy, the honest Plan/Narrate/Animate/Finish pipeline, a compact source-problem card, and clearer safe-to-leave Library messaging. Reduced-motion settings freeze the decorative loop while preserving real progress updates.
+
+## [2026-08-09] change | Prepared the free mobile launch contract
+Locked the launch product to exactly 10 video generations per verified account per UTC day with every other feature free and without a product usage limit, removed paid-plan/paywall roadmap claims, and returned quota exhaustion as 429. Attested mobile calls now bypass the web fallback limiter. Added contextual optional notification consent, provider-aware in-app account and private-video deletion, collision-safe offline video/caption caching and cleanup, mobile legal links, consent-gated web analytics, fixed legal effective dates, sanitized Pressroom HTML, response security headers, patched MathLive, and moved Gemini keys out of query URLs. Added a server-controlled update policy whose ordinary prompts are dismissible and whose hard gate only accepts explicit security/compatibility reasons. Created App Store Connect record `6799652720` as `AI Math Solver – MathSolver` and saved its ASO metadata with manual release. See [[product-overview]], [[tech-and-ops]], [[codebase-map]], and [[mobile-app-concept]].
+
+## [2026-08-09] change | Completed final store screenshots and deletion disclosures
+Uploaded the five approved iPhone 6.9-inch and iPad 13-inch App Store screenshots in deliberate Solve → Learn → Check Work → Video → Practice order. Expanded the web/mobile privacy and terms disclosures, added a public `/account-deletion` route plus in-app help link, and added the route to the sitemap. Set Apple pricing to free and worldwide availability to all 175 regions, saved owner-provided copyright/review contact, created and live-tested a dedicated verified review account, kept untested Mac/Vision compatibility off, and declared that the iOS binary uses no non-exempt encryption. The store record remains unsubmitted for owner inspection.
+
+## [2026-08-09] ingest | Confirmed grade 5–6 audience and published Apple privacy label
+Published the six source-verified App Store privacy disclosures after the owner's explicit attestation; the app remains unsubmitted. Recorded the owner decision that MathSolver must support grades 5–6 rather than be labeled 18+.
+
+## [2026-08-09] change | Simplified launch to a general Education audience
+Following the owner's correction, removed the blocking 13+ onboarding checkbox and the expanded Kids Category/parental-flow scope. MathSolver remains a normal general-audience Education app for students and other learners, including grades 5–6. Apple calculated a 4+ rating from the app's actual math-only content, with no Kids Category or higher-age override. The record remains unsubmitted for owner review.
+
+## [2026-08-09] change | Passed simulator auth/profile launch QA
+Enabled iOS Simulator destinations alongside physical iOS builds and added MathSolver's own Keychain access group for secure account-session storage. An iPhone 17 Pro Simulator pass verified onboarding, live guest solving and independent review, verified sign-in, guest-notebook merge, restart-safe session restoration, the exact 10/10 daily video allowance, deletion safeguards, and sign-out. Fixed a deletion-dialog lifecycle crash and added a regression test. Flutter analysis, all 12 tests, and the configured iOS Simulator debug build pass.
+
+## [2026-08-09] change | Installed standalone iPhone release build
+Selected the CHAKO LTD Apple Development identity matching team `UGWY3X7QR2`, aligned all Runner target configurations to the Firebase-required iOS 15 deployment minimum, and built, installed, and independently launched MathSolver 1.0.0 (1) on the owner's iOS 26.5.2 phone. The app is no longer attached to Xcode or Flutter and remains launchable after disconnecting the Mac. Interactive physical-device camera, App Check, APNs, offline, sharing, and background-flow verification remains before review submission.
+
+## [2026-08-09] change | Restored native Apple and Google sign-in
+The launch mobile build offers Sign in with Apple and Google alongside verified Email/Password, source-verifies their Firebase configuration, and reauthenticates with the account's actual provider before in-app deletion. Analyzer, all 12 tests, and the configured iOS Simulator build pass; the provider buttons were visually verified and the corrected signed build was installed on the owner's iPhone.

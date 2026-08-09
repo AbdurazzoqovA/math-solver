@@ -297,19 +297,9 @@ def _finish_without_charge(
             if stored_period_key == period_key
             else 0
         )
-        configured_limit = max(
-            1,
-            int(
-                os.environ.get(
-                    "VIDEO_FREE_LIMIT",
-                    str(DEFAULT_DAILY_VIDEO_LIMIT),
-                )
-            ),
-        )
-        limit = max(
-            configured_limit,
-            int((quota or {}).get("limit", configured_limit)),
-        )
+        # This is a product limit, not a paid entitlement or environment-tuned
+        # capacity setting. Keep refunds pinned to the public 10/day promise.
+        limit = DEFAULT_DAILY_VIDEO_LIMIT
         should_refund = (
             charged
             and job.get("quotaPeriodKey") == period_key

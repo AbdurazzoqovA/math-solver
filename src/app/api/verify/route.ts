@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
-import { validateRequest } from "@/lib/captcha";
+import {
+  validateRequest,
+  type RequestValidationOptions,
+} from "@/lib/captcha";
 import { verifyCompletedSolution } from "@/lib/math-review";
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  _context?: { params: Promise<unknown> },
+  validationOptions: RequestValidationOptions = {},
+) {
   try {
-    const validation = await validateRequest(request);
+    const validation = await validateRequest(request, validationOptions);
     if (!validation.allowed) {
       return NextResponse.json(
         { error: validation.error },

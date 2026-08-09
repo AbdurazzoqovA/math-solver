@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateRequest } from '@/lib/captcha';
+import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
 import { getCalculator } from '@/lib/calculators';
 import { streamGeminiText, type GeminiMessage } from '@/lib/gemini';
 
@@ -18,10 +18,14 @@ CRITICAL FORMATTING RULES:
 8. Explain *why* you are doing a step, not just *what* you are doing, but keep it concise.
 9. End the solution with a clear, distinct section headed **Final Answer** showing the final outcome in a $$ block.`;
 
-export async function POST(req: Request) {
+export async function POST(
+  req: Request,
+  _context?: { params: Promise<unknown> },
+  validationOptions: RequestValidationOptions = {},
+) {
   try {
     // ── Captcha / rate-limit gate ──
-    const validation = await validateRequest(req);
+    const validation = await validateRequest(req, validationOptions);
     if (!validation.allowed) {
       return NextResponse.json(
         { error: validation.error },

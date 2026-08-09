@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import '../security/mobile_attestation.dart';
@@ -17,19 +19,27 @@ class AccountException implements Exception {
   String toString() => message;
 }
 
+enum AccountReauthenticationMethod { password, google, apple }
+
 class AccountController extends ChangeNotifier {
-  AccountController({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
-    : _injectedAuth = auth,
-      _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+  AccountController({
+    FirebaseAuth? auth,
+    GoogleSignIn? googleSignIn,
+    http.Client? client,
+  }) : _injectedAuth = auth,
+       _googleSignIn = googleSignIn ?? GoogleSignIn.instance,
+       _client = client ?? http.Client();
 
   final FirebaseAuth? _injectedAuth;
   final GoogleSignIn _googleSignIn;
+  final http.Client _client;
 
   String? _email;
   String? _uid;
   bool _isReady = false;
   bool _isBusy = false;
   Future<void>? _googleInitialization;
+  Set<String> _providerIds = const {};
 
   FirebaseAuth? get _auth {
     if (_injectedAuth != null) return _injectedAuth;
@@ -60,6 +70,16 @@ class AccountController extends ChangeNotifier {
 
   bool get canSignInWithApple =>
       isConfigured && Platform.isIOS && AppConfig.appleSignInEnabled;
+
+  AccountReauthenticationMethod get reauthenticationMethod {
+    if (_providerIds.contains('apple.com')) {
+      return AccountReauthenticationMethod.apple;
+    }
+    if (_providerIds.contains('google.com')) {
+      return AccountReauthenticationMethod.google;
+    }
+    return AccountReauthenticationMethod.password;
+  }
 
   String? get email => _email;
   String? get userId => _uid;
@@ -125,15 +145,7 @@ class AccountController extends ChangeNotifier {
     if (_isBusy) return false;
     _setBusy(true);
     try {
-      await _initializeGoogleSignIn();
-      final googleUser = await _googleSignIn.authenticate();
-      final idToken = googleUser.authentication.idToken;
-      if (idToken == null || idToken.isEmpty) {
-        throw const AccountException(
-          'Google did not return a valid sign-in token.',
-        );
-      }
-      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final credential = await _googleCredential();
       final result = await auth.signInWithCredential(credential);
       await _finishSignIn(auth, result.user);
       return true;
@@ -163,10 +175,7 @@ class AccountController extends ChangeNotifier {
     if (_isBusy) return false;
     _setBusy(true);
     try {
-      final provider = AppleAuthProvider()
-        ..addScope('email')
-        ..addScope('name');
-      final result = await auth.signInWithProvider(provider);
+      final result = await auth.signInWithProvider(_appleProvider());
       await _finishSignIn(auth, result.user);
       return true;
     } on AccountException {
@@ -257,13 +266,12 @@ class AccountController extends ChangeNotifier {
     _setBusy(true);
     try {
       await auth.sendPasswordResetEmail(email: email.trim());
-      // Keep the result neutral so the UI never reveals account existence.
     } on FirebaseAuthException catch (error) {
       if (error.code == 'network-request-failed' ||
           error.code == 'too-many-requests') {
         throw AccountException(_friendlyAuthError(error));
       }
-      // Firebase can report an unknown user; keep that result private.
+      // Keep unknown-user results private.
     } on Object {
       throw const AccountException(
         'We could not reach the account service. Try again.',
@@ -285,6 +293,101 @@ class AccountController extends ChangeNotifier {
     }
     _clearSession();
     notifyListeners();
+  }
+
+  Future<void> reauthenticateForDeletion(String? password) async {
+    final user = _auth?.currentUser;
+    if (!isSignedIn || user == null || _isBusy) {
+      throw const AccountException(
+        'Sign in again before deleting your account.',
+      );
+    }
+    _setBusy(true);
+    try {
+      switch (reauthenticationMethod) {
+        case AccountReauthenticationMethod.apple:
+          await user.reauthenticateWithProvider(_appleProvider());
+          break;
+        case AccountReauthenticationMethod.google:
+          await user.reauthenticateWithCredential(await _googleCredential());
+          break;
+        case AccountReauthenticationMethod.password:
+          final currentEmail = user.email;
+          if (currentEmail == null || password == null || password.isEmpty) {
+            throw const AccountException(
+              'Enter your password to delete this account.',
+            );
+          }
+          await user.reauthenticateWithCredential(
+            EmailAuthProvider.credential(
+              email: currentEmail,
+              password: password,
+            ),
+          );
+          break;
+      }
+      await user.reload();
+      _adoptUser(_auth?.currentUser ?? user);
+    } on GoogleSignInException catch (error) {
+      if (error.code == GoogleSignInExceptionCode.canceled) {
+        throw const AccountException('Account deletion was cancelled.');
+      }
+      throw AccountException(_friendlyGoogleError(error));
+    } on AccountException {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      if (_isCancellation(error.code)) {
+        throw const AccountException('Account deletion was cancelled.');
+      }
+      throw AccountException(_friendlyAuthError(error));
+    } on Object {
+      throw const AccountException(
+        'We could not verify this account. Please try again.',
+      );
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    if (!isSignedIn || _isBusy) return;
+    _setBusy(true);
+    try {
+      final token = await getIdToken();
+      final baseUrl = AppConfig.apiBaseUrl.replaceFirst(RegExp(r'/$'), '');
+      final response = await _client
+          .delete(
+            Uri.parse('$baseUrl/api/mobile/v1/account'),
+            headers: await MobileAttestation.headers(
+              additional: {'Authorization': 'Bearer $token'},
+            ),
+          )
+          .timeout(AppConfig.requestTimeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final body = _jsonObject(response.body);
+        final message = body['error'];
+        throw AccountException(
+          message is String && message.trim().isNotEmpty
+              ? message
+              : 'Your account could not be deleted. Please try again.',
+        );
+      }
+
+      try {
+        await _auth?.signOut();
+      } on Object {
+        // The backend has already deleted the Firebase user.
+      }
+      _clearSession();
+    } on AccountException {
+      rethrow;
+    } on Object {
+      throw const AccountException(
+        'Your account could not be deleted. Check your connection and try again.',
+      );
+    } finally {
+      _setBusy(false);
+    }
   }
 
   Future<String> getIdToken() async {
@@ -333,6 +436,22 @@ class AccountController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<OAuthCredential> _googleCredential() async {
+    await _initializeGoogleSignIn();
+    final googleUser = await _googleSignIn.authenticate();
+    final idToken = googleUser.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw const AccountException(
+        'Google did not return a valid sign-in token.',
+      );
+    }
+    return GoogleAuthProvider.credential(idToken: idToken);
+  }
+
+  AppleAuthProvider _appleProvider() => AppleAuthProvider()
+    ..addScope('email')
+    ..addScope('name');
+
   Future<void> _initializeGoogleSignIn() {
     return _googleInitialization ??= _googleSignIn.initialize(
       clientId: Platform.isIOS ? AppConfig.googleIosClientId : null,
@@ -353,16 +472,30 @@ class AccountController extends ChangeNotifier {
   void _adoptUser(User user) {
     _uid = user.uid;
     _email = user.email;
+    _providerIds = user.providerData
+        .map((provider) => provider.providerId)
+        .toSet();
   }
 
   void _clearSession() {
     _uid = null;
     _email = null;
+    _providerIds = const {};
   }
 
   void _setBusy(bool value) {
     _isBusy = value;
     notifyListeners();
+  }
+
+  static Map<String, Object?> _jsonObject(String value) {
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map<String, Object?>) return decoded;
+    } on FormatException {
+      // The caller uses a contextual error.
+    }
+    return const {};
   }
 
   static bool _isCancellation(String code) =>
@@ -399,5 +532,11 @@ class AccountController extends ChangeNotifier {
       'operation-not-allowed' => 'This sign-in method is not enabled yet.',
       _ => 'Sign-in could not be completed. Please try again.',
     };
+  }
+
+  @override
+  void dispose() {
+    _client.close();
+    super.dispose();
   }
 }

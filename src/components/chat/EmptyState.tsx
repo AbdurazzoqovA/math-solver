@@ -35,8 +35,6 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
         {/* Minimum Footer */}
         <footer className="w-full text-center text-muted-foreground/50 text-[10px] sm:text-xs">
           <div className="flex items-center justify-center gap-2 sm:gap-4 mb-3 flex-wrap px-4">
-            <a href="#" className="hover:text-foreground transition-colors">Careers</a>
-            <span>&middot;</span>
             <Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link>
             <span>&middot;</span>
             <Link href="/calculator" className="hover:text-foreground transition-colors">Calculators</Link>

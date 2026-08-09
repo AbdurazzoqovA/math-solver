@@ -3,14 +3,14 @@
 import { useUI } from "@/context/UIContext";
 import { Panel, Group, Separator } from "react-resizable-panels";
 import PracticePanel from "@/components/practice/PracticePanel";
-import { GripVertical, X } from "lucide-react";
+import { GripVertical } from "lucide-react";
 
 export default function SplitLayoutWrapper({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isPracticePanelOpen, closePracticePanel } = useUI();
+  const { isPracticePanelOpen } = useUI();
 
   if (!isPracticePanelOpen) {
     return <>{children}</>;

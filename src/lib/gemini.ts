@@ -53,14 +53,15 @@ async function callGemini(
 ): Promise<Response> {
   const { apiKey, model } = getGeminiConfig();
   const operation = stream ? "streamGenerateContent" : "generateContent";
-  const query = stream
-    ? `alt=sse&key=${encodeURIComponent(apiKey)}`
-    : `key=${encodeURIComponent(apiKey)}`;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${operation}?${query}`;
+  const query = stream ? "?alt=sse" : "";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${operation}${query}`;
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
     body: JSON.stringify(buildPayload(options)),
   });
 

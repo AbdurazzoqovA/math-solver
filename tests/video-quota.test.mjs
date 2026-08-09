@@ -47,6 +47,17 @@ test("the configured daily limit upgrades old five-video records", () => {
   assert.equal(quota.limit, 10);
 });
 
+test("the configured daily limit caps legacy higher-limit records", () => {
+  const quota = normalizeDailyVideoQuota(
+    { used: 7, limit: 50, periodKey: "2026-07-29" },
+    10,
+    JULY_29_NOON_UTC,
+  );
+
+  assert.equal(quota.used, 7);
+  assert.equal(quota.limit, 10);
+});
+
 test("quota periods roll over exactly at UTC midnight", () => {
   assert.deepEqual(videoQuotaPeriod(Date.UTC(2026, 11, 31, 23, 59, 59)), {
     key: "2026-12-31",

@@ -94,9 +94,9 @@ Correct Answer: Option ${correctAnswerIndex + 1} ("${correctOptionText}")
       }
       
     } catch {
-      console.error('Failed to parse AI JSON response:', content);
+      console.error('Failed to parse AI practice-step response');
       return NextResponse.json(
-        { error: 'Failed to parse AI response.', details: content },
+        { error: 'Failed to parse AI response.' },
         { status: 500 }
       );
     }

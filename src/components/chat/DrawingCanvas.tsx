@@ -32,9 +32,12 @@ export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProp
 
   // Current color/lineWidth refs so pointer handlers always see latest
   const colorRef = useRef(color);
-  colorRef.current = color;
   const lineWidthRef = useRef(lineWidth);
-  lineWidthRef.current = lineWidth;
+
+  useEffect(() => {
+    colorRef.current = color;
+    lineWidthRef.current = lineWidth;
+  }, [color, lineWidth]);
 
   // ---------- Canvas sizing ----------
   // Keep canvas.width/height === CSS display size (1:1).

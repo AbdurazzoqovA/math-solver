@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/video/domain/video_lesson.dart';
 import '../auth/account_controller.dart';
@@ -34,6 +36,8 @@ class VideoLessonApi {
   final http.Client _client;
   final String _baseUrl;
   StreamSubscription<String>? _tokenRefreshSubscription;
+  static const _notificationOfferHandledKey =
+      'mathsolver.video-ready-notification-offer.v1';
 
   Future<VideoJob> createJob({
     required String requestKey,
@@ -155,34 +159,66 @@ class VideoLessonApi {
     }
   }
 
+  Future<bool> shouldOfferReadyNotifications() async {
+    if (Firebase.apps.isEmpty || !account.isSignedIn) return false;
+    try {
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      if (settings.authorizationStatus != AuthorizationStatus.notDetermined) {
+        return false;
+      }
+      final handled =
+          (await SharedPreferences.getInstance()).getBool(
+            _notificationOfferHandledKey,
+          ) ??
+          false;
+      return !handled;
+    } on Object {
+      return false;
+    }
+  }
+
+  Future<void> markReadyNotificationOfferHandled() async {
+    await (await SharedPreferences.getInstance()).setBool(
+      _notificationOfferHandledKey,
+      true,
+    );
+  }
+
   Future<void> disableReadyNotifications() async {
     if (Firebase.apps.isEmpty || !account.isSignedIn) return;
     try {
       final messaging = FirebaseMessaging.instance;
       final token = await messaging.getToken();
       if (token != null && token.isNotEmpty) {
-        final response = await _client
+        await _client
             .delete(
               Uri.parse('$_baseUrl/api/mobile/v1/devices'),
               headers: await _headers(includeContentType: true),
               body: jsonEncode({'token': token, 'captchaToken': null}),
             )
             .timeout(AppConfig.requestTimeout);
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          return;
-        }
+        // Local token removal still runs if the server is temporarily
+        // unreachable. Account deletion also removes the registry server-side.
       }
-      await _tokenRefreshSubscription?.cancel();
-      _tokenRefreshSubscription = null;
-      await messaging.deleteToken();
-      await messaging.setAutoInitEnabled(false);
     } on Object {
       // Account sign-out must remain available while offline. A later token
       // registration transaction also moves ownership away from this account.
+    } finally {
+      await _tokenRefreshSubscription?.cancel();
+      _tokenRefreshSubscription = null;
+      try {
+        final messaging = FirebaseMessaging.instance;
+        await messaging.deleteToken();
+        await messaging.setAutoInitEnabled(false);
+      } on Object {
+        // The server registry is authoritative if local FCM cleanup fails.
+      }
     }
   }
 
   Future<void> _registerDeviceToken(String token) async {
+    final packageInfo = await PackageInfo.fromPlatform();
     final response = await _client
         .post(
           Uri.parse('$_baseUrl/api/mobile/v1/devices'),
@@ -190,7 +226,7 @@ class VideoLessonApi {
           body: jsonEncode({
             'token': token,
             'platform': Platform.isIOS ? 'ios' : 'android',
-            'appVersion': '1.0.0',
+            'appVersion': packageInfo.version,
             'captchaToken': null,
           }),
         )

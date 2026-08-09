@@ -3,9 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 
-/// Google's official gradient "G" mark, scaled proportionally from the
-/// current asset published at developers.google.com/static/identity/images/
-/// g-logo.png.
+/// Google's official gradient "G" mark, scaled proportionally from Google's
+/// published identity asset.
 class GoogleBrandIcon extends StatelessWidget {
   const GoogleBrandIcon({super.key, this.size = 20});
 

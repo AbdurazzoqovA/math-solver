@@ -6,7 +6,7 @@ import 'package:mathsolver_mobile/features/solve/domain/solution_record.dart';
 import 'package:mathsolver_mobile/features/practice/domain/review_item.dart';
 
 void main() {
-  testWidgets('onboarding is one screen and requires age confirmation', (
+  testWidgets('onboarding is one screen and welcomes student learners', (
     tester,
   ) async {
     final repository = _MemoryRepository();
@@ -14,18 +14,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Math finally\nclicks.'), findsOneWidget);
-    expect(find.text('I am 13 or older'), findsOneWidget);
+    expect(find.text('Made for learning math'), findsOneWidget);
 
-    var startButton = tester.widget<FilledButton>(
-      find.byKey(const Key('onboarding-continue')),
-    );
-    expect(startButton.onPressed, isNull);
-
-    await tester.ensureVisible(find.text('I am 13 or older'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byType(Checkbox));
-    await tester.pump();
-    startButton = tester.widget<FilledButton>(
+    final startButton = tester.widget<FilledButton>(
       find.byKey(const Key('onboarding-continue')),
     );
     expect(startButton.onPressed, isNotNull);
@@ -44,6 +35,12 @@ class _MemoryRepository implements NotebookRepository {
   bool learningMode = true;
   bool analyticsEnabled = false;
   List<SolutionRecord> solutions = [];
+
+  @override
+  Future<void> clearLearningData() async {
+    solutions = [];
+    analyticsEnabled = false;
+  }
 
   @override
   Future<bool> readLearningMode() async => learningMode;

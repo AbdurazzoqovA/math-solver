@@ -231,4 +231,13 @@ class AppController extends ChangeNotifier {
     await _repository.writeAnalyticsEnabled(value);
     await MobileAnalytics.setEnabled(value);
   }
+
+  Future<void> clearPersonalData() async {
+    _solutions = const [];
+    _reviewItems = const [];
+    _analyticsEnabled = false;
+    notifyListeners();
+    await MobileAnalytics.setEnabled(false);
+    await _repository.clearLearningData();
+  }
 }

@@ -462,6 +462,9 @@ class _GalleryRepository implements NotebookRepository {
   bool _onboardingComplete = false;
 
   @override
+  Future<void> clearLearningData() async {}
+
+  @override
   Future<bool> readOnboardingComplete() async => switch (state) {
     'onboarding' => _onboardingComplete,
     _ => true,

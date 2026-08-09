@@ -29,6 +29,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/contact`,
     },
     {
+      url: `${baseUrl}/account-deletion`,
+    },
+    {
       url: `${baseUrl}/calculator`,
       lastModified: calculatorReleaseDate,
     },

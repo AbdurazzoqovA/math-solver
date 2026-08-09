@@ -41,6 +41,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>MathSolver uses the camera to read a math problem you choose to scan.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

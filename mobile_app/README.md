@@ -21,10 +21,8 @@ Standalone Flutter app for iOS and Android. Everything mobile-specific lives in
 - A local-first solution library, verified-account Firestore merge/sync,
   generated quizzes, a two-minute warm-up, and persisted 1→3→7→14-day mistake
   review.
-- Native Firebase Authentication with complete verified Email/Password create,
-  verify, resend, reset, sign-in, and sign-out journeys plus Google on iOS and
-  Android and Sign in with Apple on iOS. The native SDK persists and refreshes
-  sessions across app restarts.
+- Complete native Firebase Apple, Google, and Email/Password sign-in. Email
+  accounts include create, verify, resend, reset, and sign-out journeys.
 - Private visual lessons through the shared renderer: create, list, poll,
   resume, delete, continuous chapter playback, a caption-safe transcript strip,
   0.75–2× playback, full screen, offline download, native sharing, optional
@@ -46,10 +44,9 @@ node tool/configure_firebase.mjs
 
 The configuration command uses the ignored Firebase Admin credential from the
 repository's local environment only to download the already-registered iOS and
-Android SDK configs. It extracts their public platform API keys and Google OAuth
-client IDs, detects the enabled Google/Apple providers, and writes ignored,
-mode-`0600` local files; it never copies the service-account or Apple private
-key. The run wrapper supplies those values through `--dart-define-from-file`.
+Android SDK configs. It extracts their public platform API keys into ignored,
+mode-`0600` local files; it never copies the service-account private key. The
+run wrapper supplies those values through `--dart-define-from-file`.
 
 After configuration, opening and running `ios/Runner.xcworkspace` directly in
 Xcode also receives the local Firebase defines through
@@ -67,13 +64,7 @@ For an iOS simulator, use the Mac host address instead of `localhost` when
 needed. Android Emulator commonly uses `http://10.0.2.2:3000`.
 
 For CI/release builds, inject the platform keys directly or provide an ignored
-JSON file generated with the same names. Native social sign-in additionally
-uses `MATHSOLVER_GOOGLE_IOS_CLIENT_ID`,
-`MATHSOLVER_GOOGLE_SERVER_CLIENT_ID`,
-`MATHSOLVER_GOOGLE_ANDROID_ENABLED`, and
-`MATHSOLVER_APPLE_AUTH_ENABLED`; iOS builds must also supply
-`MATHSOLVER_GOOGLE_IOS_REVERSED_CLIENT_ID` as an Xcode setting for the callback
-URL scheme.
+JSON file with the same names:
 
 ```bash
 flutter run \
@@ -98,7 +89,7 @@ and never commit them.
 lib/
   core/
     analytics/    Opt-in, no-content Firebase Analytics adapter
-    auth/         Native Email/Password, Google, and Apple Firebase sessions
+    auth/         Apple, Google, and verified Email/Password sessions
     config/       Runtime API and Firebase configuration
     network/      Versioned mobile API, notebook sync, and video clients
     security/     Firebase initialization and App Check token headers
@@ -139,8 +130,9 @@ continues server-side when the app closes or the student navigates away.
 The code-controlled learning product is implemented. Store credentials and
 business decisions are intentionally not fabricated in source control. Follow
 [`RELEASE.md`](RELEASE.md) for Apple/Google signing, APNs, App Check rollout,
-backend deployment, and store QA. RevenueCat products, widgets, Pencil input,
-live tutoring, and exam packs remain later product scope; all free learning
-flows still work without an account.
+backend deployment, and store QA. Native Google/Apple login is implemented;
+widgets, Pencil input, live tutoring, and exam packs remain later product
+scope. The launch app has no subscriptions, purchases, paid products, or
+monetization prompts.
 
 Never commit service accounts, API keys, signing keys, or store credentials.

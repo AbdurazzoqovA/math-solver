@@ -23,10 +23,7 @@ const JOB_RETENTION_MS = 14 * 24 * 60 * 60 * 1_000;
 const MAX_UNSUPPORTED_ATTEMPTS = 2;
 
 function getFreeVideoLimit(): number {
-  const configured = Number(process.env.VIDEO_FREE_LIMIT);
-  return Number.isInteger(configured) && configured > 0
-    ? configured
-    : DEFAULT_DAILY_VIDEO_LIMIT;
+  return DEFAULT_DAILY_VIDEO_LIMIT;
 }
 
 function buildJobId(uid: string, requestKey: string): string {
@@ -90,8 +87,8 @@ export async function createOrRestartVideoJob(
     const needsQuotaCharge = !existing?.quotaCharged;
     if (needsQuotaCharge && quota.used >= quota.limit) {
       throw new VideoJobServiceError(
-        `You have used all ${quota.limit} free video explanations for today.`,
-        402,
+        `You have made all ${quota.limit} video explanations available today. You can make more after the daily reset.`,
+        429,
         "free_video_limit_reached",
       );
     }

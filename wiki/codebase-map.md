@@ -25,8 +25,9 @@ src/
       [slug]/page.tsx      # rich article, metadata, author, JSON-LD, solver CTA
     auth/action/page.tsx   # "/auth/action" — noindex Firebase email action handler
     contact/page.tsx       # "/contact" — support/feedback form with Telegram delivery
-    privacy/page.tsx       # static legal
-    terms/page.tsx         # static legal
+    privacy/page.tsx       # web/mobile data disclosures, choices, retention, deletion
+    terms/page.tsx         # web/mobile terms, free-product and update-policy contract
+    account-deletion/page.tsx # public Apple/Play account and data deletion instructions
     api/
       solve/route.ts       # POST — Gemini streamed steps + trusted calculator-mode lookup
       ocr/route.ts         # POST — Gemini 3.1 flash-lite, image/PDF/drawing → expression text
@@ -93,9 +94,9 @@ src/
     math-expression.ts     # safe recursive-descent expression parser used by graphing
     math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
-    analytics.ts          # privacy-safe GA4 event queue + return buckets
+    analytics.ts          # privacy-safe consent-gated GA4 events + return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
-    pressroom.ts          # server-only list/article API, types, 5-minute cache
+    pressroom.ts          # server-only sanitized list/article API, types, 5-minute cache
     pressroom-math.ts     # HTML-aware \\(...\\)/\\[...\\] authoring markers → safe server-rendered KaTeX
     firebase-auth-actions.ts # action-mode validation + same-origin continue URL guard
     firebase-client.ts     # env-gated Firebase App/Auth/Firestore Lite initialization
@@ -124,7 +125,8 @@ mobile_app/                  # standalone Flutter iOS/Android client; no web sou
       config/                # API/Firebase dart defines and request/upload limits
       network/               # mobile v1 API, Firestore notebook sync, video/push clients
       security/              # Firebase initialization + App Check token headers
-      storage/               # guest-first notebook/settings + spaced-review persistence
+      storage/               # guest-first notebook/settings, review, and per-lesson offline cache
+      update/                # optional/requires-update client policy and local dismissal/cache
       theme/                 # light-first Material 3 tokens and adaptive component styles
       widgets/               # native LaTeX, safe text-entry sheet, shared screen layout
     features/
@@ -169,7 +171,8 @@ infra/video/               # idempotent GCS/Cloud Tasks/IAM/TTL/CORS/lifecycle s
 
 Mobile-only server entries live under `src/app/api/mobile/v1/`: App-Check-aware
 wrappers for OCR, solve, practice, Check My Work, verification, feedback,
-private video jobs, and verified-account FCM device registration.
+private video jobs, verified-account FCM device registration and recent-login
+account deletion, plus the public server-controlled app-version policy.
 
 ## Load-bearing files (touch with care)
 
@@ -183,6 +186,6 @@ Input (type / paste / photo / draw) → optional `/api/ocr` (Gemini) to get text
 
 For “Generate video explanation,” `MessageList` selects the completed problem/solution pair → `/api/video/jobs` verifies a fresh Firebase ID token and email verification → a Firestore transaction reserves one of 10 generations in the current UTC-day bucket and creates an idempotent job → the originating assistant message syncs the private job ID/version and `InlineVideoLesson` shows progress independently of the modal → Cloud Tasks calls the private renderer with OIDC → Gemini treats the written solution only as an accuracy reference and plans a schema-v2 visual lesson → Pydantic rejects any plan missing orientation, concept modeling, strategy reasoning, misconception contrast, representation connection, verification/generalization, non-equation visuals, construct/highlight/compare actions, or a safe complete `finalAnswerLatex` → a separate Gemini reviewer checks both mathematics and teaching value, including the final result and its spoken verification, with one bounded feedback-guided revision and an explicit-clarification path for damaged input → verified phrase-level TTS feeds deterministic Manim scenes → the final scene always replaces its teaching visual with a 3.5-second `FINAL ANSWER` card → FFmpeg assembles one continuous H.264/AAC lesson MP4 and one continuous WebVTT timeline → private GCS stores the single-video manifest/media → the authorized job API validates object keys and returns 45-minute signed playback URLs to `VideoLessonPlayer`. The ready player replaces the inline progress attachment, exposes no chapter boundaries, keeps captions outside the math canvas, and can show one optional transfer check only after the full video. The control rail remains visible and includes full-screen. A missing Manim assembly fragment gets one fresh-directory retry; unsuccessful jobs refund only the matching daily bucket. The same endpoint's authenticated `GET` powers `/video-library`, which lists up to 24 unexpired account-owned jobs with short-lived signed posters; selecting a ready card reopens the existing lesson without regenerating or consuming another daily slot.
 
-The Flutter client is a separate loop-first product: Home scan/photo/paste/type → crop/worksheet selection → editable OCR readback → streamed `/api/mobile/v1/solve` response → native step/LaTeX rendering with hint-first reveal and independent verification → private continuous video playback with optional practice pauses/offline/share → optional practice and scheduled mistake review. Check My Work uses its own multimodal route to diagnose the learner's first incorrect handwritten line. It deliberately imports no web UI code. Native Firebase Authentication provides verified Email/Password, Google, and Apple sessions with SDK-managed persistence; verified owners merge/sync the local notebook through Firestore. App Check protects the mobile gateway, and FCM registration supports content-free ready notifications. Store credentials and later native-only surfaces are the remaining boundaries. See [[mobile-app-concept]].
+The Flutter client is a separate loop-first product: Home scan/photo/paste/type → crop/worksheet selection → editable OCR readback → streamed `/api/mobile/v1/solve` response → native step/LaTeX rendering with hint-first reveal and independent verification → private continuous video playback with optional practice pauses/offline/share → optional practice and scheduled mistake review. Check My Work uses its own multimodal route to diagnose the learner's first incorrect handwritten line. It deliberately imports no web UI code. Native Firebase Authentication provides verified Email/Password, Google, and Apple sessions with SDK-managed persistence; verified owners merge/sync the local notebook through Firestore and can permanently delete their account after provider-aware reauthentication. App Check protects the mobile gateway without applying the web fallback quota. FCM registration follows a contextual `Notify me when ready` choice, and optional app updates are dismissible while hard gates require an explicit server-declared security or incompatible-protocol minimum. Store credentials and later native-only surfaces are the remaining boundaries. See [[mobile-app-concept]].
 
 Calculator pages use the same data flow and the same `ChatConversation` interface as the homepage. On the first submission, `forceNewChat` creates a fresh chat with a `calculator:<slug>` source tag so an old active conversation cannot absorb the calculator problem. `/api/solve` validates that slug against the server registry and adds its trusted `solverInstruction`, so ambiguous input receives the operation intended by the page. The graphing route first evaluates explicit functions locally with the safe parser, then can send its visible functions into the shared tutor chat for explanation. See [[calculator-pages]].

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateRequest } from '@/lib/captcha';
+import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
 import { generateGeminiText } from '@/lib/gemini';
 
 const PRACTICE_PROMPT = `You are MathSolver, an expert AI math tutor. 
@@ -28,10 +28,14 @@ CRITICAL JSON RULES:
 2. For line breaks in any string, use the standard JSON newline escape \\n (one backslash in the JSON source). Use \\n\\n when Markdown should start a new paragraph. Never double-escape a newline as \\\\n.
 3. Do not include raw unescaped newlines in your string properties.`;
 
-export async function POST(req: Request) {
+export async function POST(
+  req: Request,
+  _context?: { params: Promise<unknown> },
+  validationOptions: RequestValidationOptions = {},
+) {
   try {
     // ── Captcha / rate-limit gate ──
-    const validation = await validateRequest(req);
+    const validation = await validateRequest(req, validationOptions);
     if (!validation.allowed) {
       return NextResponse.json(
         { error: validation.error },
@@ -93,7 +97,7 @@ export async function POST(req: Request) {
     } catch {
       console.error('Failed to parse AI practice response');
       return NextResponse.json(
-        { error: 'Failed to parse AI response.', details: content },
+        { error: 'Failed to parse AI response.' },
         { status: 500 }
       );
     }

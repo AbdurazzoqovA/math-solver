@@ -1,10 +1,17 @@
 import "server-only";
 import { renderPressroomMath } from "@/lib/pressroom-math";
+import sanitizeHtml from "sanitize-html";
 
 const PRESSROOM_API_URL =
   process.env.PRESSROOM_API_URL?.trim() ||
   "https://press.roselapp.com";
 const PRESSROOM_REVALIDATE_SECONDS = 300;
+const ARTICLE_TAGS = [
+  ...sanitizeHtml.defaults.allowedTags,
+  "figure",
+  "figcaption",
+  "img",
+];
 
 export type PressroomAuthor = {
   name: string;
@@ -61,6 +68,28 @@ async function pressroomFetch(path: string) {
     },
     next: {
       revalidate: PRESSROOM_REVALIDATE_SECONDS,
+    },
+  });
+}
+
+function sanitizeArticleHtml(value: string): string {
+  return sanitizeHtml(value, {
+    allowedTags: ARTICLE_TAGS,
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ["src", "alt", "title", "width", "height", "loading"],
+    },
+    allowedSchemes: ["http", "https", "mailto"],
+    transformTags: {
+      a: (_tagName, attributes) => ({
+        tagName: "a",
+        attribs: {
+          ...attributes,
+          ...(attributes.target === "_blank"
+            ? { rel: "noopener noreferrer" }
+            : {}),
+        },
+      }),
     },
   });
 }
@@ -142,7 +171,7 @@ export async function getPost(
 
   return {
     ...data.post,
-    contentHtml: renderPressroomMath(data.post.contentHtml),
+    contentHtml: renderPressroomMath(sanitizeArticleHtml(data.post.contentHtml)),
   };
 }
 

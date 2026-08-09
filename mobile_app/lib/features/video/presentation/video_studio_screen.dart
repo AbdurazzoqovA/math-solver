@@ -4,7 +4,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
@@ -12,6 +11,7 @@ import '../../../core/analytics/mobile_analytics.dart';
 import '../../../core/auth/account_controller.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/video_lesson_api.dart';
+import '../../../core/storage/video_offline_cache.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/math_text.dart';
 import '../../profile/account_sheet.dart';
@@ -159,7 +159,7 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
       if (widget.existingJobId == null && !_requestTracked) {
         _requestTracked = true;
         unawaited(MobileAnalytics.videoLessonRequested());
-        unawaited(widget.api.enableReadyNotifications());
+        unawaited(_offerReadyNotifications());
       }
       if (!mounted || run != _run) {
         return;
@@ -206,6 +206,87 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _offerReadyNotifications() async {
+    if (!await widget.api.shouldOfferReadyNotifications() || !mounted) return;
+    final accepted = await showModalBottomSheet<bool>(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => const _NotificationOffer(),
+    );
+    await widget.api.markReadyNotificationOfferHandled();
+    if (accepted != true) return;
+
+    final enabled = await widget.api.enableReadyNotifications();
+    if (!enabled && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Notifications stayed off. Your lesson will still appear in the library.',
+          ),
+        ),
+      );
+    }
+  }
+}
+
+class _NotificationOffer extends StatelessWidget {
+  const _NotificationOffer();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: AppTheme.mint,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.notifications_active_outlined,
+              color: AppTheme.ink,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Know when your lesson is ready',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Video lessons keep rendering after you leave. MathSolver can send one private, generic alert when this lesson is ready—never your problem or answer.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.notifications_none_rounded),
+              label: const Text('Notify me when ready'),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Not now'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -957,7 +1038,7 @@ class _QuotaBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
-        '$remaining free today',
+        '$remaining of 10 today',
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: AppTheme.ink,
           fontWeight: FontWeight.w700,
@@ -1074,6 +1155,7 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
         ),
         const SizedBox(height: 14),
         _LessonClipPlayer(
+          lessonId: lesson.lessonId,
           clip: clip,
           autoPlay: _autoPlaySelectedClip,
           onAutoPlayConsumed: () {
@@ -1225,6 +1307,7 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
 
 class _LessonClipPlayer extends StatefulWidget {
   const _LessonClipPlayer({
+    required this.lessonId,
     required this.clip,
     this.allowFullscreen = true,
     this.autoPlay = false,
@@ -1232,6 +1315,7 @@ class _LessonClipPlayer extends StatefulWidget {
     this.onEnded,
   });
 
+  final String lessonId;
   final VideoLessonClip clip;
   final bool allowFullscreen;
   final bool autoPlay;
@@ -1260,7 +1344,8 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
   @override
   void didUpdateWidget(covariant _LessonClipPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.clip.videoUrl != widget.clip.videoUrl) {
+    if (oldWidget.lessonId != widget.lessonId ||
+        oldWidget.clip.videoUrl != widget.clip.videoUrl) {
       _load();
     }
   }
@@ -1314,6 +1399,14 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
   }
 
   Future<ClosedCaptionFile> _loadCaptions() async {
+    final cached = await VideoOfflineCache.file(
+      widget.lessonId,
+      widget.clip.id,
+      'vtt',
+    );
+    if (await cached.exists()) {
+      return WebVTTCaptionFile(await cached.readAsString());
+    }
     if (widget.clip.captionsUrl.trim().isEmpty) {
       return WebVTTCaptionFile('');
     }
@@ -1330,21 +1423,12 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
     return WebVTTCaptionFile('');
   }
 
-  Future<Directory> _cacheDirectory() async {
-    final root = await getApplicationDocumentsDirectory();
-    final directory = Directory('${root.path}/private-video-lessons');
-    if (!await directory.exists()) {
-      await directory.create(recursive: true);
-    }
-    return directory;
-  }
-
-  String get _safeClipId =>
-      widget.clip.id.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
-
   Future<File?> _existingCacheFile() async {
-    final directory = await _cacheDirectory();
-    final file = File('${directory.path}/$_safeClipId.mp4');
+    final file = await VideoOfflineCache.file(
+      widget.lessonId,
+      widget.clip.id,
+      'mp4',
+    );
     return await file.exists() ? file : null;
   }
 
@@ -1358,9 +1442,29 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw const HttpException('Download failed');
       }
-      final directory = await _cacheDirectory();
-      final file = File('${directory.path}/$_safeClipId.mp4');
+      final file = await VideoOfflineCache.file(
+        widget.lessonId,
+        widget.clip.id,
+        'mp4',
+      );
       await file.writeAsBytes(response.bodyBytes, flush: true);
+      if (widget.clip.captionsUrl.trim().isNotEmpty) {
+        try {
+          final captions = await http
+              .get(Uri.parse(widget.clip.captionsUrl))
+              .timeout(AppConfig.requestTimeout);
+          if (captions.statusCode >= 200 && captions.statusCode < 300) {
+            final captionFile = await VideoOfflineCache.file(
+              widget.lessonId,
+              widget.clip.id,
+              'vtt',
+            );
+            await captionFile.writeAsString(captions.body, flush: true);
+          }
+        } on Object {
+          // Saving the video remains useful if captions are unavailable.
+        }
+      }
       if (mounted) {
         setState(() => _cachedFile = file);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1415,7 +1519,11 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
             title: Text(widget.clip.title),
           ),
           body: Center(
-            child: _LessonClipPlayer(clip: widget.clip, allowFullscreen: false),
+            child: _LessonClipPlayer(
+              lessonId: widget.lessonId,
+              clip: widget.clip,
+              allowFullscreen: false,
+            ),
           ),
         ),
       ),

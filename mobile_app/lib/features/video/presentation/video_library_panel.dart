@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/account_controller.dart';
 import '../../../core/network/video_lesson_api.dart';
+import '../../../core/storage/video_offline_cache.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../profile/account_sheet.dart';
 import '../domain/video_lesson.dart';
@@ -86,7 +87,7 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
           children: [
             Expanded(
               child: Text(
-                '${library.quota.remaining} free videos left today',
+                '${library.quota.remaining} of ${library.quota.limit} videos available today',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -99,7 +100,11 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
         ),
         const SizedBox(height: 12),
         for (final job in library.jobs) ...[
-          _VideoLibraryCard(job: job, onTap: () => _open(job)),
+          _VideoLibraryCard(
+            job: job,
+            onTap: () => _open(job),
+            onDelete: () => _delete(job),
+          ),
           const SizedBox(height: 12),
         ],
       ],
@@ -174,13 +179,59 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
       await _load();
     }
   }
+
+  Future<void> _delete(VideoJobSummary job) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this video?'),
+        content: const Text(
+          'The private video and any copy saved offline on this device will be permanently deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await widget.api.deleteJob(job.id);
+      await VideoOfflineCache.deleteLesson(job.id);
+      await _load();
+    } on VideoApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The video could not be deleted.')),
+        );
+      }
+    }
+  }
 }
 
 class _VideoLibraryCard extends StatelessWidget {
-  const _VideoLibraryCard({required this.job, required this.onTap});
+  const _VideoLibraryCard({
+    required this.job,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   final VideoJobSummary job;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -256,9 +307,14 @@ class _VideoLibraryCard extends StatelessWidget {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(right: 10),
-              child: Icon(Icons.chevron_right_rounded),
+            PopupMenuButton<String>(
+              tooltip: 'Video options',
+              onSelected: (value) {
+                if (value == 'delete') onDelete();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'delete', child: Text('Delete video')),
+              ],
             ),
           ],
         ),
@@ -411,7 +467,7 @@ class _SignedInEmpty extends StatelessWidget {
             ),
             if (remaining != null) ...[
               const SizedBox(height: 8),
-              Text('$remaining free lessons available today'),
+              Text('$remaining of 10 video lessons available today'),
             ],
             const SizedBox(height: 16),
             TextButton.icon(

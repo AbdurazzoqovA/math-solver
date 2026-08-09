@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/auth/account_controller.dart';
 import '../../core/network/video_lesson_api.dart';
+import '../../core/storage/video_offline_cache.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/screen_layout.dart';
 import '../app/app_controller.dart';
@@ -40,8 +43,11 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 ListenableBuilder(
                   listenable: account,
-                  builder: (context, _) =>
-                      _AccountCard(account: account, videoApi: videoApi),
+                  builder: (context, _) => _AccountCard(
+                    account: account,
+                    videoApi: videoApi,
+                    controller: controller,
+                  ),
                 ),
                 const SizedBox(height: 26),
                 Text('Learning', style: Theme.of(context).textTheme.titleLarge),
@@ -102,21 +108,62 @@ class ProfileScreen extends StatelessWidget {
                     const Divider(indent: 74),
                     ListTile(
                       leading: _SettingsIcon(
+                        icon: Icons.privacy_tip_outlined,
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                      ),
+                      title: const Text('Privacy policy'),
+                      trailing: const Icon(Icons.open_in_new_rounded),
+                      onTap: () => _openWebPage(
+                        context,
+                        Uri.parse('https://math-solver.io/privacy'),
+                      ),
+                    ),
+                    const Divider(indent: 74),
+                    ListTile(
+                      leading: _SettingsIcon(
+                        icon: Icons.description_outlined,
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                      ),
+                      title: const Text('Terms of use'),
+                      trailing: const Icon(Icons.open_in_new_rounded),
+                      onTap: () => _openWebPage(
+                        context,
+                        Uri.parse('https://math-solver.io/terms'),
+                      ),
+                    ),
+                    const Divider(indent: 74),
+                    ListTile(
+                      leading: _SettingsIcon(
+                        icon: Icons.person_remove_outlined,
+                        color: Theme.of(context).colorScheme.errorContainer,
+                      ),
+                      title: const Text('Account deletion help'),
+                      subtitle: const Text(
+                        'Delete in the app or request help online',
+                      ),
+                      trailing: const Icon(Icons.open_in_new_rounded),
+                      onTap: () => _openWebPage(
+                        context,
+                        Uri.parse('https://math-solver.io/account-deletion'),
+                      ),
+                    ),
+                    const Divider(indent: 74),
+                    ListTile(
+                      leading: _SettingsIcon(
                         icon: Icons.info_outline_rounded,
                         color: Theme.of(context).colorScheme.tertiaryContainer,
                       ),
                       title: const Text('About MathSolver'),
-                      subtitle: const Text('Version 1.0.0'),
+                      subtitle: FutureBuilder<PackageInfo>(
+                        future: PackageInfo.fromPlatform(),
+                        builder: (context, snapshot) => Text(
+                          snapshot.hasData
+                              ? 'Version ${snapshot.data!.version}'
+                              : 'Version information',
+                        ),
+                      ),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () {
-                        showAboutDialog(
-                          context: context,
-                          applicationName: 'MathSolver',
-                          applicationVersion: '1.0.0',
-                          applicationLegalese:
-                              'Full step-by-step solutions. Free. Unlimited.',
-                        );
-                      },
+                      onTap: () => _showAbout(context),
                     ),
                   ],
                 ),
@@ -186,6 +233,27 @@ class ProfileScreen extends StatelessWidget {
     ThemeMode.system => 'Match device',
     ThemeMode.dark => 'Dark',
   };
+
+  static Future<void> _openWebPage(BuildContext context, Uri url) async {
+    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This page could not be opened.')),
+      );
+    }
+  }
+
+  static Future<void> _showAbout(BuildContext context) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!context.mounted) return;
+    showAboutDialog(
+      context: context,
+      applicationName: 'MathSolver',
+      applicationVersion: '${packageInfo.version} (${packageInfo.buildNumber})',
+      applicationLegalese:
+          'Written solving features are free and unlimited. Videos: 10 per day.',
+    );
+  }
 }
 
 class _ProfileHero extends StatelessWidget {
@@ -272,10 +340,15 @@ class _HeroStat extends StatelessWidget {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.account, required this.videoApi});
+  const _AccountCard({
+    required this.account,
+    required this.videoApi,
+    required this.controller,
+  });
 
   final AccountController account;
   final VideoLessonApi videoApi;
+  final AppController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -288,44 +361,63 @@ class _AccountCard extends StatelessWidget {
           color: AppTheme.mintCard(colors),
           borderRadius: BorderRadius.circular(24),
         ),
-        child: Row(
+        child: Column(
           children: [
-            const CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person_rounded, color: AppTheme.ink),
+            Row(
+              children: [
+                const CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person_rounded, color: AppTheme.ink),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Verified account',
+                        style: TextStyle(
+                          color: mintForeground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        account.email ?? 'Private Apple account',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: mintForeground.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: account.isBusy
+                      ? null
+                      : () async {
+                          await videoApi.disableReadyNotifications();
+                          await account.signOut();
+                        },
+                  style: TextButton.styleFrom(foregroundColor: mintForeground),
+                  child: const Text('Sign out'),
+                ),
+              ],
             ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Verified account',
-                    style: TextStyle(
-                      color: mintForeground,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    account.email ?? 'Private Apple account',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: mintForeground.withValues(alpha: 0.68),
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: account.isBusy
+                    ? null
+                    : () => _confirmAccountDeletion(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: const Text('Delete account and data'),
               ),
-            ),
-            TextButton(
-              onPressed: () async {
-                await videoApi.disableReadyNotifications();
-                await account.signOut();
-              },
-              style: TextButton.styleFrom(foregroundColor: mintForeground),
-              child: const Text('Sign out'),
             ),
           ],
         ),
@@ -388,6 +480,124 @@ class _AccountCard extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _confirmAccountDeletion(BuildContext context) async {
+    final password = await showDialog<String>(
+      context: context,
+      builder: (context) => _AccountDeletionDialog(
+        reauthenticationMethod: account.reauthenticationMethod,
+      ),
+    );
+    if (password == null || !context.mounted) return;
+
+    try {
+      await account.reauthenticateForDeletion(password);
+      await videoApi.disableReadyNotifications();
+      await account.deleteAccount();
+      await VideoOfflineCache.clearAll();
+      await controller.clearPersonalData();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your account and data were deleted.')),
+        );
+      }
+    } on AccountException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+}
+
+class _AccountDeletionDialog extends StatefulWidget {
+  const _AccountDeletionDialog({required this.reauthenticationMethod});
+
+  final AccountReauthenticationMethod reauthenticationMethod;
+
+  @override
+  State<_AccountDeletionDialog> createState() => _AccountDeletionDialogState();
+}
+
+class _AccountDeletionDialogState extends State<_AccountDeletionDialog> {
+  final _passwordController = TextEditingController();
+  var _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final needsPassword =
+        widget.reauthenticationMethod == AccountReauthenticationMethod.password;
+    return AlertDialog(
+      title: const Text('Delete your account?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'This permanently deletes your account, synced solutions, private videos, and notification registration. This cannot be undone.',
+          ),
+          const SizedBox(height: 16),
+          if (needsPassword)
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              autofocus: true,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: InputDecoration(
+                labelText: 'Confirm your password',
+                suffixIcon: IconButton(
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            )
+          else
+            Text(_providerConfirmationText),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Keep account'),
+        ),
+        FilledButton(
+          onPressed: needsPassword && _passwordController.text.isEmpty
+              ? null
+              : () => Navigator.pop(
+                  context,
+                  needsPassword ? _passwordController.text : '',
+                ),
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+          child: const Text('Delete permanently'),
+        ),
+      ],
+    );
+  }
+
+  String get _providerConfirmationText =>
+      switch (widget.reauthenticationMethod) {
+        AccountReauthenticationMethod.apple =>
+          'Apple will ask you to confirm your identity before deletion.',
+        AccountReauthenticationMethod.google =>
+          'Google will ask you to confirm your identity before deletion.',
+        AccountReauthenticationMethod.password => '',
+      };
 }
 
 class _SettingsGroup extends StatelessWidget {
