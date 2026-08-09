@@ -293,3 +293,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Restored the established rounded functions icon
 
 - Corrected the release asset generator to use the exact `Icons.functions_rounded` glyph already used by MathSolver's mobile interface instead of the temporary sharp custom Sigma. Uploaded and processed replacement build `1.0.0 (2)`, detached build 1 from the App Store version, attached build 2, and visually verified the corrected included asset in App Store Connect. Manual release remains selected and no review action was taken.
+
+## [2026-08-09] change | Restored the approved calculator app icon
+
+- Recovered the exact 1024 px light-blue `+ − × =` calculator icon from the earlier release assets after the owner identified it from a prior on-device install. Made that artwork the reproducible iOS icon and launch-screen source and advanced the replacement archive to build `1.0.0 (3)`; no review or release action is authorized.

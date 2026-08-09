@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,33 +14,23 @@ const launchDirectory = path.join(
   appRoot,
   'ios/Runner/Assets.xcassets/LaunchImage.imageset',
 );
-
-const functionsRoundedPath =
-  'M352-427H161c-18 0-33 15-33 34 0 6 3 11 7 15l132 122-132 122c-4 4-7 9-7 15 0 19 15 34 33 34h191c18 0 32-15 32-32 0-18-14-32-32-32H235l76-77c17-17 17-44 0-60l-76-77h117c18 0 32-14 32-32 0-17-14-32-32-32Z';
-
-const iconSvg = Buffer.from(`
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 544 544">
-  <defs>
-    <linearGradient id="brand" x1="51" y1="34" x2="493" y2="510" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2F438F"/>
-      <stop offset="1" stop-color="#5267F7"/>
-    </linearGradient>
-  </defs>
-  <rect width="544" height="544" fill="url(#brand)"/>
-  <path d="${functionsRoundedPath}" transform="translate(16 528)" fill="#FFFFFF"/>
-</svg>
-`);
+const sourceIconPath = path.join(
+  toolDirectory,
+  'assets/mathsolver-calculator-icon.png',
+);
+const sourceIcon = await readFile(sourceIconPath);
+const sourceIconData = sourceIcon.toString('base64');
 
 const launchSvg = Buffer.from(`
 <svg xmlns="http://www.w3.org/2000/svg" width="504" height="555" viewBox="0 0 168 185">
   <defs>
-    <linearGradient id="brand" x1="36" y1="14" x2="132" y2="110" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2F438F"/>
-      <stop offset="1" stop-color="#5267F7"/>
-    </linearGradient>
+    <clipPath id="app-icon-mask">
+      <rect x="36" y="14" width="96" height="96" rx="23"/>
+    </clipPath>
   </defs>
-  <rect x="36" y="14" width="96" height="96" rx="27" fill="url(#brand)"/>
-  <path d="${functionsRoundedPath}" transform="translate(36 110.0625) scale(.1875)" fill="#FFFFFF"/>
+  <image x="36" y="14" width="96" height="96"
+    href="data:image/png;base64,${sourceIconData}"
+    clip-path="url(#app-icon-mask)"/>
   <text x="84" y="143" text-anchor="middle" fill="#172033" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">MathSolver</text>
   <text x="84" y="160" text-anchor="middle" fill="#73798A" font-family="Arial, Helvetica, sans-serif" font-size="5.3" font-weight="700" letter-spacing="0.8">LEARN MATH STEP BY STEP</text>
 </svg>
@@ -55,12 +45,16 @@ for (const item of contents.images) {
   const points = Number.parseFloat(item.size.split('x')[0]);
   const scale = Number.parseInt(item.scale, 10);
   const pixels = Math.round(points * scale);
-  await sharp(iconSvg)
-    .resize(pixels, pixels)
-    .flatten({ background: '#5267F7' })
-    .removeAlpha()
-    .png()
-    .toFile(path.join(iconDirectory, item.filename));
+  const outputPath = path.join(iconDirectory, item.filename);
+  if (pixels === 1024) {
+    await writeFile(outputPath, sourceIcon);
+  } else {
+    await sharp(sourceIcon)
+      .resize(pixels, pixels)
+      .removeAlpha()
+      .png()
+      .toFile(outputPath);
+  }
 }
 
 for (const [filename, width, height] of [
