@@ -552,10 +552,10 @@ class _VerificationCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(verification.summary),
+          MathText.auto(verification.summary),
           for (final issue in verification.issues) ...[
             const SizedBox(height: 6),
-            Text('• $issue'),
+            MathText.auto('• $issue'),
           ],
           const SizedBox(height: 8),
           Text(
@@ -660,10 +660,7 @@ class _ProblemHeader extends StatelessWidget {
             ).textTheme.labelLarge?.copyWith(color: colors.primary),
           ),
           const SizedBox(height: 9),
-          MathText(
-            mathProblemDisplay(problem),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          MathText.auto(problem, style: Theme.of(context).textTheme.titleLarge),
         ],
       ),
     );
@@ -732,7 +729,7 @@ class _StepCard extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      step.title,
+                      plainMathPreview(step.title),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -786,7 +783,7 @@ class _FinalAnswer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          MathText(
+          MathText.auto(
             answer,
             style: Theme.of(
               context,

@@ -166,7 +166,7 @@ class _ReviewResult extends StatelessWidget {
                 ).textTheme.headlineSmall?.copyWith(color: heroForeground),
               ),
               const SizedBox(height: 7),
-              Text(
+              MathText.auto(
                 result.summary,
                 style: Theme.of(
                   context,
@@ -189,7 +189,7 @@ class _ReviewResult extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(18),
-              child: MathText(result.problem),
+              child: MathText.auto(result.problem),
             ),
           ),
         ],
@@ -220,7 +220,7 @@ class _ReviewResult extends StatelessWidget {
                 ),
                 const SizedBox(width: 11),
                 Expanded(
-                  child: Text(
+                  child: MathText.auto(
                     result.nextHint,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: colors.onPrimaryContainer,
@@ -299,12 +299,12 @@ class _WorkLineCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 11),
-              Expanded(child: MathText(line.transcription)),
+              Expanded(child: MathText.auto(line.transcription)),
             ],
           ),
           if (line.explanation.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(
+            MathText.auto(
               line.explanation,
               style: Theme.of(
                 context,
@@ -321,7 +321,7 @@ class _WorkLineCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            MathText(line.correction!),
+            MathText.auto(line.correction!),
           ],
         ],
       ),

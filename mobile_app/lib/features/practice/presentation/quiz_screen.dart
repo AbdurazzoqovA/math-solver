@@ -66,7 +66,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.practice.title),
+        title: Text(plainMathPreview(widget.practice.title)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 18),
@@ -179,7 +179,7 @@ class _QuestionView extends StatelessWidget {
             ).textTheme.labelLarge?.copyWith(color: colors.primary),
           ),
           const SizedBox(height: 10),
-          MathText(
+          MathText.auto(
             question.question,
             style: Theme.of(
               context,
@@ -315,7 +315,7 @@ class _AnswerOption extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 13),
-              Expanded(child: MathText(value)),
+              Expanded(child: MathText.auto(value)),
             ],
           ),
         ),

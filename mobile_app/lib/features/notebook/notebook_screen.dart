@@ -403,7 +403,7 @@ class SavedSolutionScreen extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 9),
-                      MathText(
+                      MathText.auto(
                         record.problem,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),

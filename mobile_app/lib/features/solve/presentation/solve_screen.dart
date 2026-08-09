@@ -376,8 +376,8 @@ class _SolveScreenState extends State<SolveScreen> {
               Card(
                 child: ListTile(
                   leading: CircleAvatar(child: Text('${index + 1}')),
-                  title: MathText(
-                    mathProblemDisplay(candidates[index]),
+                  title: MathText.auto(
+                    candidates[index],
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),

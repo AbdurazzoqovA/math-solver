@@ -6,6 +6,7 @@ import '../../../core/auth/account_controller.dart';
 import '../../../core/network/video_lesson_api.dart';
 import '../../../core/storage/video_offline_cache.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/math_text.dart';
 import '../../profile/account_sheet.dart';
 import '../domain/video_lesson.dart';
 import 'video_studio_screen.dart';
@@ -286,7 +287,7 @@ class _VideoLibraryCard extends StatelessWidget {
                     _StatusPill(status: job.status),
                     const SizedBox(height: 9),
                     Text(
-                      job.title,
+                      plainMathPreview(job.title),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium,

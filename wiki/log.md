@@ -276,3 +276,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Fixed iOS adjustable-crop confirmation
 
 - Limited the background-isolate handoff to sendable photo bytes and numeric crop coordinates, preventing the iOS “Could not crop that photo” failure when choosing the preselected camera region. The crop-screen test now presses Use selection and verifies the resulting pixel dimensions.
+
+## [2026-08-09] change | Removed raw LaTeX from mobile math surfaces
+
+- Audited mobile problem and expression rendering across OCR confirmation, solutions, saved work, Check My Work, practice questions/options, video generation, video checkpoints, final answers, and compact video titles. Added a shared automatic bare-LaTeX path with a readable mixed-prose fallback and a regression for the exact video-generation screen.

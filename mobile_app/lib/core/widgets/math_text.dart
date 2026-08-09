@@ -20,7 +20,13 @@ const _superscripts = {
 /// delimiters and maps common tokens to readable unicode. Not a full
 /// renderer — unknown commands simply lose their backslash.
 String plainMathPreview(String value) {
-  var text = value.replaceAll('\n', ' ').replaceAll(RegExp(r'\${1,2}'), '');
+  var text = value
+      .replaceAll('\n', ' ')
+      .replaceAll(r'\(', '')
+      .replaceAll(r'\)', '')
+      .replaceAll(r'\[', '')
+      .replaceAll(r'\]', '')
+      .replaceAll(RegExp(r'\${1,2}'), '');
   text = text.replaceAllMapped(
     RegExp(r'\^\{?([0-9n\-]{1,3})\}?'),
     (match) =>
@@ -51,17 +57,42 @@ String plainMathPreview(String value) {
 /// [MathText] renders them instead of exposing commands such as `\\lim` and
 /// `\\frac` to the learner. Ordinary typed word problems remain plain text.
 String mathProblemDisplay(String value) {
-  final trimmed = value.trim();
+  final normalized = normalizeMathDelimiters(value);
+  final trimmed = normalized.trim();
   if (trimmed.isEmpty ||
       trimmed.contains(r'$$') ||
       RegExp(r'\$[^$\n]+\$').hasMatch(trimmed)) {
-    return value;
+    return normalized;
   }
   final containsLatexCommand = RegExp(
-    r'\\(?:frac|dfrac|tfrac|sqrt|lim|to|infty|left|right|sum|prod|int|sin|cos|tan|log|ln|theta|pi|pm|times|cdot|begin|end)\b',
+    r'\\(?:frac|dfrac|tfrac|sqrt|lim|to|infty|left|right|sum|prod|int|iint|iiint|sin|cos|tan|sec|csc|cot|log|ln|exp|theta|alpha|beta|gamma|delta|pi|pm|mp|times|cdot|div|le|leq|ge|geq|ne|neq|approx|equiv|partial|nabla|overline|underline|vec|hat|bar|boxed|text|mathrm|mathbf|operatorname|begin|end)\b',
   ).hasMatch(trimmed);
-  return containsLatexCommand ? r'$$' + trimmed + r'$$' : value;
+  if (!containsLatexCommand) return normalized;
+
+  // A bare OCR expression can be rendered as one display equation. If the
+  // same undelimited LaTeX is embedded in a word problem, prefer a clean
+  // unicode preview over exposing commands or treating prose as variables.
+  final withoutCommands = trimmed
+      .replaceAll(
+        RegExp(r'\\(?:text|mathrm|mathbf|operatorname)\{[^{}]*\}'),
+        '',
+      )
+      .replaceAll(
+        RegExp(r'\{(?:aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array)\}'),
+        '',
+      )
+      .replaceAll(RegExp(r'\\[a-zA-Z]+\*?'), '');
+  final containsProse = RegExp(r'\b[a-zA-Z]{3,}\b').hasMatch(withoutCommands);
+  return containsProse ? plainMathPreview(normalized) : r'$$' + trimmed + r'$$';
 }
+
+/// Normalizes the other common LaTeX delimiter style emitted by AI models.
+/// The renderer uses dollar delimiters internally.
+String normalizeMathDelimiters(String value) => value
+    .replaceAll(r'\[', r'$$')
+    .replaceAll(r'\]', r'$$')
+    .replaceAll(r'\(', r'$')
+    .replaceAll(r'\)', r'$');
 
 class MathText extends StatelessWidget {
   const MathText(
@@ -69,16 +100,27 @@ class MathText extends StatelessWidget {
     super.key,
     this.style,
     this.textAlign = TextAlign.start,
-  });
+  }) : normalizeBareLatex = false;
+
+  const MathText.auto(
+    this.data, {
+    super.key,
+    this.style,
+    this.textAlign = TextAlign.start,
+  }) : normalizeBareLatex = true;
 
   final String data;
   final TextStyle? style;
   final TextAlign textAlign;
+  final bool normalizeBareLatex;
 
   @override
   Widget build(BuildContext context) {
     final baseStyle = style ?? Theme.of(context).textTheme.bodyLarge!;
-    final blocks = _splitBlocks(data);
+    final normalized = normalizeMathDelimiters(data);
+    final blocks = _splitBlocks(
+      normalizeBareLatex ? mathProblemDisplay(normalized) : normalized,
+    );
     return Column(
       crossAxisAlignment: textAlign == TextAlign.center
           ? CrossAxisAlignment.center
@@ -95,8 +137,10 @@ class MathText extends StatelessWidget {
                   textStyle: baseStyle.copyWith(
                     fontSize: (baseStyle.fontSize ?? 16) + 2,
                   ),
-                  onErrorFallback: (_) =>
-                      SelectableText(block.value, style: baseStyle),
+                  onErrorFallback: (_) => SelectableText(
+                    plainMathPreview(block.value),
+                    style: baseStyle,
+                  ),
                 ),
               ),
             )
@@ -251,7 +295,8 @@ class _InlineMathLine extends StatelessWidget {
                 expression,
                 mathStyle: MathStyle.text,
                 textStyle: style,
-                onErrorFallback: (_) => Text(expression, style: style),
+                onErrorFallback: (_) =>
+                    Text(plainMathPreview(expression), style: style),
               ),
             ),
           ),

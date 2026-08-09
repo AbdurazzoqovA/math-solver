@@ -32,6 +32,8 @@ import '../features/video/domain/video_lesson.dart';
 import '../features/video/presentation/video_studio_screen.dart';
 
 const _problem = r'Solve $2x^2 - 7x + 3 = 0$';
+const _rawOcrProblem =
+    r'\lim_{x \to 3} \left(\frac{x^2 + 9}{x - 3}\right)';
 
 const _solution = r'''
 **Step 1: Identify the coefficients**
@@ -425,7 +427,7 @@ Future<void> _pushVideoStudioPreview() async {
               progress: 62,
               label: 'Animating each worked step',
               status: VideoJobStatus.rendering,
-              problem: _problem,
+              problem: _rawOcrProblem,
             ),
           ),
         ),

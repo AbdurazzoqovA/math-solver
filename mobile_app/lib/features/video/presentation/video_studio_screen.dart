@@ -70,7 +70,7 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_job?.lesson?.title ?? 'Video lesson'),
+        title: Text(plainMathPreview(_job?.lesson?.title ?? 'Video lesson')),
         actions: [
           if (_job?.quota case final quota?)
             Padding(
@@ -417,7 +417,7 @@ class VideoGenerationProgress extends StatelessWidget {
                                   ),
                             ),
                             const SizedBox(height: 3),
-                            MathText(
+                            MathText.auto(
                               problem!,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
@@ -1164,7 +1164,7 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
           onEnded: _handleClipEnded,
         ),
         const SizedBox(height: 18),
-        Text(
+        MathText.auto(
           lesson.learningGoal,
           style: Theme.of(context).textTheme.titleLarge,
         ),
@@ -1201,7 +1201,7 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
                     ),
                   ),
                 ),
-                label: Text(item.title),
+                label: Text(plainMathPreview(item.title)),
               );
             },
           ),
@@ -1252,14 +1252,14 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
                 children: [
                   const Icon(Icons.celebration_outlined, color: AppTheme.ink),
                   const SizedBox(height: 10),
-                  Text(
+                  MathText.auto(
                     lesson.completionTitle,
                     style: Theme.of(
                       context,
                     ).textTheme.titleLarge?.copyWith(color: AppTheme.ink),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  MathText.auto(
                     lesson.completionBody,
                     style: Theme.of(
                       context,
@@ -1516,7 +1516,7 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
           appBar: AppBar(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
-            title: Text(widget.clip.title),
+            title: Text(plainMathPreview(widget.clip.title)),
           ),
           body: Center(
             child: _LessonClipPlayer(
@@ -1815,13 +1815,13 @@ class _CheckpointCard extends StatelessWidget {
           ),
           if (interaction.problem != null) ...[
             const SizedBox(height: 10),
-            MathText(
+            MathText.auto(
               interaction.problem!,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
           const SizedBox(height: 8),
-          Text(
+          MathText.auto(
             interaction.prompt,
             style: Theme.of(context).textTheme.titleMedium,
           ),
@@ -1837,13 +1837,13 @@ class _CheckpointCard extends StatelessWidget {
                       ? colors.primaryContainer
                       : null,
                 ),
-                child: Text(option.label),
+                child: MathText.auto(option.label),
               ),
             ),
             const SizedBox(height: 8),
           ],
           if (selected != null)
-            Text(
+            MathText.auto(
               isCorrect
                   ? interaction.correctFeedback
                   : interaction.incorrectFeedback,

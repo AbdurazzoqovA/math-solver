@@ -117,8 +117,8 @@ class _TextEntrySheetState extends State<TextEntrySheet> {
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: colors.outlineVariant),
                 ),
-                child: MathText(
-                  mathProblemDisplay(_controller.text),
+                child: MathText.auto(
+                  _controller.text,
                   style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
