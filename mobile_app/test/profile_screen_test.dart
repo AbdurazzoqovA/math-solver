@@ -7,8 +7,50 @@ import 'package:mathsolver_mobile/features/app/app_controller.dart';
 import 'package:mathsolver_mobile/features/practice/domain/review_item.dart';
 import 'package:mathsolver_mobile/features/profile/profile_screen.dart';
 import 'package:mathsolver_mobile/features/solve/domain/solution_record.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
+  testWidgets('about sheet shows only MathSolver product information', (
+    tester,
+  ) async {
+    PackageInfo.setMockInitialValues(
+      appName: 'MathSolver',
+      packageName: 'io.mathsolver.app',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+    final controller = AppController(_EmptyRepository());
+    await controller.initialize();
+    final account = _SignedInAccountController();
+    final videoApi = VideoLessonApi(account: account);
+    addTearDown(() {
+      videoApi.close();
+      account.dispose();
+      controller.dispose();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileScreen(
+          controller: controller,
+          account: account,
+          videoApi: videoApi,
+        ),
+      ),
+    );
+
+    await tester.scrollUntilVisible(find.text('About MathSolver'), 400);
+    await tester.tap(find.text('About MathSolver'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MathSolver'), findsOneWidget);
+    expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
+    expect(find.textContaining('Completely free.'), findsOneWidget);
+    expect(find.text('View licenses'), findsNothing);
+    expect(find.text('Done'), findsOneWidget);
+  });
+
   testWidgets('account deletion dialog can be cancelled safely', (
     tester,
   ) async {

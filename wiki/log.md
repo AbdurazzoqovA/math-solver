@@ -256,3 +256,6 @@ Selected the CHAKO LTD Apple Development identity matching team `UGWY3X7QR2`, al
 
 ## [2026-08-09] change | Restored native Apple and Google sign-in
 The launch mobile build offers Sign in with Apple and Google alongside verified Email/Password, source-verifies their Firebase configuration, and reauthenticates with the account's actual provider before in-app deletion. Analyzer, all 12 tests, and the configured iOS Simulator build pass; the provider buttons were visually verified and the corrected signed build was installed on the owner's iPhone.
+
+## [2026-08-09] change | Replaced Flutter's internal About dialog
+Replaced the framework-supplied About/license browser with a customer-facing MathSolver sheet that shows only the app version, product purpose, completely-free limits, support, privacy, and terms. Added a widget regression that prevents the internal package-license entry from returning.

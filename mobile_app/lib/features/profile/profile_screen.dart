@@ -246,12 +246,120 @@ class ProfileScreen extends StatelessWidget {
   static Future<void> _showAbout(BuildContext context) async {
     final packageInfo = await PackageInfo.fromPlatform();
     if (!context.mounted) return;
-    showAboutDialog(
+    await showModalBottomSheet<void>(
       context: context,
-      applicationName: 'MathSolver',
-      applicationVersion: '${packageInfo.version} (${packageInfo.buildNumber})',
-      applicationLegalese:
-          'Written solving features are free and unlimited. Videos: 10 per day.',
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _MathSolverAboutSheet(
+        version: packageInfo.version,
+        buildNumber: packageInfo.buildNumber,
+      ),
+    );
+  }
+}
+
+class _MathSolverAboutSheet extends StatelessWidget {
+  const _MathSolverAboutSheet({
+    required this.version,
+    required this.buildNumber,
+  });
+
+  final String version;
+  final String buildNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: AppTheme.mint,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.functions_rounded,
+              color: AppTheme.ink,
+              size: 38,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('MathSolver', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Version $version ($buildNumber)',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Scan, solve, and understand math with clear steps, work checking, practice, and personal video lessons.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.mintCard(colors),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Completely free. Written solutions, Check My Work, practice, and your notebook are unlimited. Create up to 10 video lessons each day.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.onMintCard(colors),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 4,
+            children: [
+              TextButton(
+                onPressed: () => ProfileScreen._openWebPage(
+                  context,
+                  Uri.parse('https://math-solver.io/privacy'),
+                ),
+                child: const Text('Privacy'),
+              ),
+              TextButton(
+                onPressed: () => ProfileScreen._openWebPage(
+                  context,
+                  Uri.parse('https://math-solver.io/terms'),
+                ),
+                child: const Text('Terms'),
+              ),
+              TextButton(
+                onPressed: () => ProfileScreen._openWebPage(
+                  context,
+                  Uri.parse('mailto:support@math-solver.io'),
+                ),
+                child: const Text('Support'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
