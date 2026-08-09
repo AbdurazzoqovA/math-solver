@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'math_text.dart';
+
 Future<String?> showTextEntrySheet(
   BuildContext context, {
   required String title,
@@ -10,6 +12,7 @@ Future<String?> showTextEntrySheet(
   String? secondaryLabel,
   int maxLines = 5,
   bool autofocus = true,
+  bool showMathPreview = false,
 }) {
   return showModalBottomSheet<String>(
     context: context,
@@ -24,6 +27,7 @@ Future<String?> showTextEntrySheet(
       secondaryLabel: secondaryLabel,
       maxLines: maxLines,
       autofocus: autofocus,
+      showMathPreview: showMathPreview,
     ),
   );
 }
@@ -39,6 +43,7 @@ class TextEntrySheet extends StatefulWidget {
     this.secondaryLabel,
     this.maxLines = 5,
     this.autofocus = true,
+    this.showMathPreview = false,
   });
 
   final String title;
@@ -49,6 +54,7 @@ class TextEntrySheet extends StatefulWidget {
   final String? secondaryLabel;
   final int maxLines;
   final bool autofocus;
+  final bool showMathPreview;
 
   @override
   State<TextEntrySheet> createState() => _TextEntrySheetState();
@@ -56,11 +62,13 @@ class TextEntrySheet extends StatefulWidget {
 
 class _TextEntrySheetState extends State<TextEntrySheet> {
   late final TextEditingController _controller;
+  late bool _isEditing;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _isEditing = !widget.showMathPreview;
   }
 
   @override
@@ -99,13 +107,51 @@ class _TextEntrySheetState extends State<TextEntrySheet> {
               ),
             ],
             const SizedBox(height: 18),
-            TextField(
-              controller: _controller,
-              autofocus: widget.autofocus,
-              minLines: 2,
-              maxLines: widget.maxLines,
-              decoration: InputDecoration(hintText: widget.hintText),
-            ),
+            if (widget.showMathPreview) ...[
+              Container(
+                key: const Key('recognized-math-preview'),
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                child: MathText(
+                  mathProblemDisplay(_controller.text),
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: const Key('edit-recognized-math'),
+                  onPressed: () => setState(() => _isEditing = !_isEditing),
+                  icon: Icon(
+                    _isEditing ? Icons.check_rounded : Icons.edit_outlined,
+                  ),
+                  label: Text(
+                    _isEditing ? 'Done editing' : 'Edit recognized text',
+                  ),
+                ),
+              ),
+            ],
+            if (_isEditing)
+              TextField(
+                key: const Key('text-entry-field'),
+                controller: _controller,
+                autofocus: widget.autofocus,
+                minLines: 2,
+                maxLines: widget.maxLines,
+                onChanged: widget.showMathPreview
+                    ? (_) => setState(() {})
+                    : null,
+                decoration: InputDecoration(
+                  hintText: widget.hintText,
+                  labelText: widget.showMathPreview ? 'Recognized math' : null,
+                ),
+              ),
             const SizedBox(height: 16),
             Row(
               children: [

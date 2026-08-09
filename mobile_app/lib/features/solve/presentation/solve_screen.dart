@@ -265,6 +265,7 @@ class _SolveScreenState extends State<SolveScreen> {
         confirmLabel: 'Solve now',
         secondaryLabel: 'Retake',
         autofocus: false,
+        showMathPreview: true,
       );
       if (confirmed != null && mounted) {
         await _openSolution(confirmed, source);
@@ -355,7 +356,10 @@ class _SolveScreenState extends State<SolveScreen> {
               Card(
                 child: ListTile(
                   leading: CircleAvatar(child: Text('${index + 1}')),
-                  title: Text(candidates[index]),
+                  title: MathText(
+                    mathProblemDisplay(candidates[index]),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.pop(context, candidates[index]),
                 ),

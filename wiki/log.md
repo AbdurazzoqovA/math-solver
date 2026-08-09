@@ -262,3 +262,6 @@ Replaced the framework-supplied About/license browser with a customer-facing Mat
 
 ## [2026-08-09] change | Rendered handwritten OCR LaTeX in problem cards
 Detected delimiter-free LaTeX returned by handwriting OCR and wrapped it for the native math renderer before displaying the solution's problem card. Handwritten limits, fractions, roots, sums, integrals, and other command-based expressions no longer expose raw commands such as `\\lim`, `\\to`, or `\\frac`; ordinary word problems remain plain text. Added unit and widget regressions for the reported limit expression.
+
+## [2026-08-09] change | Rendered OCR math in the confirmation sheet
+Changed “Check what we read” to lead with a formatted equation preview and hide raw LaTeX by default. Learners can explicitly open an editor to correct a sign or exponent and see the formatted preview update live. Worksheet line choices now use the same math rendering path. Added a widget regression for the reported handwritten limit.
