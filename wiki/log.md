@@ -297,3 +297,4 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Restored the approved calculator app icon
 
 - Recovered the exact 1024 px light-blue `+ − × =` calculator icon from the earlier release assets after the owner identified it from a prior on-device install. Made that artwork the reproducible iOS icon and launch-screen source and advanced the replacement archive to build `1.0.0 (3)`; no review or release action is authorized.
+- Analyzer and all 25 Flutter tests passed, the signed archive's embedded icon was extracted and visually verified, Apple processed build 3 successfully, and App Store Connect's own asset thumbnail matches the approved calculator artwork. Replaced build 2 with build 3 on the saved App Store version while preserving manual release; no Add for Review or release action was taken.
