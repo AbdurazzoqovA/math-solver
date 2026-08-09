@@ -285,3 +285,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Branded the iOS release icon and launch screen
 
 - Replaced the template calculator icon and placeholder launch asset with the production blue MathSolver Sigma identity. Added a reproducible Sharp-based asset generator for every Apple icon scale and launch-screen density; the 1024 px App Store icon is opaque and meets Apple's required dimensions.
+
+## [2026-08-09] change | Uploaded and attached the final iOS build
+
+- Built and App Store-exported MathSolver `1.0.0 (1)` for `io.mathsolver.app`, uploaded it through Xcode, waited for Apple processing to reach Ready to Submit, and attached build 1 to the App Store version record. The record remains Prepare for Submission with manual release selected; no Add for Review, review submission, or release action was taken.
