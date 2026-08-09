@@ -18,6 +18,7 @@ import '../../video/presentation/video_studio_screen.dart';
 import '../domain/math_review.dart';
 import '../domain/solution_record.dart';
 import 'camera_capture_screen.dart';
+import 'camera_crop_screen.dart';
 import 'check_work_screen.dart';
 import 'solution_screen.dart';
 
@@ -152,11 +153,15 @@ class _SolveScreenState extends State<SolveScreen> {
   }
 
   Future<void> _openCamera() async {
-    final bytes = await Navigator.of(context).push<Uint8List>(
+    final capture = await Navigator.of(context).push<CameraCaptureResult>(
       MaterialPageRoute(builder: (_) => const CameraCaptureScreen()),
     );
-    if (bytes != null && mounted) {
-      await _readImage(bytes: bytes, source: ProblemSource.camera);
+    if (capture != null && mounted) {
+      await _readImage(
+        bytes: capture.bytes,
+        source: ProblemSource.camera,
+        initialCameraCrop: capture.initialCrop,
+      );
     }
   }
 
@@ -183,15 +188,18 @@ class _SolveScreenState extends State<SolveScreen> {
     if (source == null || !mounted) return;
 
     Uint8List? bytes;
+    Rect? initialCameraCrop;
     if (source == _WorkImageSource.camera) {
-      bytes = await Navigator.of(context).push<Uint8List>(
+      final capture = await Navigator.of(context).push<CameraCaptureResult>(
         MaterialPageRoute(
           builder: (_) => const CameraCaptureScreen(
             instruction:
-                'Frame the problem and every handwritten line — only this area is used',
+                'Frame the problem and every handwritten line — adjust it next',
           ),
         ),
       );
+      bytes = capture?.bytes;
+      initialCameraCrop = capture?.initialCrop;
     } else {
       final file = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -200,10 +208,7 @@ class _SolveScreenState extends State<SolveScreen> {
       if (file != null) bytes = await file.readAsBytes();
     }
     if (bytes == null || !mounted) return;
-    final prepared = await _cropImage(
-      bytes,
-      framedByCamera: source == _WorkImageSource.camera,
-    );
+    final prepared = await _cropImage(bytes, initialCrop: initialCameraCrop);
     if (prepared == null || !mounted) return;
 
     await Navigator.of(context).push<void>(
@@ -246,11 +251,9 @@ class _SolveScreenState extends State<SolveScreen> {
   Future<void> _readImage({
     required Uint8List bytes,
     required ProblemSource source,
+    Rect? initialCameraCrop,
   }) async {
-    final prepared = await _cropImage(
-      bytes,
-      framedByCamera: source == ProblemSource.camera,
-    );
+    final prepared = await _cropImage(bytes, initialCrop: initialCameraCrop);
     if (prepared == null || !mounted) return;
     setState(() => _isReading = true);
     try {
@@ -292,10 +295,15 @@ class _SolveScreenState extends State<SolveScreen> {
     }
   }
 
-  Future<Uint8List?> _cropImage(
-    Uint8List bytes, {
-    bool framedByCamera = false,
-  }) async {
+  Future<Uint8List?> _cropImage(Uint8List bytes, {Rect? initialCrop}) async {
+    if (initialCrop != null) {
+      return Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          builder: (_) =>
+              CameraCropScreen(bytes: bytes, initialCrop: initialCrop),
+        ),
+      );
+    }
     final directory = await getTemporaryDirectory();
     final source = File(
       '${directory.path}/mathsolver-capture-${DateTime.now().microsecondsSinceEpoch}.jpg',
@@ -304,20 +312,20 @@ class _SolveScreenState extends State<SolveScreen> {
     try {
       final cropped = await ImageCropper().cropImage(
         sourcePath: source.path,
+        maxWidth: 2048,
+        maxHeight: 2048,
         compressFormat: ImageCompressFormat.jpg,
-        compressQuality: 94,
+        compressQuality: 88,
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: framedByCamera
-                ? 'Fine-tune the math'
-                : 'Frame the math',
+            toolbarTitle: 'Frame the math',
             toolbarColor: AppTheme.ink,
             toolbarWidgetColor: Colors.white,
             activeControlsWidgetColor: AppTheme.electric,
             lockAspectRatio: false,
           ),
           IOSUiSettings(
-            title: framedByCamera ? 'Fine-tune the math' : 'Frame the math',
+            title: 'Frame the math',
             doneButtonTitle: 'Use photo',
             cancelButtonTitle: 'Retake',
             rotateButtonsHidden: false,

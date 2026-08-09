@@ -39,17 +39,25 @@ class MathSolverApi {
       throw const ApiException('This image is larger than 10 MB.');
     }
 
-    final response = await _client
-        .post(
-          Uri.parse('$_baseUrl/api/mobile/v1/ocr'),
-          headers: await MobileAttestation.headers(json: true),
-          body: jsonEncode({
-            'base64': base64Encode(bytes),
-            'mimeType': mimeType,
-            'source': source,
-          }),
-        )
-        .timeout(AppConfig.requestTimeout);
+    late final http.Response response;
+    try {
+      final headers = await MobileAttestation.headers(json: true);
+      response = await _client
+          .post(
+            Uri.parse('$_baseUrl/api/mobile/v1/ocr'),
+            headers: headers,
+            body: jsonEncode({
+              'base64': base64Encode(bytes),
+              'mimeType': mimeType,
+              'source': source,
+            }),
+          )
+          .timeout(AppConfig.ocrRequestTimeout);
+    } on TimeoutException {
+      throw const ApiException(
+        'Reading took too long. Check your connection and try again.',
+      );
+    }
 
     final data = _readJson(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {

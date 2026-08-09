@@ -58,6 +58,8 @@ abstract final class AppConfig {
       '1:736102054894:android:768ac92dba7cb1ac412cff';
 
   static const requestTimeout = Duration(seconds: 45);
+  static const ocrRequestTimeout = Duration(seconds: 30);
+  static const attestationTimeout = Duration(seconds: 8);
   static const videoPollInterval = Duration(seconds: 3);
   static const maximumUploadBytes = 10 * 1024 * 1024;
 }

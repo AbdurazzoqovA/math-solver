@@ -32,6 +32,8 @@ Uint8List cropCameraFrameBytes(
   required double top,
   required double width,
   required double height,
+  int? maxDimension,
+  int quality = 94,
 }) {
   final decoded = image.decodeImage(bytes);
   if (decoded == null) return bytes;
@@ -50,12 +52,18 @@ Uint8List cropCameraFrameBytes(
     y + 1,
     oriented.height,
   );
-  final cropped = image.copyCrop(
+  var cropped = image.copyCrop(
     oriented,
     x: x,
     y: y,
     width: math.max(1, right - x),
     height: math.max(1, bottom - y),
   );
-  return Uint8List.fromList(image.encodeJpg(cropped, quality: 94));
+  if (maxDimension != null &&
+      math.max(cropped.width, cropped.height) > maxDimension) {
+    cropped = cropped.width >= cropped.height
+        ? image.copyResize(cropped, width: maxDimension)
+        : image.copyResize(cropped, height: maxDimension);
+  }
+  return Uint8List.fromList(image.encodeJpg(cropped, quality: quality));
 }

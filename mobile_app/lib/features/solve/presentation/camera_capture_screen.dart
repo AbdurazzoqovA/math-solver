@@ -1,16 +1,20 @@
-import 'dart:isolate';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'camera_frame_crop.dart';
 
+class CameraCaptureResult {
+  const CameraCaptureResult({required this.bytes, required this.initialCrop});
+
+  final Uint8List bytes;
+  final Rect initialCrop;
+}
+
 class CameraCaptureScreen extends StatefulWidget {
   const CameraCaptureScreen({
     super.key,
-    this.instruction =
-        'Keep the problem inside the frame — only this area is used',
+    this.instruction = 'Keep the problem inside the frame — adjust it next',
   });
 
   final String instruction;
@@ -119,21 +123,11 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
       final file = await camera.takePicture();
       final bytes = await file.readAsBytes();
       final region = _normalizedFrameRegion();
-      final left = region.left;
-      final top = region.top;
-      final width = region.width;
-      final height = region.height;
-      final framedBytes = await Isolate.run(
-        () => cropCameraFrameBytes(
-          bytes,
-          left: left,
-          top: top,
-          width: width,
-          height: height,
-        ),
-      );
       if (mounted) {
-        Navigator.pop<Uint8List>(context, framedBytes);
+        Navigator.pop<CameraCaptureResult>(
+          context,
+          CameraCaptureResult(bytes: bytes, initialCrop: region),
+        );
       }
     } on CameraException {
       if (mounted) {

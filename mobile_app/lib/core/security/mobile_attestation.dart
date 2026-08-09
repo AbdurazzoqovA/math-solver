@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -45,8 +46,12 @@ abstract final class MobileAttestation {
   static Future<String?> token() async {
     if (!_isReady) return null;
     try {
-      return await FirebaseAppCheck.instance.getToken();
+      return await FirebaseAppCheck.instance.getToken().timeout(
+        AppConfig.attestationTimeout,
+      );
     } on FirebaseException {
+      return null;
+    } on TimeoutException {
       return null;
     }
   }

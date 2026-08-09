@@ -12,6 +12,7 @@ const ACCEPTED_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const GEMINI_TIMEOUT_MS = 25_000;
 
 export async function POST(
   req: Request,
@@ -64,6 +65,12 @@ export async function POST(
     );
 
   } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { error: 'Image recognition took too long. Please try again.' },
+        { status: 504 }
+      );
+    }
     console.error('Error in /api/ocr:', error);
     return NextResponse.json(
       { error: 'Internal server error during document analysis.' },
@@ -91,6 +98,7 @@ async function recognizeWithGemini(base64: string, mimeType: string, source?: st
 
   const response = await fetch(url, {
     method: 'POST',
+    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
     headers: {
       'Content-Type': 'application/json',
       'x-goog-api-key': apiKey,

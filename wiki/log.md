@@ -266,5 +266,9 @@ Detected delimiter-free LaTeX returned by handwriting OCR and wrapped it for the
 ## [2026-08-09] change | Rendered OCR math in the confirmation sheet
 Changed “Check what we read” to lead with a formatted equation preview and hide raw LaTeX by default. Learners can explicitly open an editor to correct a sign or exponent and see the formatted preview update live. Worksheet line choices now use the same math rendering path. Added a widget regression for the reported handwritten limit.
 
-## [2026-08-09] change | Made the camera viewfinder select the crop
-Fixed the camera rectangle so it defines the initial image region instead of acting as decoration. Capture now maps the visible frame into the actual centered camera preview, bakes image orientation, crops those pixels, and opens that framed result for optional fine-tuning; gallery imports retain full manual cropping. Added geometry and image-dimension regressions and clarified in-camera copy that only the framed area is used.
+## [2026-08-09] change | Made the camera viewfinder initialize the crop
+Fixed the camera rectangle so it defines the initial adjustable selection instead of acting as decoration. After capture, the app shows the full photo with the same framed region selected; learners can move or resize it before recognition. Gallery imports retain their native manual crop. Added geometry and image-dimension regressions and clarified the camera instructions.
+
+## [2026-08-09] change | Bound camera OCR waiting time
+
+- Prevented Firebase App Check token retrieval from leaving mobile image recognition on an endless spinner, added an OCR-specific timeout with actionable retry copy, reduced framed photo uploads to a high-detail 2048 px JPEG, and bounded the server-side Gemini OCR request.
