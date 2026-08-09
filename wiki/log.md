@@ -281,3 +281,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 
 - Audited mobile problem and expression rendering across OCR confirmation, solutions, saved work, Check My Work, practice questions/options, video generation, video checkpoints, final answers, and compact video titles. Added a shared automatic bare-LaTeX path with a readable mixed-prose fallback and a regression for the exact video-generation screen.
 - Replaced the initial LaTeX-command allowlist with generic TeX command/control detection so uncommon commands, matrices, set notation, annotations, and spacing sequences cannot bypass rendering.
+
+## [2026-08-09] change | Branded the iOS release icon and launch screen
+
+- Replaced the template calculator icon and placeholder launch asset with the production blue MathSolver Sigma identity. Added a reproducible Sharp-based asset generator for every Apple icon scale and launch-screen density; the 1024 px App Store icon is opaque and meets Apple's required dimensions.
