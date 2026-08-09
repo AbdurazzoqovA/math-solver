@@ -272,3 +272,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Bound camera OCR waiting time
 
 - Prevented Firebase App Check token retrieval from leaving mobile image recognition on an endless spinner, added an OCR-specific timeout with actionable retry copy, reduced framed photo uploads to a high-detail 2048 px JPEG, and bounded the server-side Gemini OCR request.
+
+## [2026-08-09] change | Fixed iOS adjustable-crop confirmation
+
+- Limited the background-isolate handoff to sendable photo bytes and numeric crop coordinates, preventing the iOS “Could not crop that photo” failure when choosing the preselected camera region. The crop-screen test now presses Use selection and verifies the resulting pixel dimensions.

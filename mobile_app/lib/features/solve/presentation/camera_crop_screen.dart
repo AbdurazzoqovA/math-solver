@@ -1,8 +1,7 @@
-import 'dart:isolate';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -66,17 +65,13 @@ class _CameraCropScreenState extends State<CameraCropScreen> {
     setState(() => _isSaving = true);
     final selection = _selection;
     try {
-      final cropped = await Isolate.run(
-        () => cropCameraFrameBytes(
-          _bytes,
-          left: selection.left,
-          top: selection.top,
-          width: selection.width,
-          height: selection.height,
-          maxDimension: 2048,
-          quality: 88,
-        ),
-      );
+      final cropped = await compute(_cropCameraSelection, (
+        bytes: _bytes,
+        left: selection.left,
+        top: selection.top,
+        width: selection.width,
+        height: selection.height,
+      ));
       if (mounted) Navigator.pop<Uint8List>(context, cropped);
     } on Object {
       if (!mounted) return;
@@ -370,3 +365,22 @@ Rect _toDisplayRect(Rect normalized, Rect imageRect) => Rect.fromLTRB(
   imageRect.left + normalized.right * imageRect.width,
   imageRect.top + normalized.bottom * imageRect.height,
 );
+
+typedef _CameraCropRequest = ({
+  Uint8List bytes,
+  double left,
+  double top,
+  double width,
+  double height,
+});
+
+Uint8List _cropCameraSelection(_CameraCropRequest request) =>
+    cropCameraFrameBytes(
+      request.bytes,
+      left: request.left,
+      top: request.top,
+      width: request.width,
+      height: request.height,
+      maxDimension: 2048,
+      quality: 88,
+    );

@@ -12,13 +12,14 @@ void main() {
     final source = image.Image(width: 100, height: 200);
     image.fill(source, color: image.ColorRgb8(250, 250, 250));
     final bytes = Uint8List.fromList(image.encodeJpg(source));
+    Uint8List? result;
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: FilledButton(
               onPressed: () async {
-                await Navigator.of(context).push<Uint8List>(
+                result = await Navigator.of(context).push<Uint8List>(
                   MaterialPageRoute(
                     builder: (_) => CameraCropScreen(
                       bytes: bytes,
@@ -51,5 +52,20 @@ void main() {
       find.widgetWithText(FilledButton, 'Use selection'),
     );
     expect(useSelection.onPressed, isNotNull);
+
+    await tester.tap(find.text('Use selection'));
+    await tester.pump();
+    for (var attempt = 0; attempt < 40 && result == null; attempt++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(find.text('Could not crop that photo. Try again.'), findsNothing);
+    expect(result, isNotNull);
+    final cropped = image.decodeImage(result!);
+    expect(cropped, isNotNull);
+    expect(cropped!.width, 80);
+    expect(cropped.height, 100);
   });
 }
