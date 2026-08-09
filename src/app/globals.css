@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -164,4 +165,19 @@ math-field::part(menu-toggle) {
 
 .post-body blockquote {
   border-left-color: var(--color-primary-500);
+}
+
+.post-body .post-math-inline {
+  white-space: nowrap;
+}
+
+.post-body .post-math-display {
+  display: block;
+  margin: 1.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.post-body .post-math-display > .katex-display {
+  min-width: max-content;
 }

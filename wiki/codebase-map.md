@@ -9,7 +9,7 @@ src/
   app/                     # Next.js App Router
     page.tsx               # "/" — solver + landing in one (renders ChatArea)
     layout.tsx             # root layout: metadata, OpenGraph, GA4, providers, fonts
-    sitemap.ts             # core/calculator routes + live Pressroom article URLs
+    sitemap.ts             # core/contact/calculator routes + live Pressroom article URLs
     robots.ts              # robots.txt — allows all, disallows /api/, base math-solver.io
     calculator/
       page.tsx             # "/calculator" — crawlable eight-category calculator hub
@@ -24,6 +24,7 @@ src/
       error.tsx            # retryable blog API/configuration failure state
       [slug]/page.tsx      # rich article, metadata, author, JSON-LD, solver CTA
     auth/action/page.tsx   # "/auth/action" — noindex Firebase email action handler
+    contact/page.tsx       # "/contact" — support/feedback form with Telegram delivery
     privacy/page.tsx       # static legal
     terms/page.tsx         # static legal
     api/
@@ -31,6 +32,7 @@ src/
       ocr/route.ts         # POST — Gemini 3.1 flash-lite, image/PDF/drawing → expression text
       practice/route.ts    # POST — Gemini, generates MCQ quiz JSON from a solution
       practice/steps/route.ts # POST — per-question step-by-step explanation
+      contact/route.ts     # POST — validate/rate-limit and deliver contact form to Telegram
       video/jobs/route.ts  # GET private library; POST verified auth/quota/queue dispatch
       video/jobs/[jobId]/route.ts # GET status/private signed playback; DELETE lesson
   components/
@@ -58,6 +60,8 @@ src/
     auth/
       AccountButton.tsx    # Email/Password + Google auth dialog, account menu, sync status
       AuthActionHandler.tsx# verify/reset/recover code UI + safe return handling
+    contact/
+      ContactForm.tsx      # accessible first-name/email/message form and submit states
     video/
       VideoLessonDialog.tsx # auth gate, async job progress, retry/delete, modal shell
       InlineVideoLesson.tsx # persisted per-answer progress/player inside chat
@@ -77,6 +81,7 @@ src/
     UIContext.tsx          # panel/calculator/practice/review UI state; calculator injection registry
   lib/
     captcha.ts             # configurable Turnstile validation; video creation requires action/hostname and fails closed
+    contact.ts             # bounded contact-form parser + plain-text Telegram formatter
     calculators.ts         # typed registry facade, Algebra/precalc definitions, categories, validation
     calculus-calculators.ts# 8 Calculus definitions, intent instructions, SEO copy, examples, links
     linear-algebra-calculators.ts # 6 matrix/vector definitions, input hints, intent instructions
@@ -91,6 +96,7 @@ src/
     analytics.ts          # privacy-safe GA4 event queue + return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
     pressroom.ts          # server-only list/article API, types, 5-minute cache
+    pressroom-math.ts     # HTML-aware \\(...\\)/\\[...\\] authoring markers → safe server-rendered KaTeX
     firebase-auth-actions.ts # action-mode validation + same-origin continue URL guard
     firebase-client.ts     # env-gated Firebase App/Auth/Firestore Lite initialization
     firebase-notebook.ts   # one-shot Firestore Lite chat reads/writes and deletion tombstones
@@ -114,7 +120,7 @@ mobile_app/                  # standalone Flutter iOS/Android client; no web sou
     dev/                     # gallery_main.dart: dev-only screenshot/state harness for simulator QA (not shipped)
     core/
       analytics/             # opt-in, no-content Firebase Analytics adapter
-      auth/                  # full verified Email/Password REST journey + secure refresh
+      auth/                  # native Firebase Email/Password + Google/Apple sessions
       config/                # API/Firebase dart defines and request/upload limits
       network/               # mobile v1 API, Firestore notebook sync, video/push clients
       security/              # Firebase initialization + App Check token headers
@@ -140,6 +146,7 @@ mobile_app/                  # standalone Flutter iOS/Android client; no web sou
 # root
 Dockerfile                 # standalone Next.js image for Cloud Run
 cloudbuild.yaml            # Docker build with explicit Firebase public build arguments
+.gcloudignore              # excludes local caches and the independent Flutter tree from web builds
 deploy.sh                  # env-driven Cloud Build + tagged Cloud Run image deployment
 next.config.ts             # output: "standalone", React Compiler
 package.json               # deps & scripts
@@ -151,6 +158,7 @@ tests/firestore.rules.test.mjs # verified-owner/isolation/validation emulator te
 tests/firebase-auth-actions.test.mjs # email action mode/redirect safety tests
 tests/post-solution-actions.test.mjs # short/long step extraction + prompt contract tests
 tests/math-markdown.test.mjs # KaTeX regressions for number-leading math and currency
+tests/pressroom-math.test.mjs # Pressroom HTML math rendering, safety, fallback, and idempotence
 tests/learning-progress.test.mjs # spaced-review and local activity-state tests
 tests/analytics.test.mjs # low-cardinality return interval contract
 tests/video-problem-context.test.mjs # problem/solution selection including OCR context
@@ -175,6 +183,6 @@ Input (type / paste / photo / draw) → optional `/api/ocr` (Gemini) to get text
 
 For “Generate video explanation,” `MessageList` selects the completed problem/solution pair → `/api/video/jobs` verifies a fresh Firebase ID token and email verification → a Firestore transaction reserves one of 10 generations in the current UTC-day bucket and creates an idempotent job → the originating assistant message syncs the private job ID/version and `InlineVideoLesson` shows progress independently of the modal → Cloud Tasks calls the private renderer with OIDC → Gemini treats the written solution only as an accuracy reference and plans a schema-v2 visual lesson → Pydantic rejects any plan missing orientation, concept modeling, strategy reasoning, misconception contrast, representation connection, verification/generalization, non-equation visuals, construct/highlight/compare actions, or a safe complete `finalAnswerLatex` → a separate Gemini reviewer checks both mathematics and teaching value, including the final result and its spoken verification, with one bounded feedback-guided revision and an explicit-clarification path for damaged input → verified phrase-level TTS feeds deterministic Manim scenes → the final scene always replaces its teaching visual with a 3.5-second `FINAL ANSWER` card → FFmpeg assembles one continuous H.264/AAC lesson MP4 and one continuous WebVTT timeline → private GCS stores the single-video manifest/media → the authorized job API validates object keys and returns 45-minute signed playback URLs to `VideoLessonPlayer`. The ready player replaces the inline progress attachment, exposes no chapter boundaries, keeps captions outside the math canvas, and can show one optional transfer check only after the full video. The control rail remains visible and includes full-screen. A missing Manim assembly fragment gets one fresh-directory retry; unsuccessful jobs refund only the matching daily bucket. The same endpoint's authenticated `GET` powers `/video-library`, which lists up to 24 unexpired account-owned jobs with short-lived signed posters; selecting a ready card reopens the existing lesson without regenerating or consuming another daily slot.
 
-The Flutter client is a separate loop-first product: Home scan/photo/paste/type → crop/worksheet selection → editable OCR readback → streamed `/api/mobile/v1/solve` response → native step/LaTeX rendering with hint-first reveal and independent verification → private continuous video playback with optional practice pauses/offline/share → optional practice and scheduled mistake review. Check My Work uses its own multimodal route to diagnose the learner's first incorrect handwritten line. It deliberately imports no web UI code. Verified Email/Password auth uses secure refresh-token storage; verified owners merge/sync the local notebook through Firestore. App Check protects the mobile gateway, and FCM registration supports content-free ready notifications. Store credentials and later native-only surfaces are the remaining boundaries. See [[mobile-app-concept]].
+The Flutter client is a separate loop-first product: Home scan/photo/paste/type → crop/worksheet selection → editable OCR readback → streamed `/api/mobile/v1/solve` response → native step/LaTeX rendering with hint-first reveal and independent verification → private continuous video playback with optional practice pauses/offline/share → optional practice and scheduled mistake review. Check My Work uses its own multimodal route to diagnose the learner's first incorrect handwritten line. It deliberately imports no web UI code. Native Firebase Authentication provides verified Email/Password, Google, and Apple sessions with SDK-managed persistence; verified owners merge/sync the local notebook through Firestore. App Check protects the mobile gateway, and FCM registration supports content-free ready notifications. Store credentials and later native-only surfaces are the remaining boundaries. See [[mobile-app-concept]].
 
 Calculator pages use the same data flow and the same `ChatConversation` interface as the homepage. On the first submission, `forceNewChat` creates a fresh chat with a `calculator:<slug>` source tag so an old active conversation cannot absorb the calculator problem. `/api/solve` validates that slug against the server registry and adds its trusted `solverInstruction`, so ambiguous input receives the operation intended by the page. The graphing route first evaluates explicit functions locally with the safe parser, then can send its visible functions into the shared tutor chat for explanation. See [[calculator-pages]].

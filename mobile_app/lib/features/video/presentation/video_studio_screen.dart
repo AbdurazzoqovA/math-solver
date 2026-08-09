@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -109,9 +110,10 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
                 onRetry: _start,
               );
             }
-            return _VideoProgress(
+            return VideoGenerationProgress(
               progress: job?.progress ?? (_isLoading ? 3 : 0),
               label: job?.stageLabel ?? 'Opening the video studio',
+              status: job?.status ?? VideoJobStatus.queued,
               problem: widget.problem,
             );
           },
@@ -207,118 +209,526 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
   }
 }
 
-class _VideoProgress extends StatelessWidget {
-  const _VideoProgress({
+class VideoGenerationProgress extends StatelessWidget {
+  const VideoGenerationProgress({
+    super.key,
     required this.progress,
     required this.label,
+    required this.status,
     required this.problem,
   });
 
   final double progress;
   final String label;
+  final VideoJobStatus status;
   final String? problem;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final normalized = (progress / 100).clamp(0.02, 1.0);
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 36),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: _VideoRenderPreview(progress: progress),
+                ),
+              ),
+              const SizedBox(height: 26),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Building your video lesson',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    '${progress.round()}%',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: colors.primary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: normalized),
                 duration: const Duration(milliseconds: 650),
                 curve: Curves.easeOutCubic,
-                builder: (context, value, _) {
-                  return SizedBox.square(
-                    dimension: 150,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          value: value,
-                          strokeWidth: 12,
-                          strokeCap: StrokeCap.round,
-                          backgroundColor: colors.primaryContainer,
-                        ),
-                        Container(
-                          width: 105,
-                          height: 105,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [AppTheme.electric, Color(0xFF7C5DFA)],
-                            ),
-                            borderRadius: BorderRadius.circular(38),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.auto_awesome_rounded,
-                            color: Colors.white,
-                            size: 42,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                builder: (context, value, _) => ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: value,
+                    minHeight: 10,
+                    backgroundColor: colors.primaryContainer,
+                    color: colors.primary,
+                  ),
+                ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 14),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: Text(
+                  label,
+                  key: ValueKey(label),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 3),
               Text(
-                label,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
+                'Usually ready in under 90 seconds',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '${progress.round()}% · Usually ready in under 90 seconds',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
-              ),
+              const SizedBox(height: 24),
+              _VideoPipeline(status: status),
               if (problem?.trim().isNotEmpty ?? false) ...[
                 const SizedBox(height: 24),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: colors.outlineVariant),
                   ),
-                  child: MathText(
-                    problem!,
-                    style: Theme.of(context).textTheme.titleMedium,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppTheme.mintCard(colors),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.functions_rounded,
+                          color: AppTheme.onMintCard(colors),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'YOUR PROBLEM',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                    letterSpacing: 0.7,
+                                  ),
+                            ),
+                            const SizedBox(height: 3),
+                            MathText(
+                              problem!,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-              const SizedBox(height: 22),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_none_rounded,
-                    size: 19,
-                    color: colors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      'You can leave—rendering continues in your library.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer.withValues(alpha: 0.48),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_done_outlined,
+                      size: 21,
+                      color: colors.primary,
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        'Safe to leave—we’ll keep rendering, and the finished lesson will appear in Library.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _VideoRenderPreview extends StatefulWidget {
+  const _VideoRenderPreview({required this.progress});
+
+  final double progress;
+
+  @override
+  State<_VideoRenderPreview> createState() => _VideoRenderPreviewState();
+}
+
+class _VideoRenderPreviewState extends State<_VideoRenderPreview>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller
+        ..stop()
+        ..value = 0.42;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF182248), Color(0xFF344CC6)],
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final phase = _controller.value;
+                  return Stack(
+                    children: [
+                      Positioned(
+                        left: 18,
+                        top: 17,
+                        child: Row(
+                          children: [
+                            Opacity(
+                              opacity:
+                                  0.45 +
+                                  (math.sin(phase * math.pi * 2) + 1) * 0.25,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.coral,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'MAKING YOUR LESSON',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontFamily: AppTheme.displayFamily,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        right: 18,
+                        top: 14,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            '${widget.progress.round()}%',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: AppTheme.displayFamily,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 18,
+                        right: 18,
+                        top: 53,
+                        bottom: 39,
+                        child: Row(
+                          children: [
+                            _StoryboardFrame(
+                              icon: Icons.functions_rounded,
+                              label: 'Problem',
+                              pulse: _pulse(phase, 0),
+                            ),
+                            const SizedBox(width: 9),
+                            _StoryboardFrame(
+                              icon: Icons.format_list_numbered_rounded,
+                              label: 'Steps',
+                              pulse: _pulse(phase, 1),
+                            ),
+                            const SizedBox(width: 9),
+                            _StoryboardFrame(
+                              icon: Icons.play_arrow_rounded,
+                              label: 'Lesson',
+                              pulse: _pulse(phase, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        left: 18,
+                        right: 18,
+                        bottom: 19,
+                        child: Container(
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 18 + (constraints.maxWidth - 40) * phase,
+                        bottom: 12,
+                        child: Container(
+                          width: 4,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(99),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha: 0.36),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  double _pulse(double phase, int index) {
+    final wave = math.sin((phase * math.pi * 2) - (index * 1.45));
+    return (wave + 1) / 2;
+  }
+}
+
+class _StoryboardFrame extends StatelessWidget {
+  const _StoryboardFrame({
+    required this.icon,
+    required this.label,
+    required this.pulse,
+  });
+
+  final IconData icon;
+  final String label;
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Transform.scale(
+        scale: 0.96 + (pulse * 0.04),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1 + pulse * 0.13),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18 + pulse * 0.34),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 26),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: AppTheme.displayFamily,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoPipeline extends StatelessWidget {
+  const _VideoPipeline({required this.status});
+
+  final VideoJobStatus status;
+
+  int get _activeIndex => switch (status) {
+    VideoJobStatus.queued || VideoJobStatus.planning => 0,
+    VideoJobStatus.voicing => 1,
+    VideoJobStatus.rendering => 2,
+    VideoJobStatus.verifying || VideoJobStatus.uploading => 3,
+    _ => 3,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const steps = [
+      (Icons.route_outlined, 'Plan'),
+      (Icons.mic_none_rounded, 'Narrate'),
+      (Icons.movie_creation_outlined, 'Animate'),
+      (Icons.verified_outlined, 'Finish'),
+    ];
+    return Semantics(
+      label: '${steps[_activeIndex].$2} stage in progress',
+      child: Row(
+        children: [
+          for (var index = 0; index < steps.length; index++) ...[
+            if (index > 0)
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 350),
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: index <= _activeIndex
+                        ? colors.primary
+                        : colors.outlineVariant,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            _PipelineStep(
+              icon: steps[index].$1,
+              label: steps[index].$2,
+              isActive: index == _activeIndex,
+              isComplete: index < _activeIndex,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PipelineStep extends StatelessWidget {
+  const _PipelineStep({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.isComplete,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final bool isComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final highlighted = isActive || isComplete;
+    return SizedBox(
+      width: 58,
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 350),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: highlighted ? colors.primary : colors.surfaceContainer,
+              shape: BoxShape.circle,
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: colors.primary.withValues(alpha: 0.22),
+                        blurRadius: 0,
+                        spreadRadius: 5,
+                      ),
+                    ]
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              isComplete ? Icons.check_rounded : icon,
+              color: highlighted ? colors.onPrimary : colors.onSurfaceVariant,
+              size: 18,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            label,
+            maxLines: 1,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: isActive ? colors.primary : colors.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

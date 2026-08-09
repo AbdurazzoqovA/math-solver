@@ -1,8 +1,9 @@
-import 'dart:convert';
+import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../config/app_config.dart';
 import '../security/mobile_attestation.dart';
@@ -17,54 +18,74 @@ class AccountException implements Exception {
 }
 
 class AccountController extends ChangeNotifier {
-  AccountController({http.Client? client, FlutterSecureStorage? storage})
-    : _client = client ?? http.Client(),
-      _storage = storage ?? const FlutterSecureStorage();
+  AccountController({FirebaseAuth? auth, GoogleSignIn? googleSignIn})
+    : _injectedAuth = auth,
+      _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
-  static const _refreshTokenKey = 'mathsolver.auth.refresh-token.v1';
-  static const _emailKey = 'mathsolver.auth.email.v1';
-  static const _uidKey = 'mathsolver.auth.uid.v1';
-
-  final http.Client _client;
-  final FlutterSecureStorage _storage;
+  final FirebaseAuth? _injectedAuth;
+  final GoogleSignIn _googleSignIn;
 
   String? _email;
-  String? _idToken;
-  String? _refreshToken;
   String? _uid;
-  DateTime? _expiresAt;
   bool _isReady = false;
   bool _isBusy = false;
+  Future<void>? _googleInitialization;
 
-  bool get isConfigured => AppConfig.firebaseApiKey.trim().isNotEmpty;
+  FirebaseAuth? get _auth {
+    if (_injectedAuth != null) return _injectedAuth;
+    if (Firebase.apps.isEmpty) return null;
+    return FirebaseAuth.instance;
+  }
+
+  bool get isConfigured => MobileAttestation.isConfigured && _auth != null;
   bool get isReady => _isReady;
   bool get isBusy => _isBusy;
-  bool get isSignedIn =>
-      _refreshToken != null && _email != null && _uid != null;
+  bool get isSignedIn {
+    final user = _auth?.currentUser;
+    return _uid != null && user != null && user.uid == _uid;
+  }
+
+  bool get canSignInWithGoogle {
+    if (!isConfigured || AppConfig.googleServerClientId.trim().isEmpty) {
+      return false;
+    }
+    if (Platform.isIOS) {
+      return AppConfig.googleIosClientId.trim().isNotEmpty;
+    }
+    if (Platform.isAndroid) {
+      return AppConfig.googleAndroidEnabled;
+    }
+    return false;
+  }
+
+  bool get canSignInWithApple =>
+      isConfigured && Platform.isIOS && AppConfig.appleSignInEnabled;
+
   String? get email => _email;
   String? get userId => _uid;
 
   Future<void> initialize() async {
-    if (!isConfigured) {
+    final auth = _auth;
+    if (!isConfigured || auth == null) {
       _isReady = true;
       notifyListeners();
       return;
     }
 
     try {
-      _refreshToken = await _storage.read(key: _refreshTokenKey);
-      _email = await _storage.read(key: _emailKey);
-      _uid = await _storage.read(key: _uidKey);
-      if (_refreshToken != null && _email != null && _uid != null) {
-        await _refreshIdToken();
-      } else if (_refreshToken != null || _email != null || _uid != null) {
-        await _clearStoredSession();
+      final existing = auth.currentUser;
+      if (existing != null) {
+        await existing.reload();
+        final current = auth.currentUser;
+        if (current == null || !current.emailVerified) {
+          await auth.signOut();
+          _clearSession();
+        } else {
+          _adoptUser(current);
+        }
       }
     } on Object {
-      _idToken = null;
-      _refreshToken = null;
-      _email = null;
-      _uid = null;
+      _clearSession();
     } finally {
       _isReady = true;
       notifyListeners();
@@ -72,74 +93,90 @@ class AccountController extends ChangeNotifier {
   }
 
   Future<void> signIn({required String email, required String password}) async {
-    if (!isConfigured) {
-      throw const AccountException(
-        'Mobile account access is not configured for this build.',
-      );
-    }
-    if (_isBusy) {
-      return;
-    }
+    final auth = _requireAuth();
+    if (_isBusy) return;
     _setBusy(true);
     try {
-      final response = await _client
-          .post(
-            Uri.https(
-              'identitytoolkit.googleapis.com',
-              '/v1/accounts:signInWithPassword',
-              {'key': AppConfig.firebaseApiKey},
-            ),
-            headers: await MobileAttestation.headers(json: true),
-            body: jsonEncode({
-              'email': email.trim(),
-              'password': password,
-              'returnSecureToken': true,
-            }),
-          )
-          .timeout(AppConfig.requestTimeout);
-      final body = _jsonObject(response.body);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw AccountException(_friendlyAuthError(body));
-      }
-
-      final idToken = body['idToken'];
-      final refreshToken = body['refreshToken'];
-      final returnedEmail = body['email'];
-      final localId = body['localId'];
-      final expiresIn = int.tryParse('${body['expiresIn'] ?? ''}');
-      if (idToken is! String ||
-          refreshToken is! String ||
-          returnedEmail is! String ||
-          localId is! String ||
-          expiresIn == null) {
-        throw const AccountException(
-          'The account service returned an unreadable response.',
-        );
-      }
-
-      final verified = await _isEmailVerified(idToken);
-      if (!verified) {
-        throw const AccountException(
-          'Verify your email first, then sign in again to create private videos.',
-        );
-      }
-
-      _idToken = idToken;
-      _refreshToken = refreshToken;
-      _email = returnedEmail;
-      _uid = localId;
-      _expiresAt = DateTime.now().add(Duration(seconds: expiresIn - 60));
-      await Future.wait([
-        _storage.write(key: _refreshTokenKey, value: refreshToken),
-        _storage.write(key: _emailKey, value: returnedEmail),
-        _storage.write(key: _uidKey, value: localId),
-      ]);
-      notifyListeners();
+      final credential = await auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      await _finishSignIn(auth, credential.user);
     } on AccountException {
       rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw AccountException(_friendlyAuthError(error));
     } on Object {
       throw const AccountException(
         'We could not reach the account service. Check your connection.',
+      );
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> signInWithGoogle() async {
+    final auth = _requireAuth();
+    if (!canSignInWithGoogle) {
+      throw const AccountException(
+        'Google sign-in is not configured for this build.',
+      );
+    }
+    if (_isBusy) return false;
+    _setBusy(true);
+    try {
+      await _initializeGoogleSignIn();
+      final googleUser = await _googleSignIn.authenticate();
+      final idToken = googleUser.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw const AccountException(
+          'Google did not return a valid sign-in token.',
+        );
+      }
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final result = await auth.signInWithCredential(credential);
+      await _finishSignIn(auth, result.user);
+      return true;
+    } on GoogleSignInException catch (error) {
+      if (error.code == GoogleSignInExceptionCode.canceled) return false;
+      throw AccountException(_friendlyGoogleError(error));
+    } on AccountException {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw AccountException(_friendlyAuthError(error));
+    } on Object {
+      throw const AccountException(
+        'Google sign-in could not be completed. Check your connection.',
+      );
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<bool> signInWithApple() async {
+    final auth = _requireAuth();
+    if (!canSignInWithApple) {
+      throw const AccountException(
+        'Sign in with Apple is not configured for this build.',
+      );
+    }
+    if (_isBusy) return false;
+    _setBusy(true);
+    try {
+      final provider = AppleAuthProvider()
+        ..addScope('email')
+        ..addScope('name');
+      final result = await auth.signInWithProvider(provider);
+      await _finishSignIn(auth, result.user);
+      return true;
+    } on AccountException {
+      rethrow;
+    } on FirebaseAuthException catch (error) {
+      if (_isCancellation(error.code)) return false;
+      throw AccountException(_friendlyAuthError(error));
+    } on Object {
+      throw const AccountException(
+        'Sign in with Apple could not be completed. Check your connection.',
       );
     } finally {
       _setBusy(false);
@@ -150,41 +187,32 @@ class AccountController extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    _requireConfiguration();
+    final auth = _requireAuth();
     if (_isBusy) return;
     _setBusy(true);
     try {
-      final response = await _client
-          .post(
-            Uri.https('identitytoolkit.googleapis.com', '/v1/accounts:signUp', {
-              'key': AppConfig.firebaseApiKey,
-            }),
-            headers: await MobileAttestation.headers(json: true),
-            body: jsonEncode({
-              'email': email.trim(),
-              'password': password,
-              'returnSecureToken': true,
-            }),
-          )
-          .timeout(AppConfig.requestTimeout);
-      final body = _jsonObject(response.body);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw AccountException(_friendlyAuthError(body));
-      }
-      final idToken = body['idToken'];
-      if (idToken is! String) {
+      final credential = await auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) {
         throw const AccountException(
           'The account service returned an unreadable response.',
         );
       }
-      await _sendVerificationToken(idToken);
+      await user.sendEmailVerification();
     } on AccountException {
       rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw AccountException(_friendlyAuthError(error));
     } on Object {
       throw const AccountException(
         'We could not create the account. Check your connection.',
       );
     } finally {
+      await auth.signOut();
+      _clearSession();
       _setBusy(false);
     }
   }
@@ -193,67 +221,49 @@ class AccountController extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    _requireConfiguration();
+    final auth = _requireAuth();
     if (_isBusy) return;
     _setBusy(true);
     try {
-      final response = await _client
-          .post(
-            Uri.https(
-              'identitytoolkit.googleapis.com',
-              '/v1/accounts:signInWithPassword',
-              {'key': AppConfig.firebaseApiKey},
-            ),
-            headers: await MobileAttestation.headers(json: true),
-            body: jsonEncode({
-              'email': email.trim(),
-              'password': password,
-              'returnSecureToken': true,
-            }),
-          )
-          .timeout(AppConfig.requestTimeout);
-      final body = _jsonObject(response.body);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw AccountException(_friendlyAuthError(body));
-      }
-      final idToken = body['idToken'];
-      if (idToken is! String) {
+      final credential = await auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) {
         throw const AccountException(
           'The account service returned an unreadable response.',
         );
       }
-      await _sendVerificationToken(idToken);
+      if (!user.emailVerified) await user.sendEmailVerification();
     } on AccountException {
       rethrow;
+    } on FirebaseAuthException catch (error) {
+      throw AccountException(_friendlyAuthError(error));
     } on Object {
       throw const AccountException(
         'We could not send the verification email. Try again.',
       );
     } finally {
+      await auth.signOut();
+      _clearSession();
       _setBusy(false);
     }
   }
 
   Future<void> sendPasswordReset(String email) async {
-    _requireConfiguration();
+    final auth = _requireAuth();
     if (_isBusy) return;
     _setBusy(true);
     try {
-      await _client
-          .post(
-            Uri.https(
-              'identitytoolkit.googleapis.com',
-              '/v1/accounts:sendOobCode',
-              {'key': AppConfig.firebaseApiKey},
-            ),
-            headers: await MobileAttestation.headers(json: true),
-            body: jsonEncode({
-              'requestType': 'PASSWORD_RESET',
-              'email': email.trim(),
-            }),
-          )
-          .timeout(AppConfig.requestTimeout);
+      await auth.sendPasswordResetEmail(email: email.trim());
       // Keep the result neutral so the UI never reveals account existence.
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'network-request-failed' ||
+          error.code == 'too-many-requests') {
+        throw AccountException(_friendlyAuthError(error));
+      }
+      // Firebase can report an unknown user; keep that result private.
     } on Object {
       throw const AccountException(
         'We could not reach the account service. Try again.',
@@ -264,142 +274,90 @@ class AccountController extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    _email = null;
-    _idToken = null;
-    _refreshToken = null;
-    _uid = null;
-    _expiresAt = null;
-    await _clearStoredSession();
+    final auth = _auth;
+    if (auth != null) await auth.signOut();
+    if (_googleInitialization != null) {
+      try {
+        await _googleSignIn.signOut();
+      } on Object {
+        // Firebase sign-out remains authoritative for the app session.
+      }
+    }
+    _clearSession();
     notifyListeners();
   }
 
-  Future<void> _clearStoredSession() async {
-    await Future.wait([
-      _storage.delete(key: _refreshTokenKey),
-      _storage.delete(key: _emailKey),
-      _storage.delete(key: _uidKey),
-    ]);
-  }
-
   Future<String> getIdToken() async {
-    if (!isSignedIn) {
+    final user = _auth?.currentUser;
+    if (!isSignedIn || user == null) {
       throw const AccountException(
         'Sign in with a verified account to create a private video.',
       );
     }
-    final expiresAt = _expiresAt;
-    if (_idToken == null ||
-        expiresAt == null ||
-        DateTime.now().isAfter(expiresAt)) {
-      await _refreshIdToken();
-    }
-    final token = _idToken;
-    if (token == null) {
-      throw const AccountException(
-        'Your session expired. Please sign in again.',
-      );
-    }
-    return token;
-  }
-
-  Future<bool> _isEmailVerified(String idToken) async {
-    final response = await _client
-        .post(
-          Uri.https('identitytoolkit.googleapis.com', '/v1/accounts:lookup', {
-            'key': AppConfig.firebaseApiKey,
-          }),
-          headers: await MobileAttestation.headers(json: true),
-          body: jsonEncode({'idToken': idToken}),
-        )
-        .timeout(AppConfig.requestTimeout);
-    final body = _jsonObject(response.body);
-    final users = body['users'];
-    if (response.statusCode < 200 ||
-        response.statusCode >= 300 ||
-        users is! List ||
-        users.isEmpty ||
-        users.first is! Map) {
-      throw const AccountException(
-        'We could not verify this account. Please try again.',
-      );
-    }
-    return (users.first as Map)['emailVerified'] == true;
-  }
-
-  Future<void> _sendVerificationToken(String idToken) async {
-    final response = await _client
-        .post(
-          Uri.https(
-            'identitytoolkit.googleapis.com',
-            '/v1/accounts:sendOobCode',
-            {'key': AppConfig.firebaseApiKey},
-          ),
-          headers: await MobileAttestation.headers(json: true),
-          body: jsonEncode({'requestType': 'VERIFY_EMAIL', 'idToken': idToken}),
-        )
-        .timeout(AppConfig.requestTimeout);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw const AccountException(
-        'The verification email could not be sent. Try again.',
-      );
-    }
-  }
-
-  void _requireConfiguration() {
-    if (!isConfigured) {
-      throw const AccountException(
-        'Mobile account access is not configured for this build.',
-      );
-    }
-  }
-
-  Future<void> _refreshIdToken() async {
-    final refreshToken = _refreshToken;
-    if (refreshToken == null) {
-      return;
-    }
     try {
-      final response = await _client
-          .post(
-            Uri.https('securetoken.googleapis.com', '/v1/token', {
-              'key': AppConfig.firebaseApiKey,
-            }),
-            headers: await MobileAttestation.headers(
-              additional: const {
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-            ),
-            body: {
-              'grant_type': 'refresh_token',
-              'refresh_token': refreshToken,
-            },
-          )
-          .timeout(AppConfig.requestTimeout);
-      final body = _jsonObject(response.body);
-      final token = body['id_token'];
-      final nextRefreshToken = body['refresh_token'];
-      final expiresIn = int.tryParse('${body['expires_in'] ?? ''}');
-      if (response.statusCode < 200 ||
-          response.statusCode >= 300 ||
-          token is! String ||
-          nextRefreshToken is! String ||
-          expiresIn == null) {
-        await signOut();
+      final token = await user.getIdToken();
+      if (token == null || token.isEmpty) {
         throw const AccountException(
           'Your session expired. Please sign in again.',
         );
       }
-      _idToken = token;
-      _refreshToken = nextRefreshToken;
-      _expiresAt = DateTime.now().add(Duration(seconds: expiresIn - 60));
-      await _storage.write(key: _refreshTokenKey, value: nextRefreshToken);
+      return token;
     } on AccountException {
       rethrow;
-    } on Object {
+    } on FirebaseAuthException catch (error) {
+      throw AccountException(_friendlyAuthError(error));
+    }
+  }
+
+  Future<void> _finishSignIn(FirebaseAuth auth, User? user) async {
+    if (user == null) {
       throw const AccountException(
-        'We could not refresh your session. Check your connection.',
+        'The account service returned an unreadable response.',
       );
     }
+    await user.reload();
+    final current = auth.currentUser;
+    if (current == null) {
+      throw const AccountException(
+        'The account service returned an unreadable response.',
+      );
+    }
+    if (!current.emailVerified) {
+      await auth.signOut();
+      _clearSession();
+      throw const AccountException(
+        'Verify your email first, then sign in again to create private videos.',
+      );
+    }
+    _adoptUser(current);
+    notifyListeners();
+  }
+
+  Future<void> _initializeGoogleSignIn() {
+    return _googleInitialization ??= _googleSignIn.initialize(
+      clientId: Platform.isIOS ? AppConfig.googleIosClientId : null,
+      serverClientId: AppConfig.googleServerClientId,
+    );
+  }
+
+  FirebaseAuth _requireAuth() {
+    final auth = _auth;
+    if (!isConfigured || auth == null) {
+      throw const AccountException(
+        'Mobile account access is not configured for this build.',
+      );
+    }
+    return auth;
+  }
+
+  void _adoptUser(User user) {
+    _uid = user.uid;
+    _email = user.email;
+  }
+
+  void _clearSession() {
+    _uid = null;
+    _email = null;
   }
 
   void _setBusy(bool value) {
@@ -407,46 +365,39 @@ class AccountController extends ChangeNotifier {
     notifyListeners();
   }
 
-  static Map<String, Object?> _jsonObject(String value) {
-    try {
-      final decoded = jsonDecode(value);
-      if (decoded is Map<String, Object?>) {
-        return decoded;
-      }
-    } on FormatException {
-      // The caller uses a contextual error.
-    }
-    return const {};
+  static bool _isCancellation(String code) =>
+      code == 'canceled' ||
+      code == 'web-context-cancelled' ||
+      code == 'popup-closed-by-user';
+
+  static String _friendlyGoogleError(GoogleSignInException error) {
+    return switch (error.code) {
+      GoogleSignInExceptionCode.clientConfigurationError ||
+      GoogleSignInExceptionCode.providerConfigurationError =>
+        'Google sign-in needs one more provider configuration step.',
+      GoogleSignInExceptionCode.interrupted =>
+        'Google sign-in was interrupted. Please try again.',
+      _ => 'Google sign-in could not be completed. Please try again.',
+    };
   }
 
-  static String _friendlyAuthError(Map<String, Object?> body) {
-    final error = body['error'];
-    if (error is Map) {
-      final message = '${error['message'] ?? ''}';
-      if (message.contains('INVALID_LOGIN_CREDENTIALS') ||
-          message.contains('INVALID_PASSWORD') ||
-          message.contains('EMAIL_NOT_FOUND')) {
-        return 'That email or password is not correct.';
-      }
-      if (message.contains('TOO_MANY_ATTEMPTS_TRY_LATER')) {
-        return 'Too many attempts. Wait a moment, then try again.';
-      }
-      if (message.contains('USER_DISABLED')) {
-        return 'This account has been disabled.';
-      }
-      if (message.contains('EMAIL_EXISTS')) {
-        return 'An account already exists for that email.';
-      }
-      if (message.contains('WEAK_PASSWORD')) {
-        return 'Use a stronger password with at least 6 characters.';
-      }
-    }
-    return 'Sign-in could not be completed. Please try again.';
-  }
-
-  @override
-  void dispose() {
-    _client.close();
-    super.dispose();
+  static String _friendlyAuthError(FirebaseAuthException error) {
+    return switch (error.code) {
+      'invalid-credential' ||
+      'wrong-password' ||
+      'user-not-found' => 'That email or password is not correct.',
+      'too-many-requests' =>
+        'Too many attempts. Wait a moment, then try again.',
+      'user-disabled' => 'This account has been disabled.',
+      'email-already-in-use' => 'An account already exists for that email.',
+      'weak-password' => 'Use a stronger password with at least 6 characters.',
+      'invalid-email' => 'Enter a valid email address.',
+      'network-request-failed' =>
+        'We could not reach the account service. Check your connection.',
+      'account-exists-with-different-credential' =>
+        'An account already exists for this email. Sign in with its original method first.',
+      'operation-not-allowed' => 'This sign-in method is not enabled yet.',
+      _ => 'Sign-in could not be completed. Please try again.',
+    };
   }
 }

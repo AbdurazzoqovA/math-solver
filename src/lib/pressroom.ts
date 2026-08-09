@@ -1,4 +1,5 @@
 import "server-only";
+import { renderPressroomMath } from "@/lib/pressroom-math";
 
 const PRESSROOM_API_URL =
   process.env.PRESSROOM_API_URL?.trim() ||
@@ -139,7 +140,10 @@ export async function getPost(
     throw new Error("Pressroom returned an invalid article response.");
   }
 
-  return data.post;
+  return {
+    ...data.post,
+    contentHtml: renderPressroomMath(data.post.contentHtml),
+  };
 }
 
 export function formatPostDate(value: string | null): string | null {

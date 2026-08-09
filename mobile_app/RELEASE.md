@@ -16,6 +16,10 @@ validated.
   `MATHSOLVER_FIREBASE_ANDROID_API_KEY` through CI or an ignored
   `--dart-define-from-file` JSON. The legacy `MATHSOLVER_FIREBASE_API_KEY`
   remains a compatibility fallback.
+- Generate the ignored local configuration with
+  `node tool/configure_firebase.mjs`, or provide the Google iOS/server client
+  IDs, Android provider flag, Apple provider flag, and iOS reversed-client-ID
+  Xcode setting described in `README.md` through private CI configuration.
 - Optionally set `MATHSOLVER_API_BASE_URL`; production defaults to
   `https://math-solver.io`.
 - Register Firebase App Check debug tokens for simulator/CI builds. Release
@@ -32,7 +36,11 @@ validated.
   permission, registers the FCM token, and deep-links ready notifications to
   the exact private lesson. Manual sign-out unregisters and deletes the local
   token. iOS delivery cannot work until the APNs key is configured.
-- Confirm App Attest, Push Notifications, and the production
+- Sign in with Apple is enabled for `io.mathsolver.app`; its Services ID,
+  Firebase callback, Firebase provider, and dedicated private key were
+  configured on 2026-08-05. Keep the one-time-downloaded `.p8` backed up outside
+  the repository and rotate the Firebase provider if that key is replaced.
+- Confirm App Attest, Sign in with Apple, Push Notifications, and the production
   `aps-environment` entitlement in the signed archive.
 - Complete the age rating and privacy nutrition labels using the policy below:
   no advertising identifier, no contacts/location, analytics off by default,
@@ -52,6 +60,9 @@ validated.
 
 - Link the Play app to Firebase, opt into Play App Signing, and confirm Play
   Integrity recognizes the release certificate.
+- The local Android debug SHA-1/SHA-256 fingerprints are registered for Google
+  sign-in. Register the upload and Play App Signing fingerprints after the
+  private release keystore and Play record exist.
 - `build.gradle.kts` never uses the debug certificate for release: it signs
   from the ignored properties when present and otherwise leaves the artifact
   unsigned.
@@ -77,9 +88,10 @@ are already configured.
 - Do not add a paywall until products, regional pricing, refund/support policy,
   and the exact free video allowance are approved. Core steps, Check My Work,
   practice, and mistake review remain free.
-- If native Google or Apple sign-in is added, configure their OAuth clients and
-  entitlements first. Email/Password registration, verification, resend,
-  password reset, secure refresh, and sign-out are complete.
+- Native Google and Apple sign-in plus Email/Password registration,
+  verification, resend, password reset, native session refresh, and sign-out
+  are complete. Preserve the Apple provider key and add Android release
+  fingerprints when distribution signing is created.
 - RevenueCat, widgets, iPad Pencil scratchpad, Live Tutor, and exam packs are
   roadmap items, not hidden launch dependencies.
 
@@ -97,4 +109,4 @@ Before submission, repeat the critical flows on real iOS and Android devices:
 permission denial/retry, camera crop and worksheet selection, OCR correction,
 streamed solve, Check My Work, verification/report, review scheduling, account
 merge, offline video, sharing, notification deep link, account deletion/support
-path, and poor/offline network recovery.
+path, Google sign-in, Sign in with Apple, and poor/offline network recovery.

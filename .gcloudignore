@@ -1,0 +1,8 @@
+# Keep Cloud Build uploads limited to source needed by the Next.js web image.
+.gcloudignore
+.git
+.git/**
+#!include:.gitignore
+
+# The standalone Flutter client is built and released independently.
+mobile_app/

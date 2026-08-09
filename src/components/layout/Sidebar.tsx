@@ -233,6 +233,7 @@ export default function Sidebar() {
 
         <div className={`flex flex-col gap-1 mt-2 text-xs text-muted-foreground/60 transition-all duration-300 ${isExpanded ? 'px-4 opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
           <Link href="/blog" onClick={() => setMobileSidebarOpen(false)} className="hover:text-foreground transition-colors py-1 truncate">Blog</Link>
+          <Link href="/contact" onClick={() => setMobileSidebarOpen(false)} className="hover:text-foreground transition-colors py-1 truncate">Contact</Link>
           <Link href="/privacy" className="hover:text-foreground transition-colors py-1 truncate">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-foreground transition-colors py-1 truncate">Terms of Service</Link>
         </div>

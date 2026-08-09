@@ -1,0 +1,29 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter/widgets.dart';
+
+/// Google's official gradient "G" mark, scaled proportionally from the
+/// current asset published at developers.google.com/static/identity/images/
+/// g-logo.png.
+class GoogleBrandIcon extends StatelessWidget {
+  const GoogleBrandIcon({super.key, this.size = 20});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.memory(
+      _googleBrandIconBytes,
+      width: size * 0.95,
+      height: size,
+      filterQuality: FilterQuality.high,
+      gaplessPlayback: true,
+      semanticLabel: 'Google',
+    );
+  }
+}
+
+final Uint8List _googleBrandIconBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAABMAAAAUCAYAAABvVQZ0AAAACXBIWXMAACxLAAAsSwDSOqY/AAAAlmVYSWZJSSoACAAAAAYAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAMQECAAYAAABmAAAAaYcNAAEAAABsAAAAAAEEAAEAAAATAAAAAQEEAAEAAAAUAAAAAAAAACABAAABAAAAIAEAAAEAAABGaWdtYQADAAGgAwABAAAAAQAAAAKgAwABAAAAEwAAAAOgAwABAAAAFAAAAJYAAAAOVvS8AAAABGNJQ1ABBAABk7gAvQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABGdBTUEAALGPC/xhBQAAA9VJREFUeNqFVFtoXFUUXfucc+/MJJmmaYyElKYGIxUGqXEsGFsUC6lElIha8EWJiJXSHz/88EtCwCh+iYkIoqIVQRsiSIShD6wklFJwtFKiFSutTU2iMYnJzJ2Z+zhne+7UxjQPPHAf57LP2nuvte4mrLMYIHR3b9UUZsnwo0Sii1heMsIZFpBj+GNygvL5cPU5tQaoa3eLcd1eMv4hCdkCEgJMgBBbhRR77EvBtOwY5e23D14sz39/Wy7nrwHj/RkXjal74YUDoiw6UVYwkYGtiu0NZMtlYwNJpIXjPM1wurbVtL62+ODzn9Qf+2B+GYz74AKVvaiYQYhkO0f2sC9YKElgYTcS8UWkoON3jj+rhK1Sm1TKLFfGNi8+rr8D2uvHUtRu0zNZMGhngctinCJxDMb8BiHrjKROgnxYS7nFEvZKpSQ/b8y9tfRfm+NoxvboSZRLu+BEXO3HpRkIvES/01eUy5dWUHq02NP7IbO8KSgX8o25T5duFCCt2hDqx+Fou7MVp3kWteE76L8wbKni1QLVffnReWywLGfunZaxW6oVKR2hppJHwn9vPaD/WwquszPWyIIxBC8g4NO0pzi7Mqjjjajb+utZG9W4XopYG9tTTiESj1UDZFwZF2HEr2uCjWwlxXutnM0b1UuaM7ZNXZUahq95f93UhpmFqXqNl/+Sf88sryYFGX1hlTtoQgaHXOdH5tbVWCJ2PfMUE2mYa1A2fa291VtwSdaO9tMJFYbhD9qAK8xU9LmhANo99h2a7rsLy7yVfYw0NdFoWVtc6/WULfXvRNQvpOyF5obqHwKcUQsIz0VGXC4AbbMM9aeg7IyfPMhcGbiu6EQfBfYRXAdvH/olQ6bhHid06h0kII0ssqQf1aTGJWv4kQLh5UlfYBpu0zTShx853XYx+237aP7u0ZWmRcPR0dY5b+7NVBh1uFRLKd4MGTpniMVPKpvFzPtnzWcRqfvnlNp11U/xNDY1T3Hzu38tuU81njxw3Aj3sjGyxlRu7gjCq91I8k5GZAmMiEN4gtQR38UVFbfSN4Hzi4uJVwO4g/My3b4QpLnAtZsDkexhJXti1cgGiqQPQ4vQYY0dGtKOOGWMCodQTpycfTFTqk6NvgyC/RPe1+H8theK5A54alNnJUhC2/7ZGgixhDF72oMwLplkhbTwiuzT25FODXqHH5i5YZ4NZ2KCL3yz43jXE6zc3gjuIeOolngqwsodj7VqtAjKwl86Fbk0VCpVxvDcAW/DSfvzvhNT9vH6llPPHDGGshapx+73seZJIYIRw2rck1fO4aFBf/XZfwCFnMFiiK6y/AAAAABJRU5ErkJggg==',
+);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/auth/account_controller.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/google_brand_icon.dart';
 
 Future<bool> showAccountSheet(
   BuildContext context, {
@@ -47,6 +48,10 @@ class _AccountSheetState extends State<AccountSheet> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final needsPassword = _mode != _AccountMode.reset;
+    final showsProviders =
+        _mode != _AccountMode.reset &&
+        (widget.account.canSignInWithApple ||
+            widget.account.canSignInWithGoogle);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       padding: EdgeInsets.fromLTRB(
@@ -88,9 +93,79 @@ class _AccountSheetState extends State<AccountSheet> {
                 ).textTheme.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: 24),
+              if (showsProviders) ...[
+                ListenableBuilder(
+                  listenable: widget.account,
+                  builder: (context, _) {
+                    return Column(
+                      children: [
+                        if (widget.account.canSignInWithApple)
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: widget.account.isBusy
+                                  ? null
+                                  : _signInWithApple,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.black54,
+                                disabledForegroundColor: Colors.white70,
+                              ),
+                              icon: const Icon(Icons.apple),
+                              label: const Text('Continue with Apple'),
+                            ),
+                          ),
+                        if (widget.account.canSignInWithApple &&
+                            widget.account.canSignInWithGoogle)
+                          const SizedBox(height: 10),
+                        if (widget.account.canSignInWithGoogle)
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: widget.account.isBusy
+                                  ? null
+                                  : _signInWithGoogle,
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF1F1F1F),
+                                disabledBackgroundColor: Colors.white70,
+                                disabledForegroundColor: const Color(
+                                  0xFF1F1F1F,
+                                ).withValues(alpha: 0.55),
+                                side: const BorderSide(
+                                  color: Color(0xFF747775),
+                                ),
+                              ),
+                              icon: const GoogleBrandIcon(),
+                              label: const Text('Continue with Google'),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'or use email',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
               TextFormField(
                 controller: _emailController,
-                autofocus: true,
+                autofocus: !showsProviders,
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 textInputAction: needsPassword
@@ -315,6 +390,32 @@ class _AccountSheetState extends State<AccountSheet> {
       if (mounted) {
         setState(() => _notice = 'A fresh verification email is on its way.');
       }
+    } on AccountException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _error = null;
+      _notice = null;
+    });
+    try {
+      final completed = await widget.account.signInWithGoogle();
+      if (completed && mounted) Navigator.pop(context, true);
+    } on AccountException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    setState(() {
+      _error = null;
+      _notice = null;
+    });
+    try {
+      final completed = await widget.account.signInWithApple();
+      if (completed && mounted) Navigator.pop(context, true);
     } on AccountException catch (error) {
       if (mounted) setState(() => _error = error.message);
     }

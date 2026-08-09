@@ -24,7 +24,7 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 ## Fast facts (so you don't have to grep)
 
 - **Stack:** Next.js 16 (App Router, React 19, React Compiler), TypeScript, Tailwind v4. Math via KaTeX + `react-markdown` + `remark-math`/`rehype-katex`; input via `mathlive`.
-- **Mobile:** standalone Flutter 3.44/Dart 3.12 iOS/Android client in `mobile_app/`; never mix its source into the Next.js root. The App-Check-aware `/api/mobile/v1/*` client includes camera crop/worksheet capture, Check My Work, verified streamed steps, practice/review, Firestore notebook sync, private visual lessons with offline/share/push, and opt-in no-content analytics. Store credentials, native social sign-in, billing, and later device-only surfaces remain release/roadmap work.
+- **Mobile:** standalone Flutter 3.44/Dart 3.12 iOS/Android client in `mobile_app/`; never mix its source into the Next.js root. The App-Check-aware `/api/mobile/v1/*` client includes camera crop/worksheet capture, Check My Work, verified streamed steps, practice/review, native Email/Password + Google/Apple auth, Firestore notebook sync, private visual lessons with offline/share/push, and opt-in no-content analytics. Store distribution credentials, billing, and later device-only surfaces remain release/roadmap work.
 - **Solver:** Google **Gemini 3.1 flash-lite** — `src/app/api/solve/route.ts`, streamed through `src/lib/gemini.ts`. Prompt `MATH_TUTOR_PROMPT` forces `**Step N:**` format.
 - **OCR (photo/PDF/drawing → text):** Google **Gemini 3.1 flash-lite** — `src/app/api/ocr/route.ts`. Extracts the expression only; does not solve.
 - **Practice quizzes:** Gemini 3.1 flash-lite — `src/app/api/practice/route.ts` + `/steps`.
@@ -38,7 +38,7 @@ Durable project knowledge lives in `wiki/` as interlinked markdown (Obsidian `[[
 ## Rules for working here
 
 1. **⚠️ Secrets:** `deploy.sh` is safe to track and loads its values from ignored local `.env` files. Do **not** add API keys, service-account files, or other credentials to tracked files. Never print or commit keys.
-2. **Firebase is optional and split from hosting.** `math-solver-e3a55` owns Email/Password + Google Auth and the Firestore notebook; `axial-willow-428621-n4` remains Cloud Run only. Guests use `localStorage`. Firestore exists in `nam5`, and the checked-in verified-account rules are live. Do not assume Storage or other backend services exist. See [[tech-and-ops]].
+2. **Firebase is optional and split from hosting.** `math-solver-e3a55` owns Email/Password + Google + Apple Auth and the Firestore notebook; `axial-willow-428621-n4` remains Cloud Run only. Guests use `localStorage`. Firestore exists in `nam5`, and the checked-in verified-account rules are live. Do not assume Storage or other backend services exist. See [[tech-and-ops]].
 3. **Keep the wiki current.** After any change that alters architecture, features, routes, or the plan, update the relevant `wiki/` page, bump [[index]] if pages were added/removed, and append one line to [[log]]. This is what keeps future sessions cheap. See the workflow below. Use `[[wikilinks]]` for any new cross-references so the Obsidian graph stays connected.
 4. **Math rendering is fragile.** LaTeX delimiters are preprocessed (`\(..\)`→`$..$`) in `MessageList.tsx`. Test rendering after touching the solve/render path.
 

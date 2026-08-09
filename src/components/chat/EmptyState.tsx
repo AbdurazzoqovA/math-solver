@@ -45,7 +45,7 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
             <span>&middot;</span>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             <span>&middot;</span>
-            <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
           </div>
           <p>MathSolver can make mistakes. Please double check important steps and calculations.</p>
           <p className="mt-1">&copy; 2026 MathSolver. All rights reserved.</p>

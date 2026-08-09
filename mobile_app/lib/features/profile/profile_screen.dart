@@ -309,7 +309,7 @@ class _AccountCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    account.email ?? '',
+                    account.email ?? 'Private Apple account',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

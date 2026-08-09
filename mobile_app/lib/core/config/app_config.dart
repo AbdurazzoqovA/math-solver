@@ -18,6 +18,22 @@ abstract final class AppConfig {
     'MATHSOLVER_FIREBASE_ANDROID_API_KEY',
   );
 
+  static const googleIosClientId = String.fromEnvironment(
+    'MATHSOLVER_GOOGLE_IOS_CLIENT_ID',
+  );
+
+  static const googleServerClientId = String.fromEnvironment(
+    'MATHSOLVER_GOOGLE_SERVER_CLIENT_ID',
+  );
+
+  static const googleAndroidEnabled = bool.fromEnvironment(
+    'MATHSOLVER_GOOGLE_ANDROID_ENABLED',
+  );
+
+  static const appleSignInEnabled = bool.fromEnvironment(
+    'MATHSOLVER_APPLE_AUTH_ENABLED',
+  );
+
   static String get firebaseApiKey {
     if (defaultTargetPlatform == TargetPlatform.iOS &&
         _firebaseIosApiKey.trim().isNotEmpty) {

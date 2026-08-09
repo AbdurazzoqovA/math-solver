@@ -19,6 +19,7 @@ import 'package:path_provider/path_provider.dart';
 import '../app.dart';
 import '../core/network/mathsolver_api.dart';
 import '../core/storage/notebook_repository.dart';
+import '../core/theme/app_theme.dart';
 import '../core/widgets/text_entry_sheet.dart';
 import '../features/practice/domain/practice_set.dart';
 import '../features/practice/domain/review_item.dart';
@@ -27,6 +28,7 @@ import '../features/solve/domain/math_review.dart';
 import '../features/solve/domain/solution_record.dart';
 import '../features/solve/presentation/solution_screen.dart';
 import '../features/solve/presentation/solve_screen.dart';
+import '../features/video/domain/video_lesson.dart';
 import '../features/video/presentation/video_studio_screen.dart';
 
 const _problem = r'Solve $2x^2 - 7x + 3 = 0$';
@@ -72,7 +74,8 @@ final _seedSolutions = [
   ),
   SolutionRecord(
     id: 'seed-3',
-    problem: 'A train travels 240 km in 3 hours. How long for 400 km at the '
+    problem:
+        'A train travels 240 km in 3 hours. How long for 400 km at the '
         'same speed?',
     solution:
         '**Step 1: Find the speed**\n'
@@ -152,6 +155,14 @@ final _dueReviews = [
 ];
 
 Future<String> _readState() async {
+  const fromBuild = String.fromEnvironment('GALLERY_STATE');
+  if (fromBuild.isNotEmpty) return fromBuild;
+  for (final argument in Platform.executableArguments) {
+    const prefix = '--gallery-state=';
+    if (argument.startsWith(prefix) && argument.length > prefix.length) {
+      return argument.substring(prefix.length);
+    }
+  }
   final fromEnv = Platform.environment['GALLERY_STATE'];
   if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
   try {
@@ -222,7 +233,7 @@ Future<void> _drive(String state) async {
     case 'camera':
       await _tapText('Scan a problem');
     case 'video-studio':
-      await _pushVideoStudio();
+      await _pushVideoStudioPreview();
   }
 }
 
@@ -230,7 +241,8 @@ Future<void> _settle(Duration duration) => Future<void>.delayed(duration);
 
 Future<void> _swipeUp() async {
   final binding = WidgetsBinding.instance;
-  final size = binding.platformDispatcher.views.first.physicalSize /
+  final size =
+      binding.platformDispatcher.views.first.physicalSize /
       binding.platformDispatcher.views.first.devicePixelRatio;
   var position = Offset(size.width / 2, size.height * 0.72);
   binding.handlePointerEvent(PointerDownEvent(position: position));
@@ -373,19 +385,49 @@ Future<void> _pushQuiz() async {
   );
 }
 
-Future<void> _pushVideoStudio() async {
-  final solve = _solveScreen();
+Future<void> _pushVideoStudioPreview() async {
   final navigator = _navigator();
-  if (solve == null || navigator == null) return;
+  if (navigator == null) return;
   unawaited(
     navigator.push<void>(
       MaterialPageRoute(
-        builder: (context) => VideoStudioScreen(
-          account: solve.account,
-          api: solve.videoApi,
-          problem: _problem,
-          solution: _solution,
-          requestKey: 'gallery',
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Video lesson'),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.mint,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: const Text(
+                      '9 free today',
+                      style: TextStyle(
+                        color: AppTheme.ink,
+                        fontFamily: AppTheme.displayFamily,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          body: const SafeArea(
+            child: VideoGenerationProgress(
+              progress: 62,
+              label: 'Animating each worked step',
+              status: VideoJobStatus.rendering,
+              problem: _problem,
+            ),
+          ),
         ),
       ),
     ),

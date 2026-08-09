@@ -203,3 +203,35 @@ Verified the existing `io.mathsolver.app` iOS and Android registrations through 
 
 ## [2026-07-31] change | Fixed practice-panel math and escaped newlines
 Corrected the quiz and explanation JSON prompts to request standard newline escapes, routed all practice question/option/explanation Markdown through the shared LaTeX normalizer, and added a math-safe compatibility repair for literal `\\n` sequences in older saved quizzes. The focused render regression, ESLint, and TypeScript checks pass. See [[product-overview]] and [[codebase-map]].
+
+## [2026-07-31] change | Added private Telegram contact delivery
+Added the indexed `/contact` support form, wired the existing footer/sidebar links and sitemap, and added server-side field validation, honeypot handling, production Turnstile enforcement, a five-per-hour per-instance IP limit, and plain-text delivery through a Secret Manager-backed Telegram bot. Added `.gcloudignore` so independent Flutter build artifacts do not enter Cloud Build uploads. Updated privacy disclosure, deployment configuration, unit coverage, [[product-overview]], [[codebase-map]], and [[tech-and-ops]].
+Deployed main revision `mathsolver-00036-7kn` at 100% traffic with the bot token pinned to Secret Manager version 1; the public contact page and fail-closed CAPTCHA path passed production smoke checks.
+
+## [2026-08-01] query | Diagnosed Telegram contact 502
+
+Production logs confirmed that contact submissions pass Cloud Run and Turnstile but Telegram rejects delivery with `400 Bad Request: chat not found`; documented the requirement for the configured private-chat account to start the bot before delivery can succeed.
+
+## [2026-08-01] change | Restored Pressroom article typography
+
+Registered the installed Tailwind Typography plugin so Pressroom headings, paragraphs, lists, links, and other rich HTML regain their intended hierarchy and spacing. Fixed the optional contact deployment arguments for macOS Bash 3 with `set -u`, deployed main revision `mathsolver-00037-5ft` at 100% traffic, and browser-verified the live article typography.
+
+## [2026-08-01] change | Added Pressroom LaTeX rendering
+
+Added the explicit `\\(...\\)` inline and `\\[...\\]` display authoring contract for blog math, with HTML-aware text-node parsing, syntax-validated trusted-off KaTeX, accessible MathML, invalid-input fallback, idempotence, and overflow-safe display equations. All 46 non-emulator tests and the production build pass; an end-to-end mock Pressroom page passed browser visual/DOM QA, and main revision `mathsolver-00038-q5b` now serves 100% of traffic while awaiting the writer's first delimiter-formatted article update.
+
+## [2026-08-05] change | Added native Google and Apple mobile authentication
+
+Replaced the Flutter client's custom Email/Password token persistence with native Firebase Authentication, added Google sign-in on iOS/Android and Sign in with Apple on iOS, and updated the account sheet with provider buttons while preserving guest-first solving and verified-owner notebook merge. Registered the local Android debug signing fingerprints, completed the MathSolver Apple App ID/Services ID/Firebase callback/dedicated key/provider configuration, added the iOS OAuth callback and Apple entitlement, and extended the ignored Firebase configurator with public OAuth clients and provider readiness flags. Pinned the matching Firebase Core platform interface after real-device release QA exposed an incompatible Pigeon schema, then rebuilt, signed, installed, and launched the corrected standalone Release app on the paired iPhone. Analyzer and all nine Flutter tests pass; Android release fingerprints remain tied to future distribution signing.
+
+## [2026-08-05] change | Applied official Google mobile auth branding
+
+Replaced the Flutter account sheet's placeholder text glyph with Google's current official gradient G mark and aligned the light button's white fill, gray border, and dark label with the published Sign in with Google branding guidance.
+
+## [2026-08-05] change | Corrected iOS App Attest signing team
+
+Traced mobile video creation's `app_check_required` failure to Firebase iOS app metadata still naming Apple Team ID `BK3T3XC2S9` while the installed MathSolver build was signed by `UGWY3X7QR2`. Updated the live Firebase iOS registration to the real signing team and hardened `configure_firebase.mjs` to fail when Firebase and Xcode Team IDs diverge, preventing silent App Attest rejection in future builds.
+
+## [2026-08-05] change | Redesigned the mobile video loading state
+
+Replaced the static AI-sparkle video placeholder with a motion-first render preview: three pulsing storyboard frames, a traveling playhead, determinate progress, animated stage copy, the honest Plan/Narrate/Animate/Finish pipeline, a compact source-problem card, and clearer safe-to-leave Library messaging. Reduced-motion settings freeze the decorative loop while preserving real progress updates.

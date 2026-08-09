@@ -67,6 +67,23 @@ web_gemini_secret_version="$(latest_enabled_secret_version \
 turnstile_secret_version="$(latest_enabled_secret_version \
   "$turnstile_secret" \
   "${TURNSTILE_SECRET_VERSION:-}")"
+update_secrets="GOOGLE_CLOUD_API_KEY=${web_gemini_secret}:${web_gemini_secret_version},TURNSTILE_SECRET_KEY=${turnstile_secret}:${turnstile_secret_version}"
+deploy_args=(
+  --memory 4Gi
+  --cpu 2
+  --max-instances 20
+)
+if [[ -n "${TELEGRAM_CHAT_ID:-}" ]]; then
+  telegram_bot_secret="${TELEGRAM_BOT_SECRET:-mathsolver-telegram-bot-token}"
+  telegram_bot_secret_version="$(latest_enabled_secret_version \
+    "$telegram_bot_secret" \
+    "${TELEGRAM_BOT_SECRET_VERSION:-}")"
+  update_secrets+=",TELEGRAM_BOT_TOKEN=${telegram_bot_secret}:${telegram_bot_secret_version}"
+  deploy_args+=(
+    --update-env-vars
+    "^:^TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}:CONTACT_TURNSTILE_HOSTNAMES=${CONTACT_TURNSTILE_HOSTNAMES:-math-solver.io,www.math-solver.io}"
+  )
+fi
 image_tag="${DEPLOY_IMAGE_TAG:-$(git -C "$repo_dir" rev-parse --short HEAD)}"
 image_uri="${cloud_region}-docker.pkg.dev/${cloud_project}/cloud-run-source-deploy/mathsolver:${image_tag}"
 
@@ -83,8 +100,6 @@ gcloud run deploy mathsolver \
   --platform managed \
   --allow-unauthenticated \
   --remove-env-vars "GOOGLE_CLOUD_API_KEY,TURNSTILE_SECRET_KEY" \
-  --update-secrets "GOOGLE_CLOUD_API_KEY=${web_gemini_secret}:${web_gemini_secret_version},TURNSTILE_SECRET_KEY=${turnstile_secret}:${turnstile_secret_version}" \
-  --memory 4Gi \
-  --cpu 2 \
-  --max-instances 20 \
+  --update-secrets "$update_secrets" \
+  "${deploy_args[@]}" \
   --project "$cloud_project"
