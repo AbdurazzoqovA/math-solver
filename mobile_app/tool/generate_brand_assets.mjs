@@ -15,16 +15,19 @@ const launchDirectory = path.join(
   'ios/Runner/Assets.xcassets/LaunchImage.imageset',
 );
 
+const functionsRoundedPath =
+  'M352-427H161c-18 0-33 15-33 34 0 6 3 11 7 15l132 122-132 122c-4 4-7 9-7 15 0 19 15 34 33 34h191c18 0 32-15 32-32 0-18-14-32-32-32H235l76-77c17-17 17-44 0-60l-76-77h117c18 0 32-14 32-32 0-17-14-32-32-32Z';
+
 const iconSvg = Buffer.from(`
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 544 544">
   <defs>
-    <linearGradient id="brand" x1="96" y1="64" x2="928" y2="960" gradientUnits="userSpaceOnUse">
+    <linearGradient id="brand" x1="51" y1="34" x2="493" y2="510" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2F438F"/>
       <stop offset="1" stop-color="#5267F7"/>
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#brand)"/>
-  <path d="M716 258H332l180 253-180 255h392v-92H510l126-163-126-161h206v-92Z" fill="#FFFFFF"/>
+  <rect width="544" height="544" fill="url(#brand)"/>
+  <path d="${functionsRoundedPath}" transform="translate(16 528)" fill="#FFFFFF"/>
 </svg>
 `);
 
@@ -37,7 +40,7 @@ const launchSvg = Buffer.from(`
     </linearGradient>
   </defs>
   <rect x="36" y="14" width="96" height="96" rx="27" fill="url(#brand)"/>
-  <path d="M104 37H68l17 24-17 24h37v-9H85l12-15-12-15h19v-9Z" fill="#FFFFFF"/>
+  <path d="${functionsRoundedPath}" transform="translate(36 110.0625) scale(.1875)" fill="#FFFFFF"/>
   <text x="84" y="143" text-anchor="middle" fill="#172033" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">MathSolver</text>
   <text x="84" y="160" text-anchor="middle" fill="#73798A" font-family="Arial, Helvetica, sans-serif" font-size="5.3" font-weight="700" letter-spacing="0.8">LEARN MATH STEP BY STEP</text>
 </svg>

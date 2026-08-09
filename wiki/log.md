@@ -289,3 +289,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Uploaded and attached the final iOS build
 
 - Built and App Store-exported MathSolver `1.0.0 (1)` for `io.mathsolver.app`, uploaded it through Xcode, waited for Apple processing to reach Ready to Submit, and attached build 1 to the App Store version record. The record remains Prepare for Submission with manual release selected; no Add for Review, review submission, or release action was taken.
+
+## [2026-08-09] change | Restored the established rounded functions icon
+
+- Corrected the release asset generator to use the exact `Icons.functions_rounded` glyph already used by MathSolver's mobile interface instead of the temporary sharp custom Sigma. Bumped the replacement App Store artifact to build 2 so Apple can accept the corrected immutable binary.
