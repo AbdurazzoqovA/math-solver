@@ -265,3 +265,6 @@ Detected delimiter-free LaTeX returned by handwriting OCR and wrapped it for the
 
 ## [2026-08-09] change | Rendered OCR math in the confirmation sheet
 Changed “Check what we read” to lead with a formatted equation preview and hide raw LaTeX by default. Learners can explicitly open an editor to correct a sign or exponent and see the formatted preview update live. Worksheet line choices now use the same math rendering path. Added a widget regression for the reported handwritten limit.
+
+## [2026-08-09] change | Made the camera viewfinder select the crop
+Fixed the camera rectangle so it defines the initial image region instead of acting as decoration. Capture now maps the visible frame into the actual centered camera preview, bakes image orientation, crops those pixels, and opens that framed result for optional fine-tuning; gallery imports retain full manual cropping. Added geometry and image-dimension regressions and clarified in-camera copy that only the framed area is used.

@@ -1,11 +1,16 @@
+import 'dart:isolate';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'camera_frame_crop.dart';
+
 class CameraCaptureScreen extends StatefulWidget {
   const CameraCaptureScreen({
     super.key,
-    this.instruction = 'Keep the whole problem inside the frame',
+    this.instruction =
+        'Keep the problem inside the frame — only this area is used',
   });
 
   final String instruction;
@@ -20,6 +25,8 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
   Object? _error;
   var _isCapturing = false;
   var _flashEnabled = false;
+  final _previewKey = GlobalKey();
+  final _frameKey = GlobalKey();
 
   @override
   void initState() {
@@ -111,8 +118,22 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
     try {
       final file = await camera.takePicture();
       final bytes = await file.readAsBytes();
+      final region = _normalizedFrameRegion();
+      final left = region.left;
+      final top = region.top;
+      final width = region.width;
+      final height = region.height;
+      final framedBytes = await Isolate.run(
+        () => cropCameraFrameBytes(
+          bytes,
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+        ),
+      );
       if (mounted) {
-        Navigator.pop<Uint8List>(context, bytes);
+        Navigator.pop<Uint8List>(context, framedBytes);
       }
     } on CameraException {
       if (mounted) {
@@ -126,6 +147,20 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
     }
   }
 
+  Rect _normalizedFrameRegion() {
+    final previewBox = _previewKey.currentContext?.findRenderObject();
+    final frameBox = _frameKey.currentContext?.findRenderObject();
+    if (previewBox is! RenderBox || frameBox is! RenderBox) {
+      return const Rect.fromLTWH(0.06, 0.23, 0.88, 0.54);
+    }
+    final previewOrigin = previewBox.localToGlobal(Offset.zero);
+    final frameOrigin = frameBox.localToGlobal(Offset.zero);
+    return normalizedCameraFrame(
+      preview: previewOrigin & previewBox.size,
+      frame: frameOrigin & frameBox.size,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final camera = _camera;
@@ -135,11 +170,11 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
         fit: StackFit.expand,
         children: [
           if (camera != null && camera.value.isInitialized)
-            Center(child: CameraPreview(camera))
+            Center(child: CameraPreview(camera, key: _previewKey))
           else
             _CameraLoading(error: _error, onRetry: _initialize),
           if (camera != null && camera.value.isInitialized)
-            const _ProblemFrame(),
+            _ProblemFrame(frameKey: _frameKey),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -239,7 +274,9 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
 }
 
 class _ProblemFrame extends StatelessWidget {
-  const _ProblemFrame();
+  const _ProblemFrame({required this.frameKey});
+
+  final Key frameKey;
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +286,7 @@ class _ProblemFrame extends StatelessWidget {
         heightFactor: 0.34,
         child: IgnorePointer(
           child: DecoratedBox(
+            key: frameKey,
             decoration: BoxDecoration(
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.9),

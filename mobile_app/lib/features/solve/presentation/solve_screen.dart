@@ -187,7 +187,8 @@ class _SolveScreenState extends State<SolveScreen> {
       bytes = await Navigator.of(context).push<Uint8List>(
         MaterialPageRoute(
           builder: (_) => const CameraCaptureScreen(
-            instruction: 'Frame the problem and every handwritten line',
+            instruction:
+                'Frame the problem and every handwritten line — only this area is used',
           ),
         ),
       );
@@ -199,7 +200,10 @@ class _SolveScreenState extends State<SolveScreen> {
       if (file != null) bytes = await file.readAsBytes();
     }
     if (bytes == null || !mounted) return;
-    final prepared = await _cropImage(bytes);
+    final prepared = await _cropImage(
+      bytes,
+      framedByCamera: source == _WorkImageSource.camera,
+    );
     if (prepared == null || !mounted) return;
 
     await Navigator.of(context).push<void>(
@@ -243,7 +247,10 @@ class _SolveScreenState extends State<SolveScreen> {
     required Uint8List bytes,
     required ProblemSource source,
   }) async {
-    final prepared = await _cropImage(bytes);
+    final prepared = await _cropImage(
+      bytes,
+      framedByCamera: source == ProblemSource.camera,
+    );
     if (prepared == null || !mounted) return;
     setState(() => _isReading = true);
     try {
@@ -285,7 +292,10 @@ class _SolveScreenState extends State<SolveScreen> {
     }
   }
 
-  Future<Uint8List?> _cropImage(Uint8List bytes) async {
+  Future<Uint8List?> _cropImage(
+    Uint8List bytes, {
+    bool framedByCamera = false,
+  }) async {
     final directory = await getTemporaryDirectory();
     final source = File(
       '${directory.path}/mathsolver-capture-${DateTime.now().microsecondsSinceEpoch}.jpg',
@@ -298,14 +308,16 @@ class _SolveScreenState extends State<SolveScreen> {
         compressQuality: 94,
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Frame the math',
+            toolbarTitle: framedByCamera
+                ? 'Fine-tune the math'
+                : 'Frame the math',
             toolbarColor: AppTheme.ink,
             toolbarWidgetColor: Colors.white,
             activeControlsWidgetColor: AppTheme.electric,
             lockAspectRatio: false,
           ),
           IOSUiSettings(
-            title: 'Frame the math',
+            title: framedByCamera ? 'Fine-tune the math' : 'Frame the math',
             doneButtonTitle: 'Use photo',
             cancelButtonTitle: 'Retake',
             rotateButtonsHidden: false,
