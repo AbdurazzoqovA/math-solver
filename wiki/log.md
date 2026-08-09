@@ -280,3 +280,4 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-09] change | Removed raw LaTeX from mobile math surfaces
 
 - Audited mobile problem and expression rendering across OCR confirmation, solutions, saved work, Check My Work, practice questions/options, video generation, video checkpoints, final answers, and compact video titles. Added a shared automatic bare-LaTeX path with a readable mixed-prose fallback and a regression for the exact video-generation screen.
+- Replaced the initial LaTeX-command allowlist with generic TeX command/control detection so uncommon commands, matrices, set notation, annotations, and spacing sequences cannot bypass rendering.

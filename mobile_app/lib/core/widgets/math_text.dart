@@ -47,6 +47,8 @@ String plainMathPreview(String value) {
       .replaceAll(r'\infty', '∞')
       .replaceAll(r'\left', '')
       .replaceAll(r'\right', '')
+      .replaceAll(RegExp(r'\\[,;:! ]'), '')
+      .replaceAll(r'\\', ' ')
       .replaceAllMapped(RegExp(r'\\([a-zA-Z]+)'), (match) => match.group(1)!)
       .replaceAll('{', '')
       .replaceAll('}', '');
@@ -64,8 +66,11 @@ String mathProblemDisplay(String value) {
       RegExp(r'\$[^$\n]+\$').hasMatch(trimmed)) {
     return normalized;
   }
+  // Treat every TeX command/control sequence as math. An allowlist here is
+  // fragile because valid input can include less-common commands such as
+  // \binom, \overset, set notation, matrices, or spacing controls.
   final containsLatexCommand = RegExp(
-    r'\\(?:frac|dfrac|tfrac|sqrt|lim|to|infty|left|right|sum|prod|int|iint|iiint|sin|cos|tan|sec|csc|cot|log|ln|exp|theta|alpha|beta|gamma|delta|pi|pm|mp|times|cdot|div|le|leq|ge|geq|ne|neq|approx|equiv|partial|nabla|overline|underline|vec|hat|bar|boxed|text|mathrm|mathbf|operatorname|begin|end)\b',
+    r'\\(?:[a-zA-Z]+\*?|.)',
   ).hasMatch(trimmed);
   if (!containsLatexCommand) return normalized;
 
@@ -81,7 +86,7 @@ String mathProblemDisplay(String value) {
         RegExp(r'\{(?:aligned|cases|matrix|pmatrix|bmatrix|vmatrix|array)\}'),
         '',
       )
-      .replaceAll(RegExp(r'\\[a-zA-Z]+\*?'), '');
+      .replaceAll(RegExp(r'\\(?:[a-zA-Z]+\*?|.)'), '');
   final containsProse = RegExp(r'\b[a-zA-Z]{3,}\b').hasMatch(withoutCommands);
   return containsProse ? plainMathPreview(normalized) : r'$$' + trimmed + r'$$';
 }

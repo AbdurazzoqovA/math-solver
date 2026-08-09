@@ -30,6 +30,15 @@ void main() {
     );
   });
 
+  test(
+    'recognizes uncommon commands and spacing controls without an allowlist',
+    () {
+      const problem = r'\overset{n}{\sum}_{k=0}^{n}\binom{n}{k}\,x^k';
+
+      expect(mathProblemDisplay(problem), r'$$' + problem + r'$$');
+    },
+  );
+
   testWidgets('does not expose OCR LaTeX commands in the rendered problem', (
     tester,
   ) async {
