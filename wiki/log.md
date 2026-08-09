@@ -259,3 +259,6 @@ The launch mobile build offers Sign in with Apple and Google alongside verified 
 
 ## [2026-08-09] change | Replaced Flutter's internal About dialog
 Replaced the framework-supplied About/license browser with a customer-facing MathSolver sheet that shows only the app version, product purpose, completely-free limits, support, privacy, and terms. Added a widget regression that prevents the internal package-license entry from returning.
+
+## [2026-08-09] change | Rendered handwritten OCR LaTeX in problem cards
+Detected delimiter-free LaTeX returned by handwriting OCR and wrapped it for the native math renderer before displaying the solution's problem card. Handwritten limits, fractions, roots, sums, integrals, and other command-based expressions no longer expose raw commands such as `\\lim`, `\\to`, or `\\frac`; ordinary word problems remain plain text. Added unit and widget regressions for the reported limit expression.

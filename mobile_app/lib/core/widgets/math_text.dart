@@ -23,11 +23,8 @@ String plainMathPreview(String value) {
   var text = value.replaceAll('\n', ' ').replaceAll(RegExp(r'\${1,2}'), '');
   text = text.replaceAllMapped(
     RegExp(r'\^\{?([0-9n\-]{1,3})\}?'),
-    (match) => match
-        .group(1)!
-        .split('')
-        .map((c) => _superscripts[c] ?? c)
-        .join(),
+    (match) =>
+        match.group(1)!.split('').map((c) => _superscripts[c] ?? c).join(),
   );
   text = text
       .replaceAllMapped(
@@ -48,6 +45,22 @@ String plainMathPreview(String value) {
       .replaceAll('{', '')
       .replaceAll('}', '');
   return text.replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
+/// Wraps OCR-produced LaTeX expressions that arrive without `$` delimiters so
+/// [MathText] renders them instead of exposing commands such as `\\lim` and
+/// `\\frac` to the learner. Ordinary typed word problems remain plain text.
+String mathProblemDisplay(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty ||
+      trimmed.contains(r'$$') ||
+      RegExp(r'\$[^$\n]+\$').hasMatch(trimmed)) {
+    return value;
+  }
+  final containsLatexCommand = RegExp(
+    r'\\(?:frac|dfrac|tfrac|sqrt|lim|to|infty|left|right|sum|prod|int|sin|cos|tan|log|ln|theta|pi|pm|times|cdot|begin|end)\b',
+  ).hasMatch(trimmed);
+  return containsLatexCommand ? r'$$' + trimmed + r'$$' : value;
 }
 
 class MathText extends StatelessWidget {

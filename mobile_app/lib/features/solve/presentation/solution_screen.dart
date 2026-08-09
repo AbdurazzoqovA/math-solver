@@ -249,7 +249,9 @@ class _SolutionScreenState extends State<SolutionScreen> {
                         const SizedBox(height: 14),
                         _EnterAnimation(
                           key: const ValueKey('verification'),
-                          child: _VerificationCard(verification: _verification!),
+                          child: _VerificationCard(
+                            verification: _verification!,
+                          ),
                         ),
                       ],
                       if (_status == _SolveStatus.ready) ...[
@@ -658,7 +660,10 @@ class _ProblemHeader extends StatelessWidget {
             ).textTheme.labelLarge?.copyWith(color: colors.primary),
           ),
           const SizedBox(height: 9),
-          MathText(problem, style: Theme.of(context).textTheme.titleLarge),
+          MathText(
+            mathProblemDisplay(problem),
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ],
       ),
     );
