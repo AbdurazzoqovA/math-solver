@@ -141,6 +141,7 @@ mobile_app/                  # standalone Flutter iOS/Android client; no web sou
       video/                 # private polling/player, controls, offline/share/push
   android/                   # io.mathsolver.app, camera/network, Play Integrity, signing hook
   ios/                       # io.mathsolver.app, App Attest/push/privacy entitlements
+  store/google-play/         # reproducible Play icon/feature graphic/compliant phone screenshots + en-US listing source
   test/                      # widget, parser, work-check, review/persistence tests
   README.md                  # run/configuration and contract guide
   RELEASE.md                 # credential-safe store and production rollout checklist
