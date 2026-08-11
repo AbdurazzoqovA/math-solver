@@ -310,3 +310,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-11] change | Uploaded signed Google Play launch candidate
 
 - Created the permanent owner-held Android upload key outside the repository, stored its password in macOS Keychain, built and verified signed bundle `1.0.0 (3)`, and uploaded it to a saved internal-testing draft without rollout or review submission. Registered both upload and Google Play distribution certificate fingerprints with Firebase, completed the IARC questionnaire at All ages / Everyone / PEGI 3, and saved a dedicated Play reviewer account. Final audience/Data safety completion remains paused at Google's explicit Families-law certification for the declared grade 5–6-inclusive audience, and the reviewer must verify the emailed account link.
+
+## [2026-08-11] change | Saved Google Play mixed student audience
+
+- After the owner's explicit legal certification, saved the 9–12, 13–15, 16–17, and 18+ target audience without entering the Teacher Approved/Kids-tab program, and opted to show the Families-policy commitment in Data safety. Final Data safety validation exposed that the checked-in account-deletion page is still 404 in production; deployment is paused at Google Cloud's owner passkey prompt.

@@ -75,10 +75,12 @@ validated.
 - Complete the review-account email verification before submission. The
   credentials are saved in Play Console and the password is owner-held in
   macOS Keychain, never in this repository.
-- Google Play's mixed-audience flow currently selects 9–12, 13–15, 16–17, and
-  18+. Do not certify the resulting Families-law declaration until the owner
-  explicitly attests to that legal statement; Data safety cannot be finalized
-  until the target-audience declaration is complete.
+- Completed after explicit owner attestation: Google Play's mixed-audience flow
+  selects 9–12, 13–15, 16–17, and 18+, does not join the Teacher Approved/Kids
+  tab program, and shows the Families-policy commitment in Data safety.
+- Deploy the checked-in `/account-deletion` page before finalizing Data safety;
+  Play currently validates the live URL as 404. The deployment requires the
+  owner to complete Google Cloud's passkey/reauthentication prompt.
 - `build.gradle.kts` never uses the debug certificate for release: it signs
   from the ignored properties when present and otherwise leaves the artifact
   unsigned.
