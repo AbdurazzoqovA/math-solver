@@ -56,8 +56,8 @@ validated.
 
 ## 3. Google Play
 
-- Create a private upload keystore. Put it outside the repository and add
-  ignored `android/key.properties` with:
+- Completed 2026-08-11: the private upload keystore is outside the repository,
+  its password is in macOS Keychain, and ignored `android/key.properties` uses:
 
   ```properties
   storePassword=...
@@ -66,11 +66,19 @@ validated.
   storeFile=/absolute/path/to/upload-keystore.jks
   ```
 
-- Link the Play app to Firebase, opt into Play App Signing, and confirm Play
-  Integrity recognizes the release certificate.
-- The local Android debug SHA-1/SHA-256 fingerprints are registered for Google
-  sign-in. Register the upload and Play App Signing fingerprints after the
-  private release keystore and Play record exist.
+- Completed: the Play app uses Play App Signing, and both the upload and Play
+  distribution SHA-1/SHA-256 fingerprints are registered with the Firebase
+  Android app alongside the local debug fingerprints.
+- Completed: signed bundle `1.0.0 (3)` was accepted by Play and saved in an
+  internal-testing release draft. It has not been rolled out or submitted for
+  review.
+- Complete the review-account email verification before submission. The
+  credentials are saved in Play Console and the password is owner-held in
+  macOS Keychain, never in this repository.
+- Google Play's mixed-audience flow currently selects 9–12, 13–15, 16–17, and
+  18+. Do not certify the resulting Families-law declaration until the owner
+  explicitly attests to that legal statement; Data safety cannot be finalized
+  until the target-audience declaration is complete.
 - `build.gradle.kts` never uses the debug certificate for release: it signs
   from the ignored properties when present and otherwise leaves the artifact
   unsigned.

@@ -306,3 +306,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-11] change | Saved Google Play launch metadata and Android QA
 
 - Created the CHAKO LTD Google Play record for `io.mathsolver.app`, saved the free/no-ads Education listing, contacts, approved visual assets, and a source-matched Data safety draft without submitting any release. Android emulator QA covered onboarding, navigation, profile/About, auth validation, contextual camera permission, and adjustable crop; analyzer and all 24 Flutter tests pass. Play upload signing, reviewer access, IARC/content declarations, and real-device Android QA remain.
+
+## [2026-08-11] change | Uploaded signed Google Play launch candidate
+
+- Created the permanent owner-held Android upload key outside the repository, stored its password in macOS Keychain, built and verified signed bundle `1.0.0 (3)`, and uploaded it to a saved internal-testing draft without rollout or review submission. Registered both upload and Google Play distribution certificate fingerprints with Firebase, completed the IARC questionnaire at All ages / Everyone / PEGI 3, and saved a dedicated Play reviewer account. Final audience/Data safety completion remains paused at Google's explicit Families-law certification for the declared grade 5–6-inclusive audience, and the reviewer must verify the emailed account link.
