@@ -318,3 +318,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-12] change | Prepared final Google Play production draft
 
 - Deployed the current `main` website revision so `/account-deletion`, `/privacy`, and `/terms` return 200, verified the exact Play reviewer account, and saved the source-matched Data safety declaration. Removed transitive Android advertising-ID and AdServices identifier permissions, advanced the signed Android bundle to `1.0.0 (4)`, verified analyzer and all 24 Flutter tests, and saved Play's Advertising ID declaration as No. Uploaded version 4, replaced the superseded internal draft artifact, targeted every available country/region plus Rest of World, and saved the same launch candidate in the production track as a draft. No rollout, review submission, or release action was taken.
+
+## [2026-08-12] change | Submitted Google Play launch for review
+
+- After confirming that Google Play cannot enable managed publishing for a first release, the owner explicitly approved immediate public availability after approval. Sent all 11 production, availability, listing, rating, privacy, Data safety, and app-content changes for review. Play now shows **Changes in review** for Android `1.0.0 (4)` with a full rollout across every available country/region plus Rest of World; the app will become public automatically if Google approves it.

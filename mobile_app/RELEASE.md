@@ -69,10 +69,13 @@ validated.
 - Completed: the Play app uses Play App Signing, and both the upload and Play
   distribution SHA-1/SHA-256 fingerprints are registered with the Firebase
   Android app alongside the local debug fingerprints.
-- Completed 2026-08-12: signed bundle `1.0.0 (4)` was accepted by Play and
-  saved in both internal-testing and production release drafts. The production
-  draft targets every available country/region plus Rest of World. Neither
-  draft has been rolled out or sent for review.
+- Completed 2026-08-12: signed bundle `1.0.0 (4)` was accepted by Play. Its
+  production release, store listing, availability, and app-content changes were
+  sent for review as one 11-change submission targeting every available
+  country/region plus Rest of World. Because Google does not allow managed
+  publishing for an app's first release, the owner explicitly approved a full
+  production rollout immediately after Google approval. The Console currently
+  shows **Changes in review**; the app is not public until that review passes.
 - Completed: the exact Play reviewer account is email-verified, its credentials
   are saved in Play Console, and its password is owner-held in macOS Keychain,
   never in this repository.
