@@ -314,3 +314,7 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-11] change | Saved Google Play mixed student audience
 
 - After the owner's explicit legal certification, saved the 9–12, 13–15, 16–17, and 18+ target audience without entering the Teacher Approved/Kids-tab program, and opted to show the Families-policy commitment in Data safety. Final Data safety validation exposed that the checked-in account-deletion page is still 404 in production; deployment is paused at Google Cloud's owner passkey prompt.
+
+## [2026-08-12] change | Prepared final Google Play production draft
+
+- Deployed the current `main` website revision so `/account-deletion`, `/privacy`, and `/terms` return 200, verified the exact Play reviewer account, and saved the source-matched Data safety declaration. Removed transitive Android advertising-ID and AdServices identifier permissions, advanced the signed Android bundle to `1.0.0 (4)`, verified analyzer and all 24 Flutter tests, and saved Play's Advertising ID declaration as No. Uploaded version 4, replaced the superseded internal draft artifact, targeted every available country/region plus Rest of World, and saved the same launch candidate in the production track as a draft. No rollout, review submission, or release action was taken.

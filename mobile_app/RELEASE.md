@@ -69,18 +69,23 @@ validated.
 - Completed: the Play app uses Play App Signing, and both the upload and Play
   distribution SHA-1/SHA-256 fingerprints are registered with the Firebase
   Android app alongside the local debug fingerprints.
-- Completed: signed bundle `1.0.0 (3)` was accepted by Play and saved in an
-  internal-testing release draft. It has not been rolled out or submitted for
-  review.
-- Complete the review-account email verification before submission. The
-  credentials are saved in Play Console and the password is owner-held in
-  macOS Keychain, never in this repository.
+- Completed 2026-08-12: signed bundle `1.0.0 (4)` was accepted by Play and
+  saved in both internal-testing and production release drafts. The production
+  draft targets every available country/region plus Rest of World. Neither
+  draft has been rolled out or sent for review.
+- Completed: the exact Play reviewer account is email-verified, its credentials
+  are saved in Play Console, and its password is owner-held in macOS Keychain,
+  never in this repository.
 - Completed after explicit owner attestation: Google Play's mixed-audience flow
   selects 9–12, 13–15, 16–17, and 18+, does not join the Teacher Approved/Kids
   tab program, and shows the Families-policy commitment in Data safety.
-- Deploy the checked-in `/account-deletion` page before finalizing Data safety;
-  Play currently validates the live URL as 404. The deployment requires the
-  owner to complete Google Cloud's passkey/reauthentication prompt.
+- Completed: `/account-deletion`, `/privacy`, and `/terms` are deployed and
+  return 200 at `math-solver.io`; Play Data safety is saved with no third-party
+  sharing, encrypted transit, account/data deletion links, and source-matched
+  collection disclosures.
+- Completed: transitive Android advertising-ID and AdServices identifier
+  permissions are removed from the merged release manifest. Play's Advertising
+  ID declaration is saved as **No**, matching the free, no-ads launch binary.
 - `build.gradle.kts` never uses the debug certificate for release: it signs
   from the ignored properties when present and otherwise leaves the artifact
   unsigned.
