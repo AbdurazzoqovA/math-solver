@@ -41,7 +41,6 @@ import TurnstileProvider from "@/components/providers/TurnstileProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { LearningProgressProvider } from "@/context/LearningProgressContext";
 import Script from "next/script";
-import AnalyticsConsent from "@/components/providers/AnalyticsConsent";
 
 export default function RootLayout({
   children,
@@ -91,7 +90,19 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
-        <AnalyticsConsent />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-YG1NPYM8BS"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', 'G-YG1NPYM8BS', { anonymize_ip: true });
+          `}
+        </Script>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TurnstileProvider>
             <AuthProvider>

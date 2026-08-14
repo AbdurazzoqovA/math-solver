@@ -322,3 +322,11 @@ Fixed the camera rectangle so it defines the initial adjustable selection instea
 ## [2026-08-12] change | Submitted Google Play launch for review
 
 - After confirming that Google Play cannot enable managed publishing for a first release, the owner explicitly approved immediate public availability after approval. Sent all 11 production, availability, listing, rating, privacy, Data safety, and app-content changes for review. Play now shows **Changes in review** for Android `1.0.0 (4)` with a full rollout across every available country/region plus Rest of World; the app will become public automatically if Google approves it.
+
+## [2026-08-13] change | Removed website analytics consent prompt
+
+Removed the globally mounted analytics choice card and stopped the website from loading Google Analytics. The existing no-content event adapter remains inert for compatibility, mobile analytics remain separately opt-in, and the privacy/ops documentation now reflects the website behavior.
+
+## [2026-08-15] change | Restored website analytics without the popup
+
+Corrected the analytics-popup removal by restoring the GA4 loader and measurement ID directly in the root layout while leaving the global consent card deleted. Updated the privacy and ops documentation to match; mobile analytics remain separately opt-in.

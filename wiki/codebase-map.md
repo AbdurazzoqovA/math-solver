@@ -94,7 +94,7 @@ src/
     math-expression.ts     # safe recursive-descent expression parser used by graphing
     math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
-    analytics.ts          # privacy-safe consent-gated GA4 events + return buckets
+    analytics.ts          # privacy-safe GA4 events + local return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
     pressroom.ts          # server-only sanitized list/article API, types, 5-minute cache
     pressroom-math.ts     # HTML-aware \\(...\\)/\\[...\\] authoring markers → safe server-rendered KaTeX

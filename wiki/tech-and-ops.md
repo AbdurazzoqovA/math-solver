@@ -24,7 +24,7 @@ Stack, hosting, config, and the sharp edges. File locations: [[codebase-map]]. P
 | Blog content | **Pressroom** server API + server-rendered KaTeX | `src/lib/pressroom.ts`, `src/lib/pressroom-math.ts`, `/blog`, `/blog/[slug]` |
 | Contact delivery | **Telegram Bot API** | `/contact`, `/api/contact`, `src/lib/contact.ts` |
 | Bot protection | Cloudflare Turnstile | `src/lib/captcha.ts`, `TurnstileProvider.tsx` |
-| Analytics | Google Analytics 4 (`G-YG1NPYM8BS`) | `src/app/layout.tsx` + privacy-safe event adapter in `src/lib/analytics.ts` |
+| Analytics | Google Analytics 4 (`G-YG1NPYM8BS`) on web; opt-in Firebase Analytics on mobile | `src/app/layout.tsx`, `src/lib/analytics.ts`, and the mobile analytics adapter |
 
 ## Env vars / secrets
 
@@ -72,7 +72,7 @@ Visual lesson jobs live at `/users/{uid}/videoJobs/{jobId}` and the daily free a
 
 ## Analytics contract
 
-`src/lib/analytics.ts` queues GA4 events even if `gtag.js` is still loading. The retention contract is intentionally narrow:
+The website loads GA4 directly from `src/app/layout.tsx` without an in-product analytics consent popup. `src/lib/analytics.ts` sends the narrow event contract after `gtag.js` is available. Mobile Firebase Analytics remains off by default and uses the same narrow contract only after opt-in:
 
 | Event | Parameters |
 |---|---|

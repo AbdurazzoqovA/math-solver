@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
             <li><strong>Notebook and learning data:</strong> Signed-out chats and progress are stored locally. If you sign in, chat text, extracted OCR text, solutions, generated practice tests, and practice-attempt results can be stored in your private cloud notebook so they can sync across devices. Uploaded image previews remain local in the current sync version.</li>
             <li><strong>Visual lesson data:</strong> If a verified account requests a visual lesson, we process the selected problem and completed solution to plan, review, narrate, and render it. We keep account-level job and daily allowance records to deliver the lesson and enforce the limit of 10 video generations per day.</li>
             <li><strong>Optional notification data:</strong> If you choose video-ready notifications, we store a device notification token, platform, and app version. The notification does not contain your math problem or solution.</li>
-            <li><strong>Optional analytics:</strong> With your consent, we collect product interaction data such as pages or learning features used, app version, and general device information. Mobile analytics are off by default and can be changed in the app. We do not put math content, uploaded images, email addresses, or notebook identifiers in MathSolver analytics events.</li>
+            <li><strong>Analytics:</strong> The website uses Google Analytics to collect product interaction data such as pages or learning features used and general device information. Mobile analytics are off by default and can be changed in the app. We do not put math content, uploaded images, email addresses, or notebook identifiers in MathSolver analytics events.</li>
             <li><strong>Security and technical data:</strong> Our systems and service providers can process IP address, browser or operating-system type, app version, request timing, and device or installation identifiers used for authentication, App Check, fraud prevention, diagnostics, and service reliability.</li>
           </ul>
 
@@ -47,13 +47,13 @@ export default function PrivacyPolicyPage() {
             <li>Authenticate optional accounts and synchronize private notebook data.</li>
             <li>Send a video-ready notification only after you choose to enable it.</li>
             <li>Maintain security, prevent abuse, diagnose failures, and protect reliability.</li>
-            <li>Measure and improve the Service when you have consented to analytics.</li>
+            <li>Measure and improve the Service through website analytics and optional mobile analytics.</li>
             <li>Respond to support, privacy, and account-deletion requests.</li>
           </ul>
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">4. Service Providers and Data Sharing</h2>
           <p className="mb-4">
-            We share information only as needed with processors that operate the Service. These include Google Gemini for AI math processing, OCR, lesson planning, narration, and quality review; Google Firebase Authentication, Cloud Firestore, Firebase Cloud Messaging, and App Check for optional accounts, private sync, notifications, and app integrity; Google Cloud Run, Cloud Tasks, and private Cloud Storage for rendering and temporary playback; Telegram for private contact-form delivery; Cloudflare Turnstile for website abuse protection; Google Analytics for consented analytics; and Pressroom for public blog content.
+            We share information only as needed with processors that operate the Service. These include Google Gemini for AI math processing, OCR, lesson planning, narration, and quality review; Google Firebase Authentication, Cloud Firestore, Firebase Cloud Messaging, and App Check for optional accounts, private sync, notifications, and app integrity; Google Cloud Run, Cloud Tasks, and private Cloud Storage for rendering and temporary playback; Telegram for private contact-form delivery; Cloudflare Turnstile for website abuse protection; Google Analytics for website measurement and optional mobile analytics; and Pressroom for public blog content.
           </p>
           <p className="mb-4">
             Submitted math text and images are sent to Google&apos;s AI service to process your request. Google may retain API inputs and outputs for a limited period for abuse monitoring under its applicable service terms. We do not sell personal data, use cross-app advertising trackers, or share data for targeted advertising. MathSolver has no ads at launch.
@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">5. Cookies and Similar Technologies</h2>
           <p className="mb-4">
-            The website uses local storage and cookies for core settings, optional account sessions, security, and consented analytics. You can refuse non-essential analytics through the consent choice and browser settings. The mobile app does not enable analytics unless you opt in.
+            The website uses local storage and cookies for core settings, optional account sessions, security, and analytics. It does not show an analytics consent popup. You can control analytics through your browser settings or privacy tools. The mobile app does not enable analytics unless you opt in.
           </p>
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">6. Retention</h2>
