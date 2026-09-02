@@ -170,7 +170,7 @@ export default function Sidebar() {
         </button>
 
         <a
-          href="https://texttohuman.com"
+          href="https://texttohuman.com/?utm_source=math-solver.io&utm_medium=referral&utm_campaign=sidebar_cross_promotion&utm_content=ai_humanizer"
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setMobileSidebarOpen(false)}
@@ -182,7 +182,7 @@ export default function Sidebar() {
         </a>
 
         <a
-          href="https://detecting-ai.com/"
+          href="https://detecting-ai.com/?utm_source=math-solver.io&utm_medium=referral&utm_campaign=sidebar_cross_promotion&utm_content=ai_detector"
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setMobileSidebarOpen(false)}

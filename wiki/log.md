@@ -370,3 +370,7 @@ App Review returned iOS `1.0.2 (6)` as **Unresolved Issues** with the generic Gu
 ## [2026-09-02] change | Added external AI Humanizer / AI Detector sidebar links
 
 Added two `target="_blank"` sidebar nav entries directly under **Practice Tests** in `src/components/layout/Sidebar.tsx`: AI Humanizer → `https://texttohuman.com` and AI Detector → `https://detecting-ai.com/`. Both use `rel="noopener noreferrer"`, reuse the existing nav item styling (`Sparkles` / `ScanSearch` lucide icons, label hidden when the sidebar is collapsed), and close the mobile drawer on click. They are plain outbound links, so no active-route highlight applies. `tsc --noEmit` is clean and the rendered sidebar was verified in the dev preview.
+
+## [2026-09-02] change | Added GA4 attribution to external tool links
+
+Tagged the sidebar links to AI Humanizer and AI Detector with `utm_source=math-solver.io`, `utm_medium=referral`, `utm_campaign=sidebar_cross_promotion`, and a tool-specific `utm_content`. Their destination GA4 properties can now report MathSolver referrals even though the links retain `rel="noopener noreferrer"`.
