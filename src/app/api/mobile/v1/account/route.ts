@@ -6,7 +6,11 @@ import {
   VideoAuthError,
 } from "@/lib/firebase-admin";
 import { mobileAppCheckFailure } from "@/lib/mobile-request";
-import { deleteLessonObjects } from "@/lib/video/storage";
+import { videoAccountDeletionPlan } from "@/lib/video/lifecycle";
+import {
+  deleteLegacyJobLessonObjects,
+  deleteLessonObjects,
+} from "@/lib/video/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,9 +40,42 @@ export async function DELETE(request: Request) {
     }
     const db = getAdminFirestore();
     const userRef = db.doc(`users/${user.uid}`);
-    const [, devicesSnapshot] = await Promise.all([
-      deleteLessonObjects(`video-lessons/${user.uid}/`),
+    await db.doc(`deletedUsers/${user.uid}`).set({
+      schemaVersion: 1,
+      uid: user.uid,
+      deletedAt: Date.now(),
+    });
+    const [videoJobsSnapshot, devicesSnapshot] = await Promise.all([
+      userRef.collection("videoJobs").get(),
       userRef.collection("devices").get(),
+    ]);
+    const deletionPlan = videoAccountDeletionPlan(
+      user.uid,
+      videoJobsSnapshot.docs.flatMap((snapshot) => {
+        const value = snapshot.data();
+        if (
+          typeof value.expiresAt !== "number" ||
+          typeof value.objectPrefix !== "string"
+        ) {
+          return [];
+        }
+        return [
+          {
+            id: snapshot.id,
+            uid: user.uid,
+            expiresAt: value.expiresAt,
+            objectPrefix: value.objectPrefix,
+          },
+        ];
+      }),
+    );
+    await Promise.all([
+      ...deletionPlan.recursivePrefixes.map((prefix) =>
+        deleteLessonObjects(prefix),
+      ),
+      ...deletionPlan.directLegacyPrefixes.map((prefix) =>
+        deleteLegacyJobLessonObjects(prefix),
+      ),
     ]);
 
     await Promise.all(

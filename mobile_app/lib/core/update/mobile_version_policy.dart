@@ -83,7 +83,12 @@ class MobileVersionPolicyService {
   final String _baseUrl;
 
   Future<MobileVersionPolicy?> load() async {
-    final info = await PackageInfo.fromPlatform();
+    late final PackageInfo info;
+    try {
+      info = await PackageInfo.fromPlatform();
+    } on Object {
+      return null;
+    }
     final platform = Platform.isIOS ? 'ios' : 'android';
     try {
       final response = await _client

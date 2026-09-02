@@ -10,6 +10,26 @@ import 'package:mathsolver_mobile/features/solve/domain/solution_record.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
+  test('account cleanup attempts every local store after a failure', () async {
+    final attempts = <String>[];
+
+    final complete = await performLocalAccountCleanup(
+      clearOfflineVideos: () async {
+        attempts.add('videos');
+        throw StateError('disk unavailable');
+      },
+      clearNotebook: () async {
+        attempts.add('notebook');
+      },
+      clearNotificationPreferences: () async {
+        attempts.add('notifications');
+      },
+    );
+
+    expect(complete, isFalse);
+    expect(attempts, ['videos', 'notebook', 'notifications']);
+  });
+
   testWidgets('about sheet shows only MathSolver product information', (
     tester,
   ) async {
@@ -99,6 +119,9 @@ class _SignedInAccountController extends AccountController {
 
 class _EmptyRepository implements NotebookRepository {
   @override
+  Future<void> clearOwnerLearningData(String ownerId) async {}
+
+  @override
   Future<void> clearLearningData() async {}
 
   @override
@@ -111,10 +134,16 @@ class _EmptyRepository implements NotebookRepository {
   Future<bool> readOnboardingComplete() async => true;
 
   @override
-  Future<List<ReviewItem>> readReviewItems() async => const [];
+  Future<List<ReviewItem>> readReviewItems({String? ownerId}) async => const [];
 
   @override
-  Future<List<SolutionRecord>> readSolutions() async => const [];
+  Future<List<SolutionRecord>> readSolutions({String? ownerId}) async =>
+      const [];
+
+  @override
+  Future<Map<String, DateTime>> readPendingSolutionDeletions({
+    String? ownerId,
+  }) async => const {};
 
   @override
   Future<ThemeMode> readThemeMode() async => ThemeMode.light;
@@ -129,10 +158,22 @@ class _EmptyRepository implements NotebookRepository {
   Future<void> writeOnboardingComplete(bool value) async {}
 
   @override
-  Future<void> writeReviewItems(List<ReviewItem> items) async {}
+  Future<void> writeReviewItems(
+    List<ReviewItem> items, {
+    String? ownerId,
+  }) async {}
 
   @override
-  Future<void> writeSolutions(List<SolutionRecord> solutions) async {}
+  Future<void> writePendingSolutionDeletions(
+    Map<String, DateTime> deletions, {
+    String? ownerId,
+  }) async {}
+
+  @override
+  Future<void> writeSolutions(
+    List<SolutionRecord> solutions, {
+    String? ownerId,
+  }) async {}
 
   @override
   Future<void> writeThemeMode(ThemeMode mode) async {}

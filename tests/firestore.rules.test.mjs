@@ -153,6 +153,40 @@ test("an unverified account cannot access cloud notebook data", async () => {
   await assertFails(setDoc(deletionRef, { deletedAt: 300 }));
 });
 
+test("a deleted-account marker blocks late notebook writes", async () => {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "deletedUsers", "owner"),
+      { schemaVersion: 1, uid: "owner", deletedAt: 300 },
+    );
+  });
+
+  const ownerDb = verifiedContext("owner").firestore();
+  await assertFails(
+    setDoc(
+      doc(ownerDb, "users", "owner", "chats", "late-chat"),
+      validChat("late-chat"),
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(ownerDb, "users", "owner", "chatDeletions", "late-chat"),
+      { deletedAt: 400 },
+    ),
+  );
+});
+
+test("clients cannot create or remove account-deletion markers", async () => {
+  const ownerDb = verifiedContext("owner").firestore();
+  const markerRef = doc(ownerDb, "deletedUsers", "owner");
+
+  await assertFails(
+    setDoc(markerRef, { schemaVersion: 1, uid: "owner", deletedAt: 300 }),
+  );
+  await assertFails(deleteDoc(markerRef));
+  await assertFails(getDoc(markerRef));
+});
+
 test("video jobs and quota counters are server-only", async () => {
   const ownerDb = verifiedContext("owner").firestore();
   const jobRef = doc(

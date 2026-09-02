@@ -16,6 +16,18 @@ from google.cloud import storage
 from google.cloud.firestore_v1 import Client as FirestoreClient
 from google.cloud.storage import Client as StorageClient
 from gemini import GeminiValidationError
+from lifecycle import (
+    ACTIVE_STATUSES,
+    MAX_RENDER_ATTEMPTS,
+    TERMINAL_STATUSES,
+    claim_decision,
+    cleanup_decision,
+    generation_object_prefix,
+    is_legacy_job_object_name,
+    is_valid_object_prefix,
+    lease_object_prefix,
+    legacy_object_prefix,
+)
 from models import CleanupTask, LessonInteraction, LessonPlan, RenderTask
 from planner import create_lesson_plan, review_lesson_plan
 from render_engine import RenderedClip, render_lesson_clips
@@ -23,15 +35,6 @@ from tts import VoiceResult, synthesize_verified_phrase
 
 LOGGER = logging.getLogger("video-renderer")
 DISCLOSURE = "AI-generated voice · Captions available"
-RENDER_LEASE_MS = 10 * 60 * 1_000
-ACTIVE_STATUSES = {
-    "planning",
-    "voicing",
-    "rendering",
-    "verifying",
-    "uploading",
-}
-TERMINAL_STATUSES = {"ready", "unsupported", "failed"}
 MAX_EXTERNAL_UNSUPPORTED_ATTEMPTS = 2
 DEFAULT_DAILY_VIDEO_LIMIT = 10
 
@@ -54,22 +57,6 @@ class RenderLeaseLost(RuntimeError):
 
 class CleanupTooEarly(RuntimeError):
     pass
-
-
-def _claim_decision(status: Any, updated_at: Any, now_ms: int) -> str:
-    if status == "queued":
-        return "claim"
-    if status in TERMINAL_STATUSES:
-        return "ignore"
-    if status in ACTIVE_STATUSES:
-        if not isinstance(updated_at, (int, float)):
-            return "claim"
-        return (
-            "claim"
-            if now_ms - int(updated_at) >= RENDER_LEASE_MS
-            else "busy"
-        )
-    return "ignore"
 
 
 def _firebase_app() -> firebase_admin.App:
@@ -103,6 +90,9 @@ def _storage() -> tuple[StorageClient, storage.Bucket]:
 
 def _notify_lesson_ready(task: RenderTask) -> None:
     database = _firestore()
+    deleted_user_reference = database.document(f"deletedUsers/{task.uid}")
+    if deleted_user_reference.get().exists:
+        return
     device_documents = list(
         database.collection(f"users/{task.uid}/devices").limit(100).stream()
     )
@@ -115,6 +105,11 @@ def _notify_lesson_ready(task: RenderTask) -> None:
             tokens.append(token)
             document_ids.append(document.id)
     if not tokens:
+        return
+    # Device lookup is a network round trip. Check again immediately before
+    # the external send so account deletion during that lookup suppresses the
+    # notification too. The message contains no lesson content either way.
+    if deleted_user_reference.get().exists:
         return
 
     message = messaging.MulticastMessage(
@@ -161,33 +156,85 @@ def _notify_lesson_ready(task: RenderTask) -> None:
 
 
 def cleanup_expired_lesson(task: CleanupTask) -> str:
-    reference = _firestore().document(
+    database = _firestore()
+    reference = database.document(
         f"users/{task.uid}/videoJobs/{task.jobId}"
     )
-    snapshot = reference.get()
-    if not snapshot.exists:
-        return "ignored"
-    job = snapshot.to_dict() or {}
-    if job.get("uid") != task.uid or job.get("id") != task.jobId:
-        return "ignored"
-
-    expires_at = int(job.get("expiresAt", 0))
-    if expires_at > int(time.time() * 1000) + 60_000:
-        raise CleanupTooEarly("lesson retention period has not elapsed")
-    prefix = str(job.get("objectPrefix", ""))
-    expected_prefix = f"video-lessons/{task.uid}/{task.jobId}/"
-    if prefix != expected_prefix:
+    transaction = database.transaction()
+    scheduled_prefix = task.objectPrefix or (
+        generation_object_prefix(task.uid, task.jobId, task.expiresAt)
+        if task.expiresAt is not None
+        else legacy_object_prefix(task.uid, task.jobId)
+    )
+    if not is_valid_object_prefix(
+        scheduled_prefix,
+        task.uid,
+        task.jobId,
+        task.expiresAt,
+    ):
         raise RuntimeError("cleanup object prefix failed validation")
 
+    @firestore.transactional
+    def claim_cleanup(transaction):
+        snapshot = reference.get(transaction=transaction)
+        now = int(time.time() * 1000)
+        if not snapshot.exists:
+            return cleanup_decision(None, task.expiresAt, now), scheduled_prefix
+
+        job = snapshot.to_dict() or {}
+        if job.get("uid") != task.uid or job.get("id") != task.jobId:
+            return "ignore", ""
+        try:
+            expires_at = int(job.get("expiresAt", 0))
+        except (TypeError, ValueError):
+            return "ignore", ""
+        job_prefix = str(job.get("objectPrefix", ""))
+        if not is_valid_object_prefix(
+            job_prefix,
+            task.uid,
+            task.jobId,
+            expires_at,
+        ):
+            return "ignore", ""
+        if task.expiresAt is None and job_prefix != scheduled_prefix:
+            return "stale", scheduled_prefix
+
+        decision = cleanup_decision(expires_at, task.expiresAt, now)
+        effective_prefix = (
+            job_prefix
+            if task.objectPrefix is None and expires_at == task.expiresAt
+            else scheduled_prefix
+        )
+        if decision == "delete" and job_prefix == effective_prefix:
+            transaction.delete(reference)
+            return decision, effective_prefix
+        if decision == "delete":
+            return "stale", scheduled_prefix
+        return decision, scheduled_prefix
+
+    decision, prefix = claim_cleanup(transaction)
+    if decision == "ignore":
+        return "ignored"
+    if decision == "early":
+        raise CleanupTooEarly("lesson retention period has not elapsed")
+
     _, bucket = _storage()
-    for blob in bucket.list_blobs(prefix=prefix):
+    blobs = bucket.list_blobs(prefix=prefix)
+    needs_legacy_filter = (
+        task.uid == "v2"
+        and prefix == legacy_object_prefix(task.uid, task.jobId)
+    )
+    for blob in blobs:
+        if needs_legacy_filter:
+            relative_name = blob.name[len(prefix) :]
+            if not is_legacy_job_object_name(relative_name):
+                continue
         blob.delete(timeout=60)
-    reference.delete()
-    return "deleted"
+    return "deleted" if decision == "delete" else "stale_deleted"
 
 
-def _job_ref(task: RenderTask):
-    return _firestore().document(
+def _job_ref(task: RenderTask, database: FirestoreClient | None = None):
+    return (database or _firestore()).document(
         f"users/{task.uid}/videoJobs/{task.jobId}"
     )
 
@@ -195,13 +242,18 @@ def _job_ref(task: RenderTask):
 def _load_and_claim_job(
     task: RenderTask,
 ) -> tuple[dict[str, Any], str] | None:
-    reference = _job_ref(task)
-    transaction = _firestore().transaction()
+    database = _firestore()
+    reference = _job_ref(task, database)
+    deleted_user_reference = database.document(f"deletedUsers/{task.uid}")
+    transaction = database.transaction()
     lease_token = secrets.token_hex(16)
 
     @firestore.transactional
     def claim(transaction):
         snapshot = reference.get(transaction=transaction)
+        deleted_user = deleted_user_reference.get(transaction=transaction)
+        if deleted_user.exists:
+            return None
         if not snapshot.exists:
             return None
         job = snapshot.to_dict() or {}
@@ -210,7 +262,7 @@ def _load_and_claim_job(
         if int(job.get("attempt", 0)) != task.attempt:
             return None
         now = int(time.time() * 1000)
-        decision = _claim_decision(
+        decision = claim_decision(
             job.get("status"),
             job.get("updatedAt"),
             now,
@@ -240,12 +292,17 @@ def _update_job(
     lease_token: str,
     **fields: Any,
 ) -> None:
-    reference = _job_ref(task)
-    transaction = _firestore().transaction()
+    database = _firestore()
+    reference = _job_ref(task, database)
+    deleted_user_reference = database.document(f"deletedUsers/{task.uid}")
+    transaction = database.transaction()
 
     @firestore.transactional
     def update(transaction):
         snapshot = reference.get(transaction=transaction)
+        deleted_user = deleted_user_reference.get(transaction=transaction)
+        if deleted_user.exists:
+            raise RenderLeaseLost("the account was deleted")
         job = snapshot.to_dict() if snapshot.exists else {}
         if (
             int((job or {}).get("attempt", 0)) != task.attempt
@@ -267,26 +324,34 @@ def _finish_without_charge(
     code: str,
     message: str,
     retryable: bool,
-) -> None:
+) -> str:
     database = _firestore()
-    job_reference = _job_ref(task)
+    job_reference = _job_ref(task, database)
     quota_reference = database.document(
         f"users/{task.uid}/entitlements/video"
     )
+    deleted_user_reference = database.document(f"deletedUsers/{task.uid}")
     transaction = database.transaction()
 
     @firestore.transactional
     def finish(transaction):
         job_snapshot = job_reference.get(transaction=transaction)
         quota_snapshot = quota_reference.get(transaction=transaction)
+        deleted_user = deleted_user_reference.get(transaction=transaction)
+        if deleted_user.exists:
+            return "deleted_account"
         if not job_snapshot.exists:
-            return
+            return "missing"
         job = job_snapshot.to_dict() or {}
         if (
             int(job.get("attempt", 0)) != task.attempt
             or job.get("renderLease") != lease_token
         ):
-            return
+            return (
+                "published"
+                if job.get("status") == "ready"
+                else "lost_lease"
+            )
         charged = bool(job.get("quotaCharged"))
         quota = quota_snapshot.to_dict() if quota_snapshot.exists else {}
         now = int(time.time() * 1000)
@@ -336,8 +401,9 @@ def _finish_without_charge(
             },
             merge=True,
         )
+        return "finished"
 
-    finish(transaction)
+    return finish(transaction)
 
 
 def _load_offline_plan() -> LessonPlan | None:
@@ -522,19 +588,19 @@ def _upload_file(
     return object_key
 
 
-def _upload_lesson(
+def _delete_bucket_prefix(bucket: storage.Bucket, prefix: str) -> None:
+    for blob in bucket.list_blobs(prefix=prefix):
+        blob.delete(timeout=60)
+
+
+def _upload_lesson_to_prefix(
     task: RenderTask,
-    job: dict[str, Any],
     plan: LessonPlan,
     clips: list[RenderedClip],
     work_dir: Path,
+    bucket: storage.Bucket,
+    prefix: str,
 ) -> str:
-    _, bucket = _storage()
-    prefix = str(job.get("objectPrefix", ""))
-    expected_prefix = f"video-lessons/{task.uid}/{task.jobId}/"
-    if prefix != expected_prefix:
-        raise RuntimeError("job object prefix failed validation")
-
     manifest_clips: list[dict[str, Any]] = []
     for index, clip in enumerate(clips):
         base = f"{index + 1:02d}-{clip.id}"
@@ -584,6 +650,74 @@ def _upload_lesson(
     manifest_key = f"{prefix}manifest.json"
     _upload_file(bucket, manifest_path, manifest_key)
     return manifest_key
+
+
+def _upload_lesson(
+    task: RenderTask,
+    job: dict[str, Any],
+    lease_token: str,
+    plan: LessonPlan,
+    clips: list[RenderedClip],
+    work_dir: Path,
+) -> str:
+    _, bucket = _storage()
+    job_prefix = str(job.get("objectPrefix", ""))
+    try:
+        expires_at = int(job.get("expiresAt", 0))
+    except (TypeError, ValueError) as error:
+        raise RuntimeError("job expiry failed validation") from error
+    if not is_valid_object_prefix(
+        job_prefix,
+        task.uid,
+        task.jobId,
+        expires_at,
+    ):
+        raise RuntimeError("job object prefix failed validation")
+    prefix = lease_object_prefix(job_prefix, lease_token)
+
+    try:
+        return _upload_lesson_to_prefix(
+            task,
+            plan,
+            clips,
+            work_dir,
+            bucket,
+            prefix,
+        )
+    except Exception:
+        # This runs only before _upload_lesson returns, therefore before the
+        # ready-state transaction can publish the manifest. It cannot erase a
+        # lesson after an ambiguous ready commit.
+        try:
+            _delete_bucket_prefix(bucket, prefix)
+        except Exception as cleanup_error:
+            LOGGER.warning(
+                "Partial lesson upload cleanup failed type=%s",
+                type(cleanup_error).__name__,
+            )
+        raise
+
+
+def _delete_lease_uploads(
+    task: RenderTask,
+    job: dict[str, Any],
+    lease_token: str,
+) -> None:
+    job_prefix = str(job.get("objectPrefix", ""))
+    try:
+        expires_at = int(job.get("expiresAt", 0))
+    except (TypeError, ValueError):
+        return
+    if not is_valid_object_prefix(
+        job_prefix,
+        task.uid,
+        task.jobId,
+        expires_at,
+    ):
+        return
+    prefix = lease_object_prefix(job_prefix, lease_token)
+    _, bucket = _storage()
+    _delete_bucket_prefix(bucket, prefix)
 
 
 def process_render_task(task: RenderTask) -> str:
@@ -652,6 +786,7 @@ def process_render_task(task: RenderTask) -> str:
             manifest_key = _upload_lesson(
                 task,
                 job,
+                lease_token,
                 plan,
                 clips,
                 work_dir,
@@ -677,6 +812,13 @@ def process_render_task(task: RenderTask) -> str:
         return "ready"
     except RenderLeaseLost:
         LOGGER.info("Video job %s lost its render lease", task.jobId)
+        try:
+            _delete_lease_uploads(task, job, lease_token)
+        except Exception as cleanup_error:
+            LOGGER.warning(
+                "Render lease cleanup failed type=%s",
+                type(cleanup_error).__name__,
+            )
         return "ignored"
     except LessonPlanningFailed as error:
         LOGGER.info(
@@ -693,7 +835,7 @@ def process_render_task(task: RenderTask) -> str:
                 "The video teacher could not finish a trustworthy teaching "
                 "plan. Your free lesson was not used, so you can retry."
             ),
-            retryable=True,
+            retryable=task.attempt < MAX_RENDER_ATTEMPTS,
         )
         return "failed"
     except UnsupportedLesson as error:
@@ -721,7 +863,7 @@ def process_render_task(task: RenderTask) -> str:
             phase,
             type(error).__name__,
         )
-        _finish_without_charge(
+        finish_outcome = _finish_without_charge(
             task,
             lease_token,
             status="failed",
@@ -730,6 +872,14 @@ def process_render_task(task: RenderTask) -> str:
                 "The video studio could not finish this lesson. Your free "
                 "lesson was not used, so you can retry."
             ),
-            retryable=True,
+            retryable=task.attempt < MAX_RENDER_ATTEMPTS,
         )
+        if phase == "uploading" and finish_outcome != "published":
+            try:
+                _delete_lease_uploads(task, job, lease_token)
+            except Exception as cleanup_error:
+                LOGGER.warning(
+                    "Failed render upload cleanup failed type=%s",
+                    type(cleanup_error).__name__,
+                )
         return "failed"

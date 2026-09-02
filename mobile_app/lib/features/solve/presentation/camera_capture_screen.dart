@@ -1,14 +1,41 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'camera_frame_crop.dart';
+import 'temporary_image_file.dart';
 
 class CameraCaptureResult {
   const CameraCaptureResult({required this.bytes, required this.initialCrop});
 
   final Uint8List bytes;
   final Rect initialCrop;
+}
+
+enum CameraLifecycleAction { none, initialize, dispose }
+
+@visibleForTesting
+CameraLifecycleAction cameraLifecycleAction(
+  AppLifecycleState state, {
+  required bool hasInitializedCamera,
+}) {
+  if (state == AppLifecycleState.resumed) {
+    return hasInitializedCamera
+        ? CameraLifecycleAction.none
+        : CameraLifecycleAction.initialize;
+  }
+  if (state == AppLifecycleState.inactive ||
+      state == AppLifecycleState.hidden ||
+      state == AppLifecycleState.paused ||
+      state == AppLifecycleState.detached) {
+    return hasInitializedCamera
+        ? CameraLifecycleAction.dispose
+        : CameraLifecycleAction.none;
+  }
+  return CameraLifecycleAction.none;
 }
 
 class CameraCaptureScreen extends StatefulWidget {
@@ -29,6 +56,9 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
   Object? _error;
   var _isCapturing = false;
   var _flashEnabled = false;
+  var _isInitializing = false;
+  var _cameraRun = 0;
+  Future<void>? _cameraRelease;
   final _previewKey = GlobalKey();
   final _frameKey = GlobalKey();
 
@@ -42,6 +72,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _cameraRun++;
     _camera?.dispose();
     super.dispose();
   }
@@ -49,19 +80,27 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final camera = _camera;
-    if (camera == null || !camera.value.isInitialized) {
-      return;
-    }
-    if (state == AppLifecycleState.inactive) {
-      camera.dispose();
-      _camera = null;
-    } else if (state == AppLifecycleState.resumed) {
-      _initialize();
+    final action = cameraLifecycleAction(
+      state,
+      hasInitializedCamera: camera?.value.isInitialized ?? false,
+    );
+    switch (action) {
+      case CameraLifecycleAction.initialize:
+        unawaited(_initialize());
+      case CameraLifecycleAction.dispose:
+        _cameraRelease = _releaseCamera();
+      case CameraLifecycleAction.none:
+        break;
     }
   }
 
   Future<void> _initialize() async {
+    if (_isInitializing || (_camera?.value.isInitialized ?? false)) return;
+    final run = ++_cameraRun;
+    _isInitializing = true;
     try {
+      await _cameraRelease;
+      if (!mounted || run != _cameraRun) return;
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         throw CameraException('no_camera', 'No camera was found.');
@@ -77,7 +116,11 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
       await camera.initialize();
-      if (!mounted) {
+      final lifecycleState = WidgetsBinding.instance.lifecycleState;
+      if (!mounted ||
+          run != _cameraRun ||
+          (lifecycleState != null &&
+              lifecycleState != AppLifecycleState.resumed)) {
         await camera.dispose();
         return;
       }
@@ -86,10 +129,22 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
         _error = null;
       });
     } on Object catch (error) {
-      if (mounted) {
+      if (mounted && run == _cameraRun) {
         setState(() => _error = error);
       }
+    } finally {
+      if (run == _cameraRun) _isInitializing = false;
     }
+  }
+
+  Future<void> _releaseCamera() async {
+    _cameraRun++;
+    _isInitializing = false;
+    final camera = _camera;
+    _camera = null;
+    _flashEnabled = false;
+    if (mounted) setState(() {});
+    await camera?.dispose();
   }
 
   Future<void> _toggleFlash() async {
@@ -121,7 +176,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
     HapticFeedback.mediumImpact();
     try {
       final file = await camera.takePicture();
-      final bytes = await file.readAsBytes();
+      final bytes = await readAndDeleteTemporaryImage(file.path);
       final region = _normalizedFrameRegion();
       if (mounted) {
         Navigator.pop<CameraCaptureResult>(
@@ -129,7 +184,7 @@ class _CameraCaptureScreenState extends State<CameraCaptureScreen>
           CameraCaptureResult(bytes: bytes, initialCrop: region),
         );
       }
-    } on CameraException {
+    } on Object {
       if (mounted) {
         setState(() => _isCapturing = false);
         ScaffoldMessenger.of(context).showSnackBar(

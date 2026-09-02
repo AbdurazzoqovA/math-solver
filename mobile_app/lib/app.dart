@@ -8,7 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'core/auth/account_controller.dart';
 import 'core/network/cloud_notebook_api.dart';
 import 'core/network/mathsolver_api.dart';
+import 'core/network/notebook_sync_coordinator.dart';
 import 'core/network/video_lesson_api.dart';
+import 'core/reviews/app_review_service.dart';
 import 'core/storage/notebook_repository.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/mobile_version_policy.dart';
@@ -27,52 +29,80 @@ class MathSolverApp extends StatefulWidget {
   State<MathSolverApp> createState() => _MathSolverAppState();
 }
 
-class _MathSolverAppState extends State<MathSolverApp> {
+class _MathSolverAppState extends State<MathSolverApp>
+    with WidgetsBindingObserver {
   late final AppController _controller;
   late final MathSolverApi _api;
   late final AccountController _account;
   late final VideoLessonApi _videoApi;
   late final CloudNotebookApi _cloudNotebook;
+  late final NotebookSyncCoordinator _notebookSync;
   late final MobileVersionPolicyService _versionPolicyService;
   final _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<RemoteMessage>? _notificationOpenSubscription;
-  String? _syncedUserId;
   String? _pendingVideoJobId;
-  var _isSyncing = false;
+  String? _observedAccountUserId;
+  Future<void> _notificationAccountTransition = Future<void>.value();
+  var _pendingVideoOpenScheduled = false;
   MobileVersionPolicy? _versionPolicy;
   var _optionalUpdateDismissed = false;
+  Future<void>? _versionPolicyRefresh;
+  DateTime? _lastVersionPolicyRefreshAt;
+  static const _versionPolicyRefreshInterval = Duration(minutes: 15);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = AppController(
       widget.repository ?? SharedPreferencesNotebookRepository(),
+      reviewRequester: AppReviewService(),
     );
     _api = widget.api ?? MathSolverApi();
     _account = AccountController();
     _videoApi = VideoLessonApi(account: _account);
     _cloudNotebook = CloudNotebookApi(account: _account);
+    _notebookSync = NotebookSyncCoordinator(
+      _controller,
+      _account,
+      _cloudNotebook,
+    );
     _versionPolicyService = MobileVersionPolicyService();
-    _controller.onSolutionAdded = _cloudNotebook.saveSolution;
-    _controller.onSolutionRemoved = _cloudNotebook.deleteSolution;
+    _controller.onSolutionAdded = (record) {
+      final ownerId = _controller.learningOwnerId;
+      if (ownerId == null) return Future<void>.value();
+      return _cloudNotebook.saveSolution(record, expectedUserId: ownerId);
+    };
+    _controller.onSolutionRemoved = (id) {
+      final ownerId = _controller.learningOwnerId;
+      if (ownerId == null) return Future<void>.value();
+      return _cloudNotebook.deleteSolution(id, expectedUserId: ownerId);
+    };
     _account.addListener(_onAccountChanged);
-    _controller.initialize().then((_) => _syncSignedInNotebook());
-    _account.initialize().then((_) => _syncSignedInNotebook());
-    unawaited(_loadVersionPolicy());
+    _controller.initialize().then((_) {
+      _notebookSync.schedule();
+      _openPendingNotification();
+    });
+    _account.initialize().then((_) {
+      _notebookSync.schedule();
+      _restoreReadyNotifications();
+      _openPendingNotification();
+    });
+    unawaited(_refreshVersionPolicy(force: true));
     if (Firebase.apps.isNotEmpty) {
       _notificationOpenSubscription = FirebaseMessaging.onMessageOpenedApp
-          .listen(_handleNotificationOpen);
-      FirebaseMessaging.instance.getInitialMessage().then((message) {
-        if (message != null) _handleNotificationOpen(message);
-      });
+          .listen(_handleNotificationOpen, onError: (Object _) {});
+      unawaited(_loadInitialNotification());
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _videoApi.close();
     _notificationOpenSubscription?.cancel();
     _account.removeListener(_onAccountChanged);
+    _notebookSync.dispose();
     _cloudNotebook.close();
     _versionPolicyService.close();
     _account.dispose();
@@ -82,8 +112,76 @@ class _MathSolverAppState extends State<MathSolverApp> {
   }
 
   void _onAccountChanged() {
-    unawaited(_syncSignedInNotebook());
+    _notebookSync.schedule();
+    final userId = _account.isSignedIn ? _account.userId : null;
+    if (userId != _observedAccountUserId) {
+      final previousUserId = _observedAccountUserId;
+      _observedAccountUserId = userId;
+      _queueNotificationAccountTransition(previousUserId, userId);
+    }
     _openPendingNotification();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _notebookSync.schedule(retryPendingWrites: true);
+    _restoreReadyNotifications();
+    unawaited(_refreshVersionPolicy());
+    _openPendingNotification();
+  }
+
+  Future<void> _loadInitialNotification() async {
+    try {
+      final message = await FirebaseMessaging.instance.getInitialMessage();
+      if (message != null) _handleNotificationOpen(message);
+    } on Object {
+      // Notification startup must never prevent the normal app launch.
+    }
+  }
+
+  void _restoreReadyNotifications() {
+    final userId = _account.isSignedIn ? _account.userId : null;
+    if (userId == null) return;
+    final previous = _notificationAccountTransition;
+    _notificationAccountTransition = () async {
+      try {
+        await previous;
+      } on Object {
+        // A failed prior cleanup must not block a later safe restore.
+      }
+      if (!mounted || _account.userId != userId) return;
+      await _videoApi.restoreReadyNotifications(expectedUserId: userId);
+    }();
+  }
+
+  void _queueNotificationAccountTransition(
+    String? previousUserId,
+    String? nextUserId,
+  ) {
+    final previous = _notificationAccountTransition;
+    final deactivation = previousUserId != null && previousUserId != nextUserId
+        ? _videoApi.deactivateReadyNotifications()
+        : Future<void>.value();
+    _notificationAccountTransition = () async {
+      try {
+        await deactivation;
+      } on Object {
+        // The API independently attempts both local token safeguards.
+      }
+      try {
+        await previous;
+      } on Object {
+        // Continue with local token isolation even if an older step failed.
+      }
+      if (!mounted ||
+          nextUserId == null ||
+          !_account.isSignedIn ||
+          _account.userId != nextUserId) {
+        return;
+      }
+      await _videoApi.restoreReadyNotifications(expectedUserId: nextUserId);
+    }();
   }
 
   void _handleNotificationOpen(RemoteMessage message) {
@@ -96,50 +194,41 @@ class _MathSolverAppState extends State<MathSolverApp> {
 
   void _openPendingNotification() {
     final jobId = _pendingVideoJobId;
-    final navigator = _navigatorKey.currentState;
     if (jobId == null ||
-        navigator == null ||
-        !_controller.isReady ||
-        !_controller.hasCompletedOnboarding ||
-        !_account.isSignedIn) {
+        _pendingVideoOpenScheduled ||
+        !_canOpenPendingNotification()) {
       return;
     }
-    _pendingVideoJobId = null;
+    _pendingVideoOpenScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      navigator.push<void>(
-        MaterialPageRoute(
-          builder: (context) => VideoStudioScreen(
-            account: _account,
-            api: _videoApi,
-            existingJobId: jobId,
+      _pendingVideoOpenScheduled = false;
+      if (!mounted ||
+          _pendingVideoJobId != jobId ||
+          !_canOpenPendingNotification()) {
+        return;
+      }
+      final navigator = _navigatorKey.currentState!;
+      _pendingVideoJobId = null;
+      unawaited(
+        navigator.push<void>(
+          MaterialPageRoute(
+            builder: (context) => VideoStudioScreen(
+              account: _account,
+              api: _videoApi,
+              existingJobId: jobId,
+            ),
           ),
         ),
       );
     });
   }
 
-  Future<void> _syncSignedInNotebook() async {
-    final uid = _account.userId;
-    if (!_account.isSignedIn || uid == null) {
-      _syncedUserId = null;
-      return;
-    }
-    if (_isSyncing || _syncedUserId == uid || !_controller.isReady) return;
-    _isSyncing = true;
-    try {
-      final cloud = await _cloudNotebook.loadNotebook();
-      await _controller.mergeCloudSolutions(cloud.solutions, cloud.deletions);
-      for (final solution in _controller.solutions) {
-        await _cloudNotebook.saveSolution(solution);
-      }
-      _syncedUserId = uid;
-      _openPendingNotification();
-    } on Object {
-      // Local solving remains available; the next account notification retries.
-    } finally {
-      _isSyncing = false;
-    }
-  }
+  bool _canOpenPendingNotification() =>
+      _navigatorKey.currentState != null &&
+      _controller.isReady &&
+      _controller.hasCompletedOnboarding &&
+      _account.isSignedIn &&
+      !(_versionPolicy?.isRequired ?? false);
 
   @override
   Widget build(BuildContext context) {
@@ -153,30 +242,31 @@ class _MathSolverAppState extends State<MathSolverApp> {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: _controller.themeMode,
-          home: _buildVersionAwareHome(),
+          builder: (context, child) =>
+              _buildVersionAwareShell(child ?? const SizedBox.shrink()),
+          home: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: _buildHome(),
+          ),
         );
       },
     );
   }
 
-  Widget _buildVersionAwareHome() {
-    final home = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 260),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: _buildHome(),
-    );
+  Widget _buildVersionAwareShell(Widget app) {
     final policy = _versionPolicy;
     final showUpdate =
         _controller.hasCompletedOnboarding &&
         policy != null &&
         policy.shouldPrompt &&
         (policy.isRequired || !_optionalUpdateDismissed);
-    if (!showUpdate) return home;
+    if (!showUpdate) return app;
 
     return Stack(
       children: [
-        home,
+        app,
         Positioned.fill(
           child: _UpdatePrompt(
             policy: policy,
@@ -205,6 +295,32 @@ class _MathSolverAppState extends State<MathSolverApp> {
         });
       }
     }
+  }
+
+  Future<void> _refreshVersionPolicy({bool force = false}) {
+    final active = _versionPolicyRefresh;
+    if (active != null) return active;
+    final lastRefresh = _lastVersionPolicyRefreshAt;
+    if (!force &&
+        lastRefresh != null &&
+        DateTime.now().difference(lastRefresh) <
+            _versionPolicyRefreshInterval) {
+      return Future<void>.value();
+    }
+
+    late final Future<void> operation;
+    operation = () async {
+      try {
+        await _loadVersionPolicy();
+      } finally {
+        _lastVersionPolicyRefreshAt = DateTime.now();
+        if (identical(_versionPolicyRefresh, operation)) {
+          _versionPolicyRefresh = null;
+        }
+      }
+    }();
+    _versionPolicyRefresh = operation;
+    return operation;
   }
 
   void _dismissOptionalUpdate(MobileVersionPolicy policy) {

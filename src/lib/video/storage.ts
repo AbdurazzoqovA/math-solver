@@ -8,6 +8,7 @@ import type {
   StoredVideoLessonManifest,
   VideoJobDocument,
 } from "@/lib/video/types";
+import { isLegacyVideoJobObjectName } from "@/lib/video/lifecycle";
 import {
   isSafeLessonObjectKey,
   isStoredVideoLessonManifest,
@@ -159,9 +160,43 @@ export async function createVideoGalleryMetadata(
   };
 }
 
-export async function deleteLessonObjects(objectPrefix: string): Promise<void> {
-  if (!objectPrefix.startsWith("video-lessons/") || objectPrefix.includes("..")) {
+function assertSafeLessonDeletePrefix(objectPrefix: string): void {
+  if (
+    !objectPrefix.startsWith("video-lessons/") ||
+    !objectPrefix.endsWith("/") ||
+    objectPrefix.includes("..") ||
+    objectPrefix.includes("//") ||
+    objectPrefix === "video-lessons/" ||
+    objectPrefix === "video-lessons/v2/"
+  ) {
     throw new Error("Refusing to delete an unsafe lesson prefix");
   }
+}
+
+export async function deleteLessonObjects(objectPrefix: string): Promise<void> {
+  assertSafeLessonDeletePrefix(objectPrefix);
+  if (/^video-lessons\/v2\/[a-f0-9]{40}\/$/.test(objectPrefix)) {
+    throw new Error(
+      "Refusing to recursively delete a shared legacy/generation prefix",
+    );
+  }
   await getVideoBucket().deleteFiles({ prefix: objectPrefix, force: true });
+}
+
+export async function deleteLegacyJobLessonObjects(
+  objectPrefix: string,
+): Promise<void> {
+  assertSafeLessonDeletePrefix(objectPrefix);
+  if (!/^video-lessons\/v2\/[a-f0-9]{40}\/$/.test(objectPrefix)) {
+    throw new Error("Refusing to scan a non-colliding legacy lesson prefix");
+  }
+  const [files] = await getVideoBucket().getFiles({ prefix: objectPrefix });
+  await Promise.all(
+    files
+      .filter((file) => {
+        const relativeName = file.name.slice(objectPrefix.length);
+        return isLegacyVideoJobObjectName(relativeName);
+      })
+      .map((file) => file.delete({ ignoreNotFound: true })),
+  );
 }

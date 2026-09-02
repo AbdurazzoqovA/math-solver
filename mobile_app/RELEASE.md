@@ -53,6 +53,15 @@ validated.
 - Complete the age rating and privacy nutrition labels using the policy below:
   no advertising identifier, no contacts/location, analytics off by default,
   and no math/photo/answer/account data in analytics or notifications.
+- Completed 2026-08-27: accepted Apple's August 18, 2026 Developer Program
+  License Agreement, uploaded App Store distribution archive `1.0.2 (6)` via
+  Xcode, attached build 6 to version 1.0.2, preserved manual release, and
+  submitted it to App Review. On August 28 App Review returned the submission
+  as **Unresolved Issues** under Guideline 4.3(a), using the generic notice that
+  its binary, metadata, and/or concept resembled apps from other developers.
+  The previously approved-but-unreleased `1.0.0 (3)` version was cancelled and
+  became **Developer Rejected**; it was never released. Apple's upload warning
+  about missing third-party Firebase/Google/Recaptcha dSYMs was non-blocking.
 
 ## 3. Google Play
 
@@ -74,8 +83,8 @@ validated.
   sent for review as one 11-change submission targeting every available
   country/region plus Rest of World. Because Google does not allow managed
   publishing for an app's first release, the owner explicitly approved a full
-  production rollout immediately after Google approval. The Console currently
-  shows **Changes in review**; the app is not public until that review passes.
+  production rollout immediately after Google approval. That review passed and
+  build 4 was publicly installable by August 25, 2026.
 - Completed: the exact Play reviewer account is email-verified, its credentials
   are saved in Play Console, and its password is owner-held in macOS Keychain,
   never in this repository.
@@ -89,6 +98,13 @@ validated.
 - Completed: transitive Android advertising-ID and AdServices identifier
   permissions are removed from the merged release manifest. Play's Advertising
   ID declaration is saved as **No**, matching the free, no-ads launch binary.
+- Completed 2026-08-27: signed bundle `1.0.2 (6)` passed package, version,
+  SDK, manifest, upload-signature, and source-freshness checks before Google
+  Play accepted it. A 100% production rollout with the approved English release
+  notes was submitted. Play warned that this would restart the in-progress
+  build 5 review; the owner-approved submission replaced it, and Publishing
+  overview now shows only `6 (1.0.2)` under **Changes in review**. Managed
+  publishing is off, so approval will publish build 6 automatically.
 - `build.gradle.kts` never uses the debug certificate for release: it signs
   from the ignored properties when present and otherwise leaves the artifact
   unsigned.
@@ -147,3 +163,23 @@ was installed and launched independently of the Xcode/Flutter debugger on the
 owner's iOS 26.5.2 phone. This verifies device compilation, signing,
 installation, and standalone launch; it does not replace the interactive
 camera, App Check, APNs, offline, sharing, and background-flow pass above.
+
+On August 27, 2026, the production-configured, rating-enabled iOS 1.0.1 (5)
+release build replaced that earlier development install on the owner's physical
+iPhone 17 Pro (the device is user-named “iPhone 13”). Xcode's device service
+installed and launched it without a Flutter debugger; the embedded development
+profile expires August 5, 2027. This was a local device installation only—no
+App Store Connect upload, TestFlight distribution, review submission, or public
+release was performed.
+
+Later on August 27, 2026, local iOS build 1.0.2 (6) added the second quiet
+rating opportunity: the fifth saved solve can request the system sheet only
+after the independent review is checked, the complete answer is visible, and a
+two-second pause has elapsed. It shares the existing 120-day cooldown with the
+strong practice/review milestone. All 93 Flutter tests and analyzer passed; the
+release was installed, its exact version was verified, and it launched on the
+same physical iPhone without a debugger. The App Store distribution archive
+was then validated, uploaded, processed, attached to version 1.0.2, and
+submitted with manual release selected. On August 28 App Review returned it as
+**Unresolved Issues** under Guideline 4.3(a); the old approved 1.0.0 release was
+cancelled without publishing it.

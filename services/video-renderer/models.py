@@ -456,3 +456,7 @@ class CleanupTask(StrictModel):
     schemaVersion: Literal[1]
     uid: str = Field(min_length=1, max_length=160)
     jobId: str = Field(pattern=r"^[a-f0-9]{40}$")
+    # Optional for backward compatibility with cleanup tasks that were queued
+    # before retention-window-specific scheduling was introduced.
+    expiresAt: int | None = Field(default=None, ge=0)
+    objectPrefix: str | None = Field(default=None, min_length=1, max_length=500)

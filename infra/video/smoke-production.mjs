@@ -49,13 +49,13 @@ async function jsonRequest(url, init) {
   return { response, body };
 }
 
-async function deleteCleanupTask(jobId) {
+async function deleteCleanupTask(jobId, expiresAt) {
   const result = spawnSync(
     "gcloud",
     [
       "tasks",
       "delete",
-      `cleanup-${jobId}`,
+      `cleanup-${jobId}-${Math.trunc(expiresAt)}`,
       "--queue",
       queueName,
       "--location",
@@ -73,7 +73,7 @@ async function deleteCleanupTask(jobId) {
 
 async function deleteSmokeLessonWithOperator(uid, jobId) {
   const objectPrefix =
-    `gs://${storageBucket}/video-lessons/${uid}/${jobId}/`;
+    `gs://${storageBucket}/video-lessons/v2/${uid}/${jobId}/`;
   const result = spawnSync(
     "gcloud",
     ["storage", "rm", "--recursive", objectPrefix],
@@ -103,6 +103,7 @@ const password = `${randomBytes(24).toString("base64url")}Aa1!`;
 let uid;
 let idToken;
 let jobId;
+let jobExpiresAt;
 
 try {
   const user = await auth.createUser({
@@ -152,6 +153,10 @@ try {
     );
   }
   jobId = create.body.job.id;
+  jobExpiresAt = create.body.job.expiresAt;
+  if (typeof jobExpiresAt !== "number") {
+    throw new Error("The production API did not return the job expiry.");
+  }
   console.log(`Queued the production lesson (${create.body.job.status}).`);
 
   const deadline = Date.now() + 15 * 60 * 1_000;
@@ -246,10 +251,12 @@ try {
         cleanupErrors.push(`lesson cleanup returned ${response.status}`);
       }
     }
-    try {
-      await deleteCleanupTask(jobId);
-    } catch (error) {
-      cleanupErrors.push(error.message);
+    if (typeof jobExpiresAt === "number") {
+      try {
+        await deleteCleanupTask(jobId, jobExpiresAt);
+      } catch (error) {
+        cleanupErrors.push(error.message);
+      }
     }
   }
   if (uid) {

@@ -21,6 +21,7 @@ import 'camera_capture_screen.dart';
 import 'camera_crop_screen.dart';
 import 'check_work_screen.dart';
 import 'solution_screen.dart';
+import 'temporary_image_file.dart';
 
 class SolveScreen extends StatefulWidget {
   const SolveScreen({
@@ -334,9 +335,9 @@ class _SolveScreenState extends State<SolveScreen> {
         ],
       );
       if (cropped == null) return null;
-      return File(cropped.path).readAsBytes();
+      return readAndDeleteTemporaryImage(cropped.path);
     } finally {
-      if (await source.exists()) await source.delete();
+      await deleteTemporaryImage(source.path);
     }
   }
 

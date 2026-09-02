@@ -8,11 +8,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 from gemini import GeminiValidationError, _normalize_json_schema
+from lifecycle import (
+    CLEANUP_EARLY_TOLERANCE_MS,
+    RENDER_LEASE_MS,
+    claim_decision,
+    cleanup_decision,
+)
 from models import CleanupTask, LessonPlan, PlanReview, RenderTask
 from pipeline import (
     LessonPlanningFailed,
-    RENDER_LEASE_MS,
-    _claim_decision,
     _create_reviewed_plan,
     _delivery_interactions,
     _interaction_manifest,
@@ -144,6 +148,33 @@ class LessonModelTests(unittest.TestCase):
             )
         with self.assertRaises(ValidationError):
             CleanupTask(schemaVersion=1, uid="student", jobId="../secret")
+
+    def test_cleanup_task_accepts_new_and_legacy_retention_payloads(self) -> None:
+        legacy = CleanupTask(
+            schemaVersion=1,
+            uid="student",
+            jobId="a" * 40,
+        )
+        transitional = CleanupTask(
+            schemaVersion=1,
+            uid="student",
+            jobId="a" * 40,
+            expiresAt=123_456,
+        )
+        current = CleanupTask(
+            schemaVersion=1,
+            uid="student",
+            jobId="a" * 40,
+            expiresAt=123_456,
+            objectPrefix=(
+                f"video-lessons/v2/student/{'a' * 40}/123456/"
+            ),
+        )
+
+        self.assertIsNone(legacy.expiresAt)
+        self.assertEqual(transitional.expiresAt, 123_456)
+        self.assertEqual(current.expiresAt, 123_456)
+        self.assertIsNotNone(current.objectPrefix)
 
     def test_graph_parser_allows_math_but_rejects_python_access(self) -> None:
         function = _safe_graph_function("x**2 - 5*x + 6")
@@ -288,24 +319,57 @@ class LessonModelTests(unittest.TestCase):
         self.assertEqual(visual.step, 1)
 
     def test_render_lease_claims_queued_work(self) -> None:
-        self.assertEqual(_claim_decision("queued", 100, 200), "claim")
+        self.assertEqual(claim_decision("queued", 100, 200), "claim")
 
     def test_render_lease_defers_recent_active_work(self) -> None:
         self.assertEqual(
-            _claim_decision("rendering", 1_000, 1_000 + RENDER_LEASE_MS - 1),
+            claim_decision("rendering", 1_000, 1_000 + RENDER_LEASE_MS - 1),
             "busy",
         )
 
     def test_render_lease_reclaims_stale_active_work(self) -> None:
         self.assertEqual(
-            _claim_decision("rendering", 1_000, 1_000 + RENDER_LEASE_MS),
+            claim_decision("rendering", 1_000, 1_000 + RENDER_LEASE_MS),
             "claim",
+        )
+
+    def test_repeated_delivery_defers_recent_active_work(self) -> None:
+        self.assertEqual(
+            claim_decision(
+                "rendering",
+                1_000,
+                2_000,
+            ),
+            "busy",
         )
 
     def test_render_lease_ignores_terminal_work(self) -> None:
         for status in ("ready", "unsupported", "failed"):
             with self.subTest(status=status):
-                self.assertEqual(_claim_decision(status, 1_000, 2_000), "ignore")
+                self.assertEqual(claim_decision(status, 1_000, 2_000), "ignore")
+
+    def test_cleanup_marks_a_stale_retention_window(self) -> None:
+        now = 10_000
+        self.assertEqual(
+            cleanup_decision(
+                now + CLEANUP_EARLY_TOLERANCE_MS + 1,
+                now - 1,
+                now,
+            ),
+            "stale",
+        )
+
+    def test_cleanup_enforces_the_current_retention_window(self) -> None:
+        now = 10_000
+        current_expiry = now + CLEANUP_EARLY_TOLERANCE_MS + 1
+        self.assertEqual(
+            cleanup_decision(current_expiry, current_expiry, now),
+            "early",
+        )
+        self.assertEqual(
+            cleanup_decision(now, now, now),
+            "delete",
+        )
 
     def test_planning_recovery_is_bounded(self) -> None:
         with patch.dict(os.environ, {"VIDEO_PLAN_ATTEMPTS": "12"}):

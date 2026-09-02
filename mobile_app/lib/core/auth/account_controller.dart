@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -38,6 +39,8 @@ class AccountController extends ChangeNotifier {
   String? _uid;
   bool _isReady = false;
   bool _isBusy = false;
+  Future<void>? _initialization;
+  StreamSubscription<User?>? _authStateSubscription;
   Future<void>? _googleInitialization;
   Set<String> _providerIds = const {};
 
@@ -47,7 +50,9 @@ class AccountController extends ChangeNotifier {
     return FirebaseAuth.instance;
   }
 
-  bool get isConfigured => MobileAttestation.isConfigured && _auth != null;
+  bool get isConfigured =>
+      _auth != null &&
+      (_injectedAuth != null || MobileAttestation.isConfigured);
   bool get isReady => _isReady;
   bool get isBusy => _isBusy;
   bool get isSignedIn {
@@ -84,7 +89,9 @@ class AccountController extends ChangeNotifier {
   String? get email => _email;
   String? get userId => _uid;
 
-  Future<void> initialize() async {
+  Future<void> initialize() => _initialization ??= _initialize();
+
+  Future<void> _initialize() async {
     final auth = _auth;
     if (!isConfigured || auth == null) {
       _isReady = true;
@@ -92,23 +99,52 @@ class AccountController extends ChangeNotifier {
       return;
     }
 
-    try {
-      final existing = auth.currentUser;
-      if (existing != null) {
-        await existing.reload();
-        final current = auth.currentUser;
-        if (current == null || !current.emailVerified) {
-          await auth.signOut();
-          _clearSession();
-        } else {
-          _adoptUser(current);
-        }
-      }
-    } on Object {
-      _clearSession();
-    } finally {
+    final restoredState = Completer<void>();
+    void finishFromCurrentSnapshot() {
+      if (restoredState.isCompleted) return;
+      _applyAuthState(auth.currentUser);
       _isReady = true;
       notifyListeners();
+      restoredState.complete();
+    }
+
+    try {
+      _authStateSubscription = auth.authStateChanges().listen(
+        (user) {
+          final isInitialState = !restoredState.isCompleted;
+          _applyAuthState(user);
+          _isReady = true;
+          notifyListeners();
+
+          if (isInitialState) {
+            restoredState.complete();
+            if (user != null && !user.emailVerified) {
+              unawaited(_signOutQuietly(auth));
+            }
+          }
+        },
+        onError: (Object _) => finishFromCurrentSnapshot(),
+        onDone: finishFromCurrentSnapshot,
+      );
+      await restoredState.future;
+    } on Object {
+      finishFromCurrentSnapshot();
+    }
+  }
+
+  void _applyAuthState(User? user) {
+    if (user == null || !user.emailVerified) {
+      _clearSession();
+    } else {
+      _adoptUser(user);
+    }
+  }
+
+  Future<void> _signOutQuietly(FirebaseAuth auth) async {
+    try {
+      await auth.signOut();
+    } on Object {
+      // The controller already treats an unverified restored user as signed out.
     }
   }
 
@@ -390,9 +426,11 @@ class AccountController extends ChangeNotifier {
     }
   }
 
-  Future<String> getIdToken() async {
+  Future<String> getIdToken({String? expectedUserId}) async {
     final user = _auth?.currentUser;
-    if (!isSignedIn || user == null) {
+    if (!isSignedIn ||
+        user == null ||
+        (expectedUserId != null && user.uid != expectedUserId)) {
       throw const AccountException(
         'Sign in with a verified account to create a private video.',
       );
@@ -536,6 +574,7 @@ class AccountController extends ChangeNotifier {
 
   @override
   void dispose() {
+    unawaited(_authStateSubscription?.cancel());
     _client.close();
     super.dispose();
   }

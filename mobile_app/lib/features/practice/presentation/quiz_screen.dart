@@ -9,12 +9,14 @@ class QuizScreen extends StatefulWidget {
     super.key,
     required this.practice,
     this.onAnswered,
+    this.onCompleted,
     this.reviewMode = false,
   });
 
   final PracticeSet practice;
   final Future<void> Function(PracticeQuestion question, bool correct)?
   onAnswered;
+  final Future<void> Function(int score, int total)? onCompleted;
   final bool reviewMode;
 
   @override
@@ -27,6 +29,7 @@ class _QuizScreenState extends State<QuizScreen> {
   var _selectedIndex = -1;
   var _hasChecked = false;
   var _isComplete = false;
+  var _hasReportedCompletion = false;
 
   PracticeQuestion get _question => widget.practice.questions[_questionIndex];
 
@@ -52,12 +55,22 @@ class _QuizScreenState extends State<QuizScreen> {
   void _next() {
     if (_questionIndex == widget.practice.questions.length - 1) {
       setState(() => _isComplete = true);
+      _reportCompletionAfterCelebration();
       return;
     }
     setState(() {
       _questionIndex++;
       _selectedIndex = -1;
       _hasChecked = false;
+    });
+  }
+
+  void _reportCompletionAfterCelebration() {
+    if (_hasReportedCompletion) return;
+    _hasReportedCompletion = true;
+    Future<void>.delayed(const Duration(milliseconds: 900), () async {
+      if (!mounted) return;
+      await widget.onCompleted?.call(_score, widget.practice.questions.length);
     });
   }
 

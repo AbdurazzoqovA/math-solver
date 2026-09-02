@@ -17,7 +17,15 @@ class CloudNotebookSnapshot {
   final Map<String, DateTime> deletions;
 }
 
-class CloudNotebookApi {
+abstract interface class CloudNotebookStore {
+  Future<CloudNotebookSnapshot> loadNotebook({String? expectedUserId});
+
+  Future<void> saveSolution(SolutionRecord record, {String? expectedUserId});
+
+  Future<void> deleteSolution(String id, {String? expectedUserId});
+}
+
+class CloudNotebookApi implements CloudNotebookStore {
   CloudNotebookApi({required this.account, http.Client? client})
     : _client = client ?? http.Client();
 
@@ -31,24 +39,30 @@ class CloudNotebookApi {
       'https://firestore.googleapis.com/v1/projects/'
       '${Uri.encodeComponent(AppConfig.firebaseProjectId)}/databases/(default)/documents';
 
-  Future<CloudNotebookSnapshot> loadNotebook() async {
-    final uid = account.userId;
-    if (!isConfigured || uid == null) {
+  @override
+  Future<CloudNotebookSnapshot> loadNotebook({String? expectedUserId}) async {
+    final uid = _currentUserId(expectedUserId);
+    if (uid == null) {
       return const CloudNotebookSnapshot(solutions: [], deletions: {});
     }
+    final headers = await _headers(uid);
     final responses = await Future.wait([
-      _client.get(
-        Uri.parse(
-          '$_documentsBase/users/${Uri.encodeComponent(uid)}/chats?pageSize=100',
-        ),
-        headers: await _headers(),
-      ),
-      _client.get(
-        Uri.parse(
-          '$_documentsBase/users/${Uri.encodeComponent(uid)}/chatDeletions?pageSize=100',
-        ),
-        headers: await _headers(),
-      ),
+      _client
+          .get(
+            Uri.parse(
+              '$_documentsBase/users/${Uri.encodeComponent(uid)}/chats?pageSize=100',
+            ),
+            headers: headers,
+          )
+          .timeout(AppConfig.requestTimeout),
+      _client
+          .get(
+            Uri.parse(
+              '$_documentsBase/users/${Uri.encodeComponent(uid)}/chatDeletions?pageSize=100',
+            ),
+            headers: headers,
+          )
+          .timeout(AppConfig.requestTimeout),
     ]);
     final solutions = _documents(responses[0])
         .map(_solutionFromDocument)
@@ -68,10 +82,14 @@ class CloudNotebookApi {
     return CloudNotebookSnapshot(solutions: solutions, deletions: deletions);
   }
 
-  Future<void> saveSolution(SolutionRecord record) async {
-    final uid = account.userId;
-    if (!isConfigured || uid == null) return;
-    final headers = await _headers(contentType: true);
+  @override
+  Future<void> saveSolution(
+    SolutionRecord record, {
+    String? expectedUserId,
+  }) async {
+    final uid = _currentUserId(expectedUserId);
+    if (uid == null) return;
+    final headers = await _headers(uid, contentType: true);
     final documentUrl =
         '$_documentsBase/users/${Uri.encodeComponent(uid)}/chats/'
         '${Uri.encodeComponent(record.id)}';
@@ -87,40 +105,54 @@ class CloudNotebookApi {
         'Cloud sync could not save a solution.',
       );
     }
-    await _client.delete(
-      Uri.parse(
-        '$_documentsBase/users/${Uri.encodeComponent(uid)}/chatDeletions/'
-        '${Uri.encodeComponent(record.id)}',
-      ),
-      headers: await _headers(),
-    );
+    final deletionResponse = await _client
+        .delete(
+          Uri.parse(
+            '$_documentsBase/users/${Uri.encodeComponent(uid)}/chatDeletions/'
+            '${Uri.encodeComponent(record.id)}',
+          ),
+          headers: await _headers(uid),
+        )
+        .timeout(AppConfig.requestTimeout);
+    if ((deletionResponse.statusCode < 200 ||
+            deletionResponse.statusCode >= 300) &&
+        deletionResponse.statusCode != 404) {
+      throw const CloudNotebookException(
+        'Cloud sync could not finish saving a solution.',
+      );
+    }
   }
 
-  Future<void> deleteSolution(String id) async {
-    final uid = account.userId;
-    if (!isConfigured || uid == null) return;
-    final headers = await _headers();
-    await _client.delete(
-      Uri.parse(
-        '$_documentsBase/users/${Uri.encodeComponent(uid)}/chats/'
-        '${Uri.encodeComponent(id)}',
-      ),
-      headers: headers,
-    );
-    final response = await _client.patch(
-      Uri.parse(
-        '$_documentsBase/users/${Uri.encodeComponent(uid)}/chatDeletions/'
-        '${Uri.encodeComponent(id)}',
-      ),
-      headers: await _headers(contentType: true),
-      body: jsonEncode({
-        'fields': {
-          'deletedAt': {
-            'integerValue': '${DateTime.now().millisecondsSinceEpoch}',
-          },
-        },
-      }),
-    );
+  @override
+  Future<void> deleteSolution(String id, {String? expectedUserId}) async {
+    final uid = _currentUserId(expectedUserId);
+    if (uid == null) return;
+    final headers = await _headers(uid);
+    await _client
+        .delete(
+          Uri.parse(
+            '$_documentsBase/users/${Uri.encodeComponent(uid)}/chats/'
+            '${Uri.encodeComponent(id)}',
+          ),
+          headers: headers,
+        )
+        .timeout(AppConfig.requestTimeout);
+    final response = await _client
+        .patch(
+          Uri.parse(
+            '$_documentsBase/users/${Uri.encodeComponent(uid)}/chatDeletions/'
+            '${Uri.encodeComponent(id)}',
+          ),
+          headers: await _headers(uid, contentType: true),
+          body: jsonEncode({
+            'fields': {
+              'deletedAt': {
+                'integerValue': '${DateTime.now().millisecondsSinceEpoch}',
+              },
+            },
+          }),
+        )
+        .timeout(AppConfig.requestTimeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const CloudNotebookException(
         'Cloud sync could not save the deletion.',
@@ -128,11 +160,27 @@ class CloudNotebookApi {
     }
   }
 
-  Future<Map<String, String>> _headers({bool contentType = false}) async =>
-      MobileAttestation.headers(
-        json: contentType,
-        additional: {'Authorization': 'Bearer ${await account.getIdToken()}'},
+  String? _currentUserId(String? expectedUserId) {
+    final currentUserId = account.isSignedIn ? account.userId : null;
+    if (expectedUserId != null && currentUserId != expectedUserId) {
+      throw const AccountException(
+        'The signed-in account changed before notebook sync completed.',
       );
+    }
+    if (!isConfigured || currentUserId == null) return null;
+    return currentUserId;
+  }
+
+  Future<Map<String, String>> _headers(
+    String expectedUserId, {
+    bool contentType = false,
+  }) async => MobileAttestation.headers(
+    json: contentType,
+    additional: {
+      'Authorization':
+          'Bearer ${await account.getIdToken(expectedUserId: expectedUserId)}',
+    },
+  );
 
   static List<Map<String, Object?>> _documents(http.Response response) {
     if (response.statusCode == 404) return const [];

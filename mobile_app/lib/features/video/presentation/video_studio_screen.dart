@@ -26,9 +26,16 @@ class VideoStudioScreen extends StatefulWidget {
     this.solution,
     this.requestKey,
     this.existingJobId,
+    this.offlineLesson,
+    this.offlineOwnerUserId,
   }) : assert(
-         existingJobId != null ||
+         offlineLesson != null ||
+             existingJobId != null ||
              (problem != null && solution != null && requestKey != null),
+       ),
+       assert(
+         (offlineLesson == null) == (offlineOwnerUserId == null),
+         'An offline lesson must include its owning account.',
        );
 
   final AccountController account;
@@ -37,33 +44,102 @@ class VideoStudioScreen extends StatefulWidget {
   final String? solution;
   final String? requestKey;
   final String? existingJobId;
+  final VideoLessonManifest? offlineLesson;
+  final String? offlineOwnerUserId;
 
   @override
   State<VideoStudioScreen> createState() => _VideoStudioScreenState();
 }
 
-class _VideoStudioScreenState extends State<VideoStudioScreen> {
+class _VideoStudioScreenState extends State<VideoStudioScreen>
+    with WidgetsBindingObserver {
+  static const _reconnectDelays = <Duration>[
+    Duration(seconds: 3),
+    Duration(seconds: 6),
+    Duration(seconds: 12),
+    Duration(seconds: 30),
+  ];
+  static const _readyManifestRefreshAge = Duration(minutes: 40);
+
   VideoJob? _job;
   String? _error;
+  String? _connectionStatus;
   var _isLoading = false;
+  var _isForeground = true;
   var _run = 0;
+  Timer? _delayTimer;
+  Completer<void>? _delayCompleter;
+  String? _activeUserId;
+  String? _routeOwnerId;
+  DateTime? _readyManifestFetchedAt;
+  var _accountMismatch = false;
+  var _blockingError = false;
+  var _isOfflineSnapshot = false;
   var _requestTracked = false;
   var _readyTracked = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _isForeground = _isResumed(WidgetsBinding.instance.lifecycleState);
+    _activeUserId = widget.account.isSignedIn ? widget.account.userId : null;
+    _routeOwnerId = widget.offlineOwnerUserId ?? _activeUserId;
+    final offlineLesson = widget.offlineLesson;
+    if (offlineLesson != null && _routeOwnerId == _activeUserId) {
+      final now = DateTime.now();
+      _job = VideoJob(
+        id: widget.existingJobId ?? offlineLesson.lessonId,
+        status: VideoJobStatus.ready,
+        progress: 100,
+        stageLabel: 'Saved offline',
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: now,
+        quota: const VideoQuota(used: 0, limit: 10, remaining: 10),
+        lesson: offlineLesson,
+      );
+      _readyManifestFetchedAt = now;
+      _isOfflineSnapshot = true;
+    } else if (offlineLesson != null) {
+      _accountMismatch = true;
+      _blockingError = true;
+      _error =
+          'This saved lesson belongs to another account. Open the Library for the signed-in account.';
+    }
+    widget.account.addListener(_accountChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.account.isSignedIn) {
-        _start();
-      }
+      _startIfNeeded();
     });
   }
 
   @override
   void dispose() {
     _run++;
+    _cancelDelay();
+    widget.account.removeListener(_accountChanged);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final wasForeground = _isForeground;
+    _isForeground = _isResumed(state);
+    if (!_isForeground) {
+      _run++;
+      _cancelDelay();
+      if (_isLoading || _connectionStatus != null) {
+        setState(() {
+          _isLoading = false;
+          _connectionStatus = null;
+        });
+      }
+      return;
+    }
+    if (!wasForeground) {
+      _startIfNeeded(refreshReadyJob: _readyManifestNeedsRefresh);
+    }
   }
 
   @override
@@ -72,11 +148,12 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
       appBar: AppBar(
         title: Text(plainMathPreview(_job?.lesson?.title ?? 'Video lesson')),
         actions: [
-          if (_job?.quota case final quota?)
-            Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: Center(child: _QuotaBadge(remaining: quota.remaining)),
-            ),
+          if (!_isOfflineSnapshot)
+            if (_job?.quota case final quota?)
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Center(child: _QuotaBadge(remaining: quota.remaining)),
+              ),
         ],
       ),
       body: SafeArea(
@@ -93,8 +170,20 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
               );
             }
             final job = _job;
+            if (_blockingError && _error != null) {
+              return _VideoError(
+                message: _error!,
+                canRetry: false,
+                onRetry: () {},
+              );
+            }
             if (job?.status == VideoJobStatus.ready && job?.lesson != null) {
-              return VideoLessonPlayer(lesson: job!.lesson!);
+              return VideoLessonPlayer(
+                lesson: job!.lesson!,
+                ownerUserId: _routeOwnerId!,
+                account: widget.account,
+                onRefresh: _isOfflineSnapshot ? null : () => _start(),
+              );
             }
             if (_error != null ||
                 job?.status == VideoJobStatus.failed ||
@@ -105,9 +194,13 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
                     job?.error?.message ??
                     'This lesson could not be generated.',
                 canRetry:
-                    widget.existingJobId == null &&
-                    (job?.error?.retryable ?? true),
-                onRetry: _start,
+                    (_error != null && !_accountMismatch) ||
+                    (widget.existingJobId == null &&
+                        !_accountMismatch &&
+                        (job?.error?.retryable ?? true)),
+                onRetry: () {
+                  unawaited(_error != null ? _start() : _restart());
+                },
               );
             }
             return VideoGenerationProgress(
@@ -115,6 +208,7 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
               label: job?.stageLabel ?? 'Opening the video studio',
               status: job?.status ?? VideoJobStatus.queued,
               problem: widget.problem,
+              connectionMessage: _connectionStatus,
             );
           },
         ),
@@ -139,43 +233,134 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
     );
   }
 
-  Future<void> _start() async {
-    if (_isLoading || !widget.account.isSignedIn) {
+  static bool _isResumed(AppLifecycleState? state) =>
+      state == null || state == AppLifecycleState.resumed;
+
+  void _accountChanged() {
+    if (!mounted) return;
+    final nextUserId = widget.account.isSignedIn ? widget.account.userId : null;
+    if (nextUserId != _activeUserId) {
+      _activeUserId = nextUserId;
+      _run++;
+      _cancelDelay();
+      if (nextUserId == null) {
+        setState(() {
+          _error = null;
+          _connectionStatus = null;
+          _isLoading = false;
+        });
+        return;
+      }
+      _routeOwnerId ??= nextUserId;
+      if (_routeOwnerId != nextUserId) {
+        setState(() {
+          _job = null;
+          _readyManifestFetchedAt = null;
+          _error =
+              'The signed-in account changed. Close this screen and open a lesson from the new account’s Library.';
+          _connectionStatus = null;
+          _isLoading = false;
+          _requestTracked = false;
+          _readyTracked = false;
+          _accountMismatch = true;
+          _blockingError = true;
+        });
+        return;
+      }
+      setState(() {
+        _error = null;
+        _connectionStatus = null;
+        _isLoading = false;
+        _accountMismatch = false;
+        _blockingError = false;
+      });
+      _startIfNeeded(refreshReadyJob: _readyManifestNeedsRefresh);
+      return;
+    }
+    if (nextUserId == null) return;
+    _startIfNeeded();
+  }
+
+  void _startIfNeeded({bool refreshReadyJob = false}) {
+    if (!mounted ||
+        !_isForeground ||
+        !widget.account.isSignedIn ||
+        _accountMismatch ||
+        _isLoading) {
+      return;
+    }
+    final job = _job;
+    if (job == null ||
+        !job.status.isTerminal ||
+        _error != null ||
+        (refreshReadyJob && job.status == VideoJobStatus.ready)) {
+      unawaited(_start());
+    }
+  }
+
+  Future<void> _restart() => _start(restartTerminalJob: true);
+
+  Future<void> _start({bool restartTerminalJob = false}) async {
+    final runUserId = _activeUserId;
+    if (_isLoading ||
+        !_isForeground ||
+        _accountMismatch ||
+        !widget.account.isSignedIn ||
+        runUserId == null ||
+        widget.account.userId != runUserId) {
       return;
     }
     final run = ++_run;
+    _cancelDelay();
     setState(() {
       _isLoading = true;
       _error = null;
+      _connectionStatus = null;
+      _blockingError = false;
+      if (restartTerminalJob) {
+        _job = null;
+        _readyManifestFetchedAt = null;
+      }
     });
     try {
-      var job = widget.existingJobId == null
-          ? await widget.api.createJob(
-              requestKey: widget.requestKey!,
-              problem: widget.problem!,
-              solution: widget.solution!,
-            )
-          : await widget.api.getJob(widget.existingJobId!);
+      final knownJobId = restartTerminalJob ? null : _job?.id;
+      final initialJobId = knownJobId ?? widget.existingJobId;
+      final initial = await _requestWithReconnect(
+        run,
+        runUserId,
+        initialJobId == null
+            ? () => widget.api.createJob(
+                requestKey: widget.requestKey!,
+                problem: widget.problem!,
+                solution: widget.solution!,
+                expectedUserId: runUserId,
+              )
+            : () => widget.api.getJob(initialJobId, expectedUserId: runUserId),
+      );
+      if (initial == null) return;
+      var job = initial;
+      if (!_canContinue(run, runUserId)) return;
       if (widget.existingJobId == null && !_requestTracked) {
         _requestTracked = true;
         unawaited(MobileAnalytics.videoLessonRequested());
-        unawaited(_offerReadyNotifications());
+        unawaited(_offerReadyNotifications(runUserId));
       }
-      if (!mounted || run != _run) {
-        return;
+      _publishJob(job);
+      while (!job.status.isTerminal && _canContinue(run, runUserId)) {
+        await _wait(AppConfig.videoPollInterval);
+        if (!_canContinue(run, runUserId)) return;
+        final refreshed = await _requestWithReconnect(
+          run,
+          runUserId,
+          () => widget.api.getJob(job.id, expectedUserId: runUserId),
+        );
+        if (refreshed == null) return;
+        job = refreshed;
+        if (_canContinue(run, runUserId)) _publishJob(job);
       }
-      setState(() => _job = job);
-      while (!job.status.isTerminal && mounted && run == _run) {
-        await Future<void>.delayed(AppConfig.videoPollInterval);
-        if (!mounted || run != _run) {
-          return;
-        }
-        job = await widget.api.getJob(job.id);
-        if (mounted && run == _run) {
-          setState(() => _job = job);
-        }
-      }
-      if (job.status == VideoJobStatus.ready && !_readyTracked) {
+      if (_canContinue(run, runUserId) &&
+          job.status == VideoJobStatus.ready &&
+          !_readyTracked) {
         _readyTracked = true;
         unawaited(MobileAnalytics.videoLessonReady());
       }
@@ -185,20 +370,42 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
       }
     } on VideoApiException catch (error) {
       if (mounted && run == _run) {
-        setState(() => _error = error.message);
+        setState(() {
+          _error = error.message;
+          _blockingError =
+              _job?.status == VideoJobStatus.ready &&
+              (error.statusCode == 401 ||
+                  error.statusCode == 403 ||
+                  error.statusCode == 404 ||
+                  error.statusCode == 410);
+        });
       }
     } on TimeoutException {
       if (mounted && run == _run) {
         setState(
           () => _error =
-              'The studio is still working, but the status check timed out. Try again.',
+              'Your lesson may still be rendering in the background, but this phone could not refresh its status. Check your connection and try again.',
+        );
+      }
+    } on IOException {
+      if (mounted && run == _run) {
+        setState(
+          () => _error =
+              'Your lesson may still be rendering in the background, but this phone could not refresh its status. Check your connection and try again.',
+        );
+      }
+    } on http.ClientException {
+      if (mounted && run == _run) {
+        setState(
+          () => _error =
+              'Your lesson may still be rendering in the background, but this phone could not refresh its status. Check your connection and try again.',
         );
       }
     } on Object {
       if (mounted && run == _run) {
         setState(
-          () =>
-              _error = 'We lost the connection to the video studio. Try again.',
+          () => _error =
+              'The app could not refresh the video studio. Your lesson is safe to check again.',
         );
       }
     } finally {
@@ -208,18 +415,136 @@ class _VideoStudioScreenState extends State<VideoStudioScreen> {
     }
   }
 
-  Future<void> _offerReadyNotifications() async {
-    if (!await widget.api.shouldOfferReadyNotifications() || !mounted) return;
+  bool _canContinue(int run, String runUserId) =>
+      mounted &&
+      run == _run &&
+      _isForeground &&
+      !_accountMismatch &&
+      widget.account.isSignedIn &&
+      _activeUserId == runUserId &&
+      widget.account.userId == runUserId;
+
+  Future<VideoJob?> _requestWithReconnect(
+    int run,
+    String runUserId,
+    Future<VideoJob> Function() request,
+  ) async {
+    var retry = 0;
+    while (_canContinue(run, runUserId)) {
+      try {
+        final job = await request();
+        if (!_canContinue(run, runUserId)) return null;
+        if (_connectionStatus != null) {
+          setState(() => _connectionStatus = null);
+        }
+        return job;
+      } on Object catch (error) {
+        if (!_canContinue(run, runUserId)) return null;
+        if (!_isTransientConnectionError(error) ||
+            retry >= _reconnectDelays.length) {
+          rethrow;
+        }
+        final delay = _reconnectDelays[retry++];
+        setState(
+          () => _connectionStatus =
+              'Connection interrupted. Reconnecting automatically…',
+        );
+        await _wait(delay);
+      }
+    }
+    return null;
+  }
+
+  bool get _readyManifestNeedsRefresh {
+    final fetchedAt = _readyManifestFetchedAt;
+    return !_isOfflineSnapshot &&
+        _job?.status == VideoJobStatus.ready &&
+        (fetchedAt == null ||
+            DateTime.now().difference(fetchedAt) >= _readyManifestRefreshAge);
+  }
+
+  void _publishJob(VideoJob job) {
+    setState(() {
+      _job = job;
+      _isOfflineSnapshot = false;
+      _blockingError = false;
+      if (job.status == VideoJobStatus.ready) {
+        _readyManifestFetchedAt = DateTime.now();
+      }
+    });
+  }
+
+  static bool _isTransientConnectionError(Object error) {
+    if (error is TimeoutException ||
+        error is IOException ||
+        error is http.ClientException) {
+      return true;
+    }
+    return error is VideoApiException &&
+        (error.statusCode == 408 ||
+            (error.statusCode != null && error.statusCode! >= 500));
+  }
+
+  Future<void> _wait(Duration duration) {
+    _cancelDelay();
+    final completer = Completer<void>();
+    _delayCompleter = completer;
+    _delayTimer = Timer(duration, () {
+      if (identical(_delayCompleter, completer)) {
+        _delayCompleter = null;
+        _delayTimer = null;
+      }
+      if (!completer.isCompleted) completer.complete();
+    });
+    return completer.future;
+  }
+
+  void _cancelDelay() {
+    _delayTimer?.cancel();
+    _delayTimer = null;
+    final completer = _delayCompleter;
+    _delayCompleter = null;
+    if (completer != null && !completer.isCompleted) completer.complete();
+  }
+
+  Future<void> _offerReadyNotifications(String runUserId) async {
+    if (!await widget.api.shouldOfferReadyNotifications() ||
+        !mounted ||
+        !_isForeground ||
+        !widget.account.isSignedIn ||
+        _activeUserId != runUserId ||
+        widget.account.userId != runUserId) {
+      return;
+    }
     final accepted = await showModalBottomSheet<bool>(
       context: context,
       useSafeArea: true,
       builder: (context) => const _NotificationOffer(),
     );
-    await widget.api.markReadyNotificationOfferHandled();
-    if (accepted != true) return;
+    if (!mounted ||
+        _activeUserId != runUserId ||
+        widget.account.userId != runUserId) {
+      return;
+    }
+    await widget.api.markReadyNotificationOfferHandled(
+      expectedUserId: runUserId,
+    );
+    if (accepted != true ||
+        !mounted ||
+        !_isForeground ||
+        !widget.account.isSignedIn ||
+        _activeUserId != runUserId ||
+        widget.account.userId != runUserId) {
+      return;
+    }
 
-    final enabled = await widget.api.enableReadyNotifications();
-    if (!enabled && mounted) {
+    final enabled = await widget.api.enableReadyNotifications(
+      expectedUserId: runUserId,
+    );
+    if (!enabled &&
+        mounted &&
+        _activeUserId == runUserId &&
+        widget.account.userId == runUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -297,12 +622,14 @@ class VideoGenerationProgress extends StatelessWidget {
     required this.label,
     required this.status,
     required this.problem,
+    this.connectionMessage,
   });
 
   final double progress;
   final String label;
   final VideoJobStatus status;
   final String? problem;
+  final String? connectionMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -375,6 +702,39 @@ class VideoGenerationProgress extends StatelessWidget {
                   color: colors.onSurfaceVariant,
                 ),
               ),
+              if (connectionMessage != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: colors.onTertiaryContainer,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          connectionMessage!,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: colors.onTertiaryContainer),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               _VideoPipeline(status: status),
               if (problem?.trim().isNotEmpty ?? false) ...[
@@ -953,7 +1313,9 @@ class _Benefit extends StatelessWidget {
           child: Icon(icon, color: AppTheme.ink, size: 22),
         ),
         const SizedBox(width: 12),
-        Text(text, style: Theme.of(context).textTheme.titleMedium),
+        Expanded(
+          child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+        ),
       ],
     );
   }
@@ -1049,9 +1411,18 @@ class _QuotaBadge extends StatelessWidget {
 }
 
 class VideoLessonPlayer extends StatefulWidget {
-  const VideoLessonPlayer({super.key, required this.lesson});
+  const VideoLessonPlayer({
+    super.key,
+    required this.lesson,
+    required this.ownerUserId,
+    required this.account,
+    this.onRefresh,
+  });
 
   final VideoLessonManifest lesson;
+  final String ownerUserId;
+  final AccountController account;
+  final Future<void> Function()? onRefresh;
 
   @override
   State<VideoLessonPlayer> createState() => _VideoLessonPlayerState();
@@ -1155,9 +1526,12 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
         ),
         const SizedBox(height: 14),
         _LessonClipPlayer(
-          lessonId: lesson.lessonId,
+          lesson: lesson,
+          ownerUserId: widget.ownerUserId,
+          account: widget.account,
           clip: clip,
           autoPlay: _autoPlaySelectedClip,
+          onRefresh: widget.onRefresh,
           onAutoPlayConsumed: () {
             if (mounted) setState(() => _autoPlaySelectedClip = false);
           },
@@ -1307,18 +1681,24 @@ class _VideoLessonPlayerState extends State<VideoLessonPlayer> {
 
 class _LessonClipPlayer extends StatefulWidget {
   const _LessonClipPlayer({
-    required this.lessonId,
+    required this.lesson,
+    required this.ownerUserId,
+    required this.account,
     required this.clip,
     this.allowFullscreen = true,
     this.autoPlay = false,
+    this.onRefresh,
     this.onAutoPlayConsumed,
     this.onEnded,
   });
 
-  final String lessonId;
+  final VideoLessonManifest lesson;
+  final String ownerUserId;
+  final AccountController account;
   final VideoLessonClip clip;
   final bool allowFullscreen;
   final bool autoPlay;
+  final Future<void> Function()? onRefresh;
   final VoidCallback? onAutoPlayConsumed;
   final VoidCallback? onEnded;
 
@@ -1333,7 +1713,9 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
   var _captionsEnabled = true;
   var _speed = 1.0;
   var _isSaving = false;
+  var _isRetrying = false;
   var _didNotifyEnded = false;
+  var _loadRun = 0;
 
   @override
   void initState() {
@@ -1344,7 +1726,8 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
   @override
   void didUpdateWidget(covariant _LessonClipPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.lessonId != widget.lessonId ||
+    if (oldWidget.lesson.lessonId != widget.lesson.lessonId ||
+        oldWidget.ownerUserId != widget.ownerUserId ||
         oldWidget.clip.videoUrl != widget.clip.videoUrl) {
       _load();
     }
@@ -1352,67 +1735,82 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
 
   @override
   void dispose() {
+    _loadRun++;
     _controller?.removeListener(_changed);
     _controller?.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
+    final run = ++_loadRun;
+    final lessonId = widget.lesson.lessonId;
+    final ownerUserId = widget.ownerUserId;
+    final clip = widget.clip;
+    final autoPlay = widget.autoPlay;
     _didNotifyEnded = false;
     final previous = _controller;
     previous?.removeListener(_changed);
     _controller = null;
     await previous?.dispose();
-    if (mounted) {
-      setState(() => _error = null);
+    if (mounted && run == _loadRun) {
+      setState(() {
+        _error = null;
+        _cachedFile = null;
+      });
     }
     try {
-      final cached = await _existingCacheFile();
-      final captions = _loadCaptions();
+      final cached = await _existingCacheFile(ownerUserId, lessonId, clip.id);
+      if (!mounted || run != _loadRun) return;
+      final captions = _loadCaptions(ownerUserId, lessonId, clip);
       final controller = cached == null
           ? VideoPlayerController.networkUrl(
-              Uri.parse(widget.clip.videoUrl),
+              Uri.parse(clip.videoUrl),
               closedCaptionFile: captions,
             )
           : VideoPlayerController.file(cached, closedCaptionFile: captions);
       await controller.initialize();
       await controller.setLooping(false);
       await controller.setPlaybackSpeed(_speed);
-      controller.addListener(_changed);
-      if (!mounted) {
+      if (!mounted || run != _loadRun) {
         await controller.dispose();
         return;
       }
+      controller.addListener(_changed);
       setState(() {
         _controller = controller;
         _cachedFile = cached;
       });
-      if (widget.autoPlay) {
+      if (autoPlay) {
         await controller.play();
         widget.onAutoPlayConsumed?.call();
       }
     } on Object catch (error) {
-      if (mounted) {
+      if (mounted && run == _loadRun) {
         setState(() => _error = error);
       }
     }
   }
 
-  Future<ClosedCaptionFile> _loadCaptions() async {
+  Future<ClosedCaptionFile> _loadCaptions(
+    String ownerUserId,
+    String lessonId,
+    VideoLessonClip clip,
+  ) async {
     final cached = await VideoOfflineCache.file(
-      widget.lessonId,
-      widget.clip.id,
-      'vtt',
+      ownerUserId: ownerUserId,
+      lessonId: lessonId,
+      clipId: clip.id,
+      extension: 'vtt',
     );
     if (await cached.exists()) {
       return WebVTTCaptionFile(await cached.readAsString());
     }
-    if (widget.clip.captionsUrl.trim().isEmpty) {
+    if (clip.captionsUrl.trim().isEmpty) {
       return WebVTTCaptionFile('');
     }
     try {
       final response = await http
-          .get(Uri.parse(widget.clip.captionsUrl))
+          .get(Uri.parse(clip.captionsUrl))
           .timeout(AppConfig.requestTimeout);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return WebVTTCaptionFile(response.body);
@@ -1423,11 +1821,16 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
     return WebVTTCaptionFile('');
   }
 
-  Future<File?> _existingCacheFile() async {
+  Future<File?> _existingCacheFile(
+    String ownerUserId,
+    String lessonId,
+    String clipId,
+  ) async {
     final file = await VideoOfflineCache.file(
-      widget.lessonId,
-      widget.clip.id,
-      'mp4',
+      ownerUserId: ownerUserId,
+      lessonId: lessonId,
+      clipId: clipId,
+      extension: 'mp4',
     );
     return await file.exists() ? file : null;
   }
@@ -1442,29 +1845,31 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw const HttpException('Download failed');
       }
-      final file = await VideoOfflineCache.file(
-        widget.lessonId,
-        widget.clip.id,
-        'mp4',
-      );
-      await file.writeAsBytes(response.bodyBytes, flush: true);
+      String? captionBody;
       if (widget.clip.captionsUrl.trim().isNotEmpty) {
         try {
           final captions = await http
               .get(Uri.parse(widget.clip.captionsUrl))
               .timeout(AppConfig.requestTimeout);
           if (captions.statusCode >= 200 && captions.statusCode < 300) {
-            final captionFile = await VideoOfflineCache.file(
-              widget.lessonId,
-              widget.clip.id,
-              'vtt',
-            );
-            await captionFile.writeAsString(captions.body, flush: true);
+            captionBody = captions.body;
           }
         } on Object {
           // Saving the video remains useful if captions are unavailable.
         }
       }
+      if (!mounted ||
+          !widget.account.isSignedIn ||
+          widget.account.userId != widget.ownerUserId) {
+        return;
+      }
+      final file = await VideoOfflineCache.saveClip(
+        ownerUserId: widget.ownerUserId,
+        lesson: widget.lesson,
+        clip: widget.clip,
+        videoBytes: response.bodyBytes,
+        captions: captionBody,
+      );
       if (mounted) {
         setState(() => _cachedFile = file);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1479,6 +1884,24 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _retryLoad() async {
+    if (_isRetrying) return;
+    setState(() => _isRetrying = true);
+    try {
+      final refresh = widget.onRefresh;
+      if (refresh == null) {
+        await _load();
+        return;
+      }
+      await refresh();
+      WidgetsBinding.instance.scheduleFrame();
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted && _error != null) await _load();
+    } finally {
+      if (mounted) setState(() => _isRetrying = false);
     }
   }
 
@@ -1520,9 +1943,12 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
           ),
           body: Center(
             child: _LessonClipPlayer(
-              lessonId: widget.lessonId,
+              lesson: widget.lesson,
+              ownerUserId: widget.ownerUserId,
+              account: widget.account,
               clip: widget.clip,
               allowFullscreen: false,
+              onRefresh: widget.onRefresh,
             ),
           ),
         ),
@@ -1560,10 +1986,26 @@ class _LessonClipPlayerState extends State<_LessonClipPlayer> {
             color: Colors.black,
             borderRadius: BorderRadius.circular(26),
           ),
-          child: const Center(
-            child: Text(
-              'This clip could not be loaded.',
-              style: TextStyle(color: Colors.white),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'This clip could not be loaded.',
+                  style: TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: _isRetrying ? null : _retryLoad,
+                  icon: _isRetrying
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
+                ),
+              ],
             ),
           ),
         ),

@@ -57,6 +57,9 @@ class _SolutionScreenState extends State<SolutionScreen> {
   var _isVerifying = false;
   SolutionVerification? _verification;
   var _requestGeneration = 0;
+  Timer? _reviewRequestTimer;
+  var _reviewRequestScheduled = false;
+  var _reviewRequestAttempted = false;
   late final String _recordId;
 
   @override
@@ -72,7 +75,9 @@ class _SolutionScreenState extends State<SolutionScreen> {
       if (!widget.controller.learningMode) {
         _revealedSteps = SolutionParser.parse(_rawSolution).steps.length;
       }
-      WidgetsBinding.instance.addPostFrameCallback((_) => _verifySolution());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_verifySolution());
+      });
     } else {
       _solve();
     }
@@ -81,6 +86,7 @@ class _SolutionScreenState extends State<SolutionScreen> {
   @override
   void dispose() {
     _requestGeneration++;
+    _reviewRequestTimer?.cancel();
     super.dispose();
   }
 
@@ -125,6 +131,9 @@ class _SolutionScreenState extends State<SolutionScreen> {
             source: widget.source,
           ),
         );
+      }
+      if (!mounted || generation != _requestGeneration) {
+        return;
       }
       await _verifySolution();
     } on ApiException catch (error) {
@@ -196,11 +205,7 @@ class _SolutionScreenState extends State<SolutionScreen> {
                         _LearningModeNotice(
                           onShowAll: parsed.steps.isEmpty
                               ? null
-                              : () {
-                                  setState(
-                                    () => _revealedSteps = parsed.steps.length,
-                                  );
-                                },
+                              : () => _showAllSteps(parsed.steps.length),
                         ),
                       if (widget.controller.learningMode)
                         const SizedBox(height: 18),
@@ -228,7 +233,7 @@ class _SolutionScreenState extends State<SolutionScreen> {
                         FilledButton.icon(
                           onPressed: () {
                             HapticFeedback.selectionClick();
-                            setState(() => _revealedSteps++);
+                            _revealNextStep();
                           },
                           icon: const Icon(Icons.arrow_downward_rounded),
                           label: Text(
@@ -298,6 +303,11 @@ class _SolutionScreenState extends State<SolutionScreen> {
           MaterialPageRoute(
             builder: (context) => QuizScreen(
               practice: practice,
+              onCompleted: (score, total) =>
+                  widget.controller.maybeRequestReviewAfterPractice(
+                    score: score,
+                    questionCount: total,
+                  ),
               onAnswered: (question, correct) =>
                   widget.controller.recordPracticeAnswer(
                     question: question,
@@ -329,7 +339,10 @@ class _SolutionScreenState extends State<SolutionScreen> {
         problem: widget.problem,
         solution: _rawSolution,
       );
-      if (mounted) setState(() => _verification = verification);
+      if (mounted) {
+        setState(() => _verification = verification);
+        _maybeScheduleVerifiedSolveReview();
+      }
     } on Object {
       if (mounted) {
         setState(
@@ -344,6 +357,44 @@ class _SolutionScreenState extends State<SolutionScreen> {
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
+  }
+
+  void _showAllSteps(int stepCount) {
+    setState(() => _revealedSteps = stepCount);
+    _maybeScheduleVerifiedSolveReview();
+  }
+
+  void _revealNextStep() {
+    setState(() => _revealedSteps++);
+    _maybeScheduleVerifiedSolveReview();
+  }
+
+  void _maybeScheduleVerifiedSolveReview() {
+    if (_reviewRequestScheduled ||
+        _reviewRequestAttempted ||
+        !widget.saveToNotebook ||
+        _status != _SolveStatus.ready ||
+        _verification?.status != SolutionVerificationStatus.checked) {
+      return;
+    }
+    final parsed = SolutionParser.parse(_rawSolution);
+    final finalAnswerIsVisible =
+        parsed.finalAnswer.isNotEmpty &&
+        (!widget.controller.learningMode ||
+            _revealedSteps >= parsed.steps.length);
+    if (!finalAnswerIsVisible) return;
+
+    _reviewRequestScheduled = true;
+    _reviewRequestTimer = Timer(const Duration(seconds: 2), () {
+      _reviewRequestScheduled = false;
+      if (!mounted ||
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
+          !(ModalRoute.of(context)?.isCurrent ?? false)) {
+        return;
+      }
+      _reviewRequestAttempted = true;
+      unawaited(widget.controller.maybeRequestReviewAfterVerifiedSolve());
+    });
   }
 
   Future<void> _reportIssue() async {

@@ -16,46 +16,94 @@ class VideoLibraryPanel extends StatefulWidget {
     super.key,
     required this.account,
     required this.api,
+    this.offlineLessonsLoader,
   });
 
   final AccountController account;
   final VideoLessonApi api;
+  final Future<List<OfflineVideoLesson>> Function(String ownerUserId)?
+  offlineLessonsLoader;
 
   @override
   State<VideoLibraryPanel> createState() => _VideoLibraryPanelState();
 }
 
-class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
+class _VideoLibraryPanelState extends State<VideoLibraryPanel>
+    with WidgetsBindingObserver {
   VideoJobList? _library;
+  List<OfflineVideoLesson> _offlineLessons = const [];
   String? _error;
   var _isLoading = false;
+  var _offlineLoaded = false;
   Timer? _refreshTimer;
+  var _loadGeneration = 0;
+  late AppLifecycleState _lifecycleState;
+  String? _activeUserId;
 
   @override
   void initState() {
     super.initState();
+    _lifecycleState =
+        WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
+    _activeUserId = widget.account.isSignedIn ? widget.account.userId : null;
+    WidgetsBinding.instance.addObserver(this);
     widget.account.addListener(_accountChanged);
-    if (widget.account.isSignedIn) {
+    if (widget.account.isSignedIn && _isResumed) {
       _load();
     }
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _invalidateLoads();
     widget.account.removeListener(_accountChanged);
     super.dispose();
+  }
+
+  bool get _isResumed => _lifecycleState == AppLifecycleState.resumed;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycleState = state;
+    if (state != AppLifecycleState.resumed) {
+      _invalidateLoads();
+      return;
+    }
+    if (widget.account.isSignedIn) {
+      _load();
+    }
+  }
+
+  void _invalidateLoads() {
+    _loadGeneration++;
+    _isLoading = false;
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
   }
 
   void _accountChanged() {
     if (!mounted) {
       return;
     }
-    if (widget.account.isSignedIn && _library == null && !_isLoading) {
+    final nextUserId = widget.account.isSignedIn ? widget.account.userId : null;
+    if (nextUserId != _activeUserId) {
+      _activeUserId = nextUserId;
+      _invalidateLoads();
+      setState(() {
+        _library = null;
+        _offlineLessons = const [];
+        _offlineLoaded = false;
+        _error = null;
+      });
+      if (nextUserId != null && _isResumed) _load();
+      return;
+    }
+    if (widget.account.isSignedIn &&
+        _library == null &&
+        !_isLoading &&
+        _isResumed) {
       _load();
-    } else if (!widget.account.isSignedIn) {
-      _refreshTimer?.cancel();
-      setState(() => _library = null);
     }
   }
 
@@ -64,22 +112,30 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
     if (!widget.account.isSignedIn) {
       return _EmptyVideoLibrary(onSignIn: _signIn);
     }
-    if (_isLoading && _library == null) {
+    if (_isLoading && _library == null && !_offlineLoaded) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 90),
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    if (_error != null && _library == null) {
+    if (_error != null && _library == null && _offlineLessons.isEmpty) {
       return _LibraryError(message: _error!, onRetry: _load);
     }
     final library = _library;
-    if (library == null || library.jobs.isEmpty) {
+    if ((library == null || library.jobs.isEmpty) && _offlineLessons.isEmpty) {
       return _SignedInEmpty(
         remaining: library?.quota.remaining,
         onRefresh: _load,
       );
     }
+
+    final remoteIds = library?.jobs.map((job) => job.id).toSet() ?? const {};
+    final offlineOnly = _offlineLessons
+        .where((lesson) => !remoteIds.contains(lesson.jobId))
+        .toList(growable: false);
+    final offlineById = {
+      for (final lesson in _offlineLessons) lesson.jobId: lesson,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +144,9 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
           children: [
             Expanded(
               child: Text(
-                '${library.quota.remaining} of ${library.quota.limit} videos available today',
+                library == null
+                    ? 'Saved on this device'
+                    : '${library.quota.remaining} of ${library.quota.limit} videos available today',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -100,11 +158,30 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
           ],
         ),
         const SizedBox(height: 12),
-        for (final job in library.jobs) ...[
+        if (_error != null) ...[
+          _OfflineNotice(message: _error!),
+          const SizedBox(height: 12),
+        ],
+        for (final job in library?.jobs ?? const <VideoJobSummary>[]) ...[
           _VideoLibraryCard(
             job: job,
-            onTap: () => _open(job),
+            onTap: () {
+              final offline = offlineById[job.id];
+              if (job.status == VideoJobStatus.ready && offline != null) {
+                _openOffline(offline);
+              } else {
+                _open(job);
+              }
+            },
             onDelete: () => _delete(job),
+          ),
+          const SizedBox(height: 12),
+        ],
+        for (final lesson in offlineOnly) ...[
+          _OfflineVideoLibraryCard(
+            lesson: lesson,
+            onTap: () => _openOffline(lesson),
+            onDelete: () => _deleteOffline(lesson),
           ),
           const SizedBox(height: 12),
         ],
@@ -130,40 +207,113 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
   }
 
   Future<void> _load() async {
-    if (_isLoading || !widget.account.isSignedIn) {
+    if (_isLoading || !widget.account.isSignedIn || !_isResumed) {
       return;
     }
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    final userId = _activeUserId;
+    if (userId == null || widget.account.userId != userId) return;
+    final generation = ++_loadGeneration;
     setState(() {
       _isLoading = true;
       _error = null;
     });
+    final loader =
+        widget.offlineLessonsLoader ??
+        (ownerUserId) =>
+            VideoOfflineCache.listLessons(ownerUserId: ownerUserId);
+    final offlineFuture = _capture(() => loader(userId));
+    final libraryFuture = _capture(
+      () => widget.api.listJobs(expectedUserId: userId),
+    );
+    unawaited(_finishOfflineLoad(offlineFuture, generation));
     try {
-      final library = await widget.api.listJobs();
-      if (!mounted) {
+      final attempt = await libraryFuture;
+      if (attempt.error case final error?) {
+        Error.throwWithStackTrace(error, attempt.stackTrace!);
+      }
+      final library = attempt.value!;
+      if (!_isCurrentLoad(generation)) {
         return;
       }
       setState(() => _library = library);
-      _refreshTimer?.cancel();
       if (library.jobs.any((job) => job.status.isActive)) {
-        _refreshTimer = Timer(const Duration(seconds: 5), _load);
+        _scheduleRefresh();
       }
     } on AccountException catch (error) {
-      if (mounted) {
+      if (_isCurrentLoad(generation)) {
         setState(() => _error = error.message);
+        _scheduleActiveJobRecovery();
       }
     } on VideoApiException catch (error) {
-      if (mounted) {
+      if (_isCurrentLoad(generation)) {
         setState(() => _error = error.message);
+        if (_isTransientApiError(error)) {
+          _scheduleActiveJobRecovery();
+        }
       }
     } on Object {
-      if (mounted) {
+      if (_isCurrentLoad(generation)) {
         setState(() => _error = 'Your videos could not be loaded.');
+        _scheduleActiveJobRecovery();
       }
     } finally {
-      if (mounted) {
+      if (_isCurrentLoad(generation)) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  bool _isCurrentLoad(int generation) {
+    return mounted &&
+        generation == _loadGeneration &&
+        _isResumed &&
+        widget.account.isSignedIn &&
+        widget.account.userId == _activeUserId;
+  }
+
+  Future<_LoadAttempt<T>> _capture<T>(Future<T> Function() load) async {
+    try {
+      return _LoadAttempt.success(await load());
+    } on Object catch (error, stackTrace) {
+      return _LoadAttempt.failure(error, stackTrace);
+    }
+  }
+
+  Future<void> _finishOfflineLoad(
+    Future<_LoadAttempt<List<OfflineVideoLesson>>> load,
+    int generation,
+  ) async {
+    final attempt = await load;
+    if (!_isCurrentLoad(generation)) return;
+    setState(() {
+      if (attempt.value case final offlineLessons?) {
+        _offlineLessons = offlineLessons;
+      }
+      _offlineLoaded = true;
+    });
+  }
+
+  bool _isTransientApiError(VideoApiException error) {
+    final status = error.statusCode;
+    return status == null || status == 408 || status >= 500;
+  }
+
+  void _scheduleActiveJobRecovery() {
+    final library = _library;
+    if (library != null && library.jobs.any((job) => job.status.isActive)) {
+      _scheduleRefresh();
+    }
+  }
+
+  void _scheduleRefresh() {
+    _refreshTimer?.cancel();
+    if (!_isResumed || !widget.account.isSignedIn) return;
+    _refreshTimer = Timer(const Duration(seconds: 5), () {
+      _refreshTimer = null;
+      _load();
+    });
   }
 
   Future<void> _open(VideoJobSummary job) async {
@@ -179,6 +329,27 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
     if (mounted) {
       await _load();
     }
+  }
+
+  Future<void> _openOffline(OfflineVideoLesson lesson) async {
+    final userId = _activeUserId;
+    if (userId == null ||
+        lesson.ownerUserId != userId ||
+        widget.account.userId != userId) {
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => VideoStudioScreen(
+          account: widget.account,
+          api: widget.api,
+          existingJobId: lesson.jobId,
+          offlineLesson: lesson.lesson,
+          offlineOwnerUserId: userId,
+        ),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _delete(VideoJobSummary job) async {
@@ -204,8 +375,13 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
     if (confirmed != true || !mounted) return;
 
     try {
-      await widget.api.deleteJob(job.id);
-      await VideoOfflineCache.deleteLesson(job.id);
+      final userId = _activeUserId;
+      if (userId == null || widget.account.userId != userId) return;
+      await widget.api.deleteJob(job.id, expectedUserId: userId);
+      await VideoOfflineCache.deleteLesson(
+        ownerUserId: userId,
+        lessonId: job.id,
+      );
       await _load();
     } on VideoApiException catch (error) {
       if (mounted) {
@@ -220,6 +396,210 @@ class _VideoLibraryPanelState extends State<VideoLibraryPanel> {
         );
       }
     }
+  }
+
+  Future<void> _deleteOffline(OfflineVideoLesson lesson) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove offline copy?'),
+        content: const Text(
+          'This removes the copy saved on this device. It does not delete the online lesson.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    final userId = _activeUserId;
+    if (confirmed != true ||
+        !mounted ||
+        userId == null ||
+        lesson.ownerUserId != userId ||
+        widget.account.userId != userId) {
+      return;
+    }
+    try {
+      await VideoOfflineCache.deleteLesson(
+        ownerUserId: userId,
+        lessonId: lesson.jobId,
+      );
+      if (mounted && widget.account.userId == userId) {
+        setState(
+          () => _offlineLessons = _offlineLessons
+              .where((item) => item.jobId != lesson.jobId)
+              .toList(growable: false),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The offline copy could not be removed.'),
+          ),
+        );
+      }
+    }
+  }
+}
+
+class _LoadAttempt<T> {
+  const _LoadAttempt.success(this.value) : error = null, stackTrace = null;
+
+  const _LoadAttempt.failure(this.error, this.stackTrace) : value = null;
+
+  final T? value;
+  final Object? error;
+  final StackTrace? stackTrace;
+}
+
+class _OfflineNotice extends StatelessWidget {
+  const _OfflineNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.offline_bolt_outlined, color: colors.onSecondaryContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Online videos could not be refreshed. Saved lessons still work offline.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.onSecondaryContainer,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: message,
+            onPressed: null,
+            icon: const Icon(Icons.info_outline_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OfflineVideoLibraryCard extends StatelessWidget {
+  const _OfflineVideoLibraryCard({
+    required this.lesson,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final OfflineVideoLesson lesson;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final seconds = lesson.durationSeconds.round();
+    final duration = seconds <= 0
+        ? null
+        : '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+    final metadata = <String?>[
+      duration,
+      '${lesson.lesson.clips.length} ${lesson.lesson.clips.length == 1 ? 'chapter' : 'chapters'}',
+    ].whereType<String>().join(' · ');
+    return Material(
+      color: colors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 116,
+              height: 112,
+              child: ColoredBox(
+                color: AppTheme.mint,
+                child: const Center(
+                  child: Icon(
+                    Icons.offline_pin_rounded,
+                    color: AppTheme.ink,
+                    size: 42,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.mint,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        'SAVED OFFLINE',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.ink,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      plainMathPreview(lesson.lesson.title),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      metadata,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Offline video options',
+              onSelected: (value) {
+                if (value == 'delete') onDelete();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Remove offline copy'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

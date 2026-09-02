@@ -37,6 +37,11 @@ class _MemoryRepository implements NotebookRepository {
   List<SolutionRecord> solutions = [];
 
   @override
+  Future<void> clearOwnerLearningData(String ownerId) async {
+    solutions = [];
+  }
+
+  @override
   Future<void> clearLearningData() async {
     solutions = [];
     analyticsEnabled = false;
@@ -52,10 +57,16 @@ class _MemoryRepository implements NotebookRepository {
   Future<bool> readOnboardingComplete() async => onboardingComplete;
 
   @override
-  Future<List<SolutionRecord>> readSolutions() async => solutions;
+  Future<List<SolutionRecord>> readSolutions({String? ownerId}) async =>
+      solutions;
 
   @override
-  Future<List<ReviewItem>> readReviewItems() async => const [];
+  Future<List<ReviewItem>> readReviewItems({String? ownerId}) async => const [];
+
+  @override
+  Future<Map<String, DateTime>> readPendingSolutionDeletions({
+    String? ownerId,
+  }) async => const {};
 
   @override
   Future<ThemeMode> readThemeMode() async => mode;
@@ -76,12 +87,24 @@ class _MemoryRepository implements NotebookRepository {
   }
 
   @override
-  Future<void> writeSolutions(List<SolutionRecord> value) async {
+  Future<void> writeSolutions(
+    List<SolutionRecord> value, {
+    String? ownerId,
+  }) async {
     solutions = value;
   }
 
   @override
-  Future<void> writeReviewItems(List<ReviewItem> items) async {}
+  Future<void> writeReviewItems(
+    List<ReviewItem> items, {
+    String? ownerId,
+  }) async {}
+
+  @override
+  Future<void> writePendingSolutionDeletions(
+    Map<String, DateTime> deletions, {
+    String? ownerId,
+  }) async {}
 
   @override
   Future<void> writeThemeMode(ThemeMode value) async {

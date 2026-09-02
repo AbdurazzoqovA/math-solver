@@ -330,3 +330,43 @@ Removed the globally mounted analytics choice card and stopped the website from 
 ## [2026-08-15] change | Restored website analytics without the popup
 
 Corrected the analytics-popup removal by restoring the GA4 loader and measurement ID directly in the root layout while leaving the global consent card deleted. Updated the privacy and ops documentation to match; mobile analytics remain separately opt-in.
+
+## [2026-08-25] change | Kept one web instance warm
+
+Updated the main Cloud Run deployment to keep one `mathsolver` instance warm and enable startup CPU boost, reducing scale-to-zero latency while preserving the existing 2 CPU, 4 GiB, and 20-instance maximum.
+
+## [2026-08-25] change | Restored native mobile sessions reliably
+
+Linked Google Play Integrity to Firebase project `math-solver-e3a55`, confirmed the Play-installed Android release passes mandatory video App Check, and replaced the mobile account controller's one-shot cold-start snapshot/network reload with an idempotent `authStateChanges()` subscription. Verified sessions now survive process restarts and transient auth-stream errors while unverified users remain rejected. Added six focused restoration regressions, passed all 30 Flutter tests and analyzer, and advanced the signed Android release candidate to `1.0.1 (5)`.
+
+## [2026-08-25] change | Hardened mobile lifecycle and saved Android 1.0.1 draft
+
+Made video generation explicitly server-owned so screen-off/backgrounding pauses only client polling and resume continues the same deterministic job; hardened owner-scoped notebook/offline caches, stale save/delete convergence, per-account notification consent, camera/temp-file lifecycle, stream timeouts, account deletion tombstones, renderer leases/retries/uploads, and generation-specific cleanup. Removed unnecessary Android microphone/advertising permissions, disabled app-data backup, and built signed `1.0.1 (5)` with the real ignored Firebase configuration. Validation passed 86 Flutter tests, analyzer, 60 Node tests, 8 TypeScript lifecycle tests, 8 Python lifecycle tests, 9 Firestore emulator tests, lint, typecheck, production build, signature/manifest/freshness checks, and production smoke. Deployed renderer `mathsolver-video-renderer-00015-j9b`, Firestore ruleset `068c0663-dd7a-427b-8f93-9fd63e13c030`, and main revision `mathsolver-00044-69b`; Google Play accepted build 5 and it is saved as a production draft without review submission or rollout.
+
+## [2026-08-26] ingest | Submitted Android 1.0.1 for production review
+
+The owner submitted Google Play build `5 (1.0.1)` with **Start full rollout**. Publishing overview shows preliminary quick checks followed by review under **Changes in review**. Managed publishing is off, so a successful approval will automatically make the update available in production; the previously published build remains live until then.
+
+## [2026-08-26] change | Added quiet native rating requests
+
+Added the native App Store/Play in-app review flow after a strong, completed learning milestone: at least three saved solutions and 75%+ on a four-or-more-question practice or mistake-review set. Requests wait for the quiz completion state, have a local 120-day cooldown, fail silently when the store flow is unavailable, and use no custom sentiment prompt or five-star wording. Analyzer, all 90 Flutter tests, Android debug compilation, and iOS simulator compilation pass.
+
+## [2026-08-27] change | Installed rating-enabled iOS release on owner device
+
+Built the production-configured iOS `1.0.1 (5)` release, verified its development profile remains valid through 2027-08-05, and replaced the prior local build on the paired physical iPhone 17 Pro that is user-named “iPhone 13.” Xcode's device service verified the installed version and launched it from its own device container without a Flutter debugger. No App Store Connect upload, TestFlight distribution, review submission, or public release was performed.
+
+## [2026-08-27] change | Added the fifth-solve rating milestone
+
+Added a second quiet native rating opportunity after the fifth saved solve, gated on an independently checked result, the complete steps/final answer being visible, a two-second pause, the solution route still being foreground/current, and the same 120-day cooldown used by strong practice/review completions. Verification warnings, errors, streaming, partial reveals, revisited notebook entries, and unavailable native flows do not prompt. Analyzer and all 93 Flutter tests pass. Advanced the local iOS build to `1.0.2 (6)`, installed it on the paired physical iPhone 17 Pro, verified that exact installed version, and standalone-launched it without App Store Connect upload or submission.
+
+## [2026-08-27] change | Submitted mobile 1.0.2 to both stores
+
+Accepted Apple's August 18 developer agreement, cancelled the approved-but-unreleased iOS 1.0.0 version, uploaded and processed App Store archive `1.0.2 (6)`, preserved manual release, and submitted build 6; App Store Connect shows **Waiting for Review**. Built and validated signed Android bundle `1.0.2 (6)`, uploaded it with approved English notes, and submitted a 100% production rollout. Google Play restarted and superseded the build 5 review and now shows only build 6 under **Changes in review**; managed publishing remains off, so approval will publish Android automatically. Apple's first-public-version form did not offer a public “What's New” field, and its third-party dSYM upload warnings were non-blocking.
+
+## [2026-08-28] ingest | Apple returned iOS 1.0.2 under Guideline 4.3(a)
+
+App Review returned iOS `1.0.2 (6)` as **Unresolved Issues** with the generic Guideline 4.3(a) notice that its binary, metadata, and/or concept resembled apps submitted by other developers. The previous iOS 1.0.0 submission had been approved but was cancelled without release. The 1.0.2 changes added the system in-app review request after strict learning milestones and hardened lifecycle, account isolation, sync, video recovery, and other reliability paths; the submitted iOS metadata, bundle ID, and brand assets were unchanged.
+
+## [2026-09-02] change | Added external AI Humanizer / AI Detector sidebar links
+
+Added two `target="_blank"` sidebar nav entries directly under **Practice Tests** in `src/components/layout/Sidebar.tsx`: AI Humanizer → `https://texttohuman.com` and AI Detector → `https://detecting-ai.com/`. Both use `rel="noopener noreferrer"`, reuse the existing nav item styling (`Sparkles` / `ScanSearch` lucide icons, label hidden when the sidebar is collapsed), and close the mobile drawer on click. They are plain outbound links, so no active-route highlight applies. `tsc --noEmit` is clean and the rendered sidebar was verified in the dev preview.

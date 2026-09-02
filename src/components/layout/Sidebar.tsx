@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { BookOpen, Calculator, Clapperboard, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon } from "lucide-react";
+import { BookOpen, Calculator, Clapperboard, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon, Sparkles, ScanSearch } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
 import { useChatContext } from "@/context/ChatContext";
@@ -168,6 +168,30 @@ export default function Sidebar() {
             </span>
           )}
         </button>
+
+        <a
+          href="https://texttohuman.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMobileSidebarOpen(false)}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 ${isExpanded ? 'justify-start px-4' : 'justify-center'}`}
+          title="AI Humanizer (opens in a new tab)"
+        >
+          <Sparkles className="w-5 h-5 transition-colors shrink-0 group-hover:text-primary-500" />
+          {isExpanded && <span className="font-medium text-sm truncate">AI Humanizer</span>}
+        </a>
+
+        <a
+          href="https://detecting-ai.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMobileSidebarOpen(false)}
+          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors group text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 ${isExpanded ? 'justify-start px-4' : 'justify-center'}`}
+          title="AI Detector (opens in a new tab)"
+        >
+          <ScanSearch className="w-5 h-5 transition-colors shrink-0 group-hover:text-primary-500" />
+          {isExpanded && <span className="font-medium text-sm truncate">AI Detector</span>}
+        </a>
 
         {/* Recent Chats Section */}
         <div className={`pt-6 pb-2 transition-opacity duration-300 ${isExpanded ? 'opacity-100 px-4' : 'opacity-0 h-0 overflow-hidden pt-0'}`}>

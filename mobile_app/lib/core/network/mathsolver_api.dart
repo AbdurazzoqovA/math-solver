@@ -20,14 +20,20 @@ class ApiException implements Exception {
 }
 
 class MathSolverApi {
-  MathSolverApi({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
-      _baseUrl = (baseUrl ?? AppConfig.apiBaseUrl).replaceAll(
-        RegExp(r'/$'),
-        '',
-      );
+  MathSolverApi({
+    http.Client? client,
+    String? baseUrl,
+    Duration? solveStreamInactivityTimeout,
+  }) : _client = client ?? http.Client(),
+       _solveStreamInactivityTimeout =
+           solveStreamInactivityTimeout ?? AppConfig.requestTimeout,
+       _baseUrl = (baseUrl ?? AppConfig.apiBaseUrl).replaceAll(
+         RegExp(r'/$'),
+         '',
+       );
 
   final http.Client _client;
+  final Duration _solveStreamInactivityTimeout;
   final String _baseUrl;
 
   Future<String> extractProblem({
@@ -90,9 +96,10 @@ class MathSolverApi {
     final response = await _client
         .send(request)
         .timeout(AppConfig.requestTimeout);
+    final bodyStream = response.stream.timeout(_solveStreamInactivityTimeout);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final body = await response.stream.bytesToString();
+      final body = await bodyStream.transform(utf8.decoder).join();
       final data = _readJson(body);
       throw ApiException(
         _readError(data, 'The solver could not start. Please try again.'),
@@ -100,7 +107,7 @@ class MathSolverApi {
       );
     }
 
-    yield* response.stream.transform(utf8.decoder);
+    yield* bodyStream.transform(utf8.decoder);
   }
 
   Future<PracticeSet> generatePractice(String topic) async {

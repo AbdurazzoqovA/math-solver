@@ -32,8 +32,7 @@ import '../features/video/domain/video_lesson.dart';
 import '../features/video/presentation/video_studio_screen.dart';
 
 const _problem = r'Solve $2x^2 - 7x + 3 = 0$';
-const _rawOcrProblem =
-    r'\lim_{x \to 3} \left(\frac{x^2 + 9}{x - 3}\right)';
+const _rawOcrProblem = r'\lim_{x \to 3} \left(\frac{x^2 + 9}{x - 3}\right)';
 
 const _solution = r'''
 **Step 1: Identify the coefficients**
@@ -464,6 +463,9 @@ class _GalleryRepository implements NotebookRepository {
   bool _onboardingComplete = false;
 
   @override
+  Future<void> clearOwnerLearningData(String ownerId) async {}
+
+  @override
   Future<void> clearLearningData() async {}
 
   @override
@@ -479,16 +481,23 @@ class _GalleryRepository implements NotebookRepository {
   Future<bool> readAnalyticsEnabled() async => false;
 
   @override
-  Future<List<SolutionRecord>> readSolutions() async => switch (state) {
-    'home-empty' || 'practice-empty' => const [],
-    _ => _seedSolutions,
-  };
+  Future<List<SolutionRecord>> readSolutions({String? ownerId}) async =>
+      switch (state) {
+        'home-empty' || 'practice-empty' => const [],
+        _ => _seedSolutions,
+      };
 
   @override
-  Future<List<ReviewItem>> readReviewItems() async => switch (state) {
-    'practice' || 'quiz' || 'quiz-checked' || 'quiz-done' => _dueReviews,
-    _ => const [],
-  };
+  Future<List<ReviewItem>> readReviewItems({String? ownerId}) async =>
+      switch (state) {
+        'practice' || 'quiz' || 'quiz-checked' || 'quiz-done' => _dueReviews,
+        _ => const [],
+      };
+
+  @override
+  Future<Map<String, DateTime>> readPendingSolutionDeletions({
+    String? ownerId,
+  }) async => const {};
 
   @override
   Future<ThemeMode> readThemeMode() async =>
@@ -506,10 +515,22 @@ class _GalleryRepository implements NotebookRepository {
   Future<void> writeAnalyticsEnabled(bool value) async {}
 
   @override
-  Future<void> writeSolutions(List<SolutionRecord> value) async {}
+  Future<void> writeSolutions(
+    List<SolutionRecord> value, {
+    String? ownerId,
+  }) async {}
 
   @override
-  Future<void> writeReviewItems(List<ReviewItem> items) async {}
+  Future<void> writeReviewItems(
+    List<ReviewItem> items, {
+    String? ownerId,
+  }) async {}
+
+  @override
+  Future<void> writePendingSolutionDeletions(
+    Map<String, DateTime> deletions, {
+    String? ownerId,
+  }) async {}
 
   @override
   Future<void> writeThemeMode(ThemeMode value) async {}

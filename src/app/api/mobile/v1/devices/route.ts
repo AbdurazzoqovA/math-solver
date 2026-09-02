@@ -54,9 +54,20 @@ export async function POST(request: Request) {
     const db = getAdminFirestore();
     const registryRef = db.doc(`mobileDevices/${tokenId}`);
     const deviceRef = db.doc(`users/${user.uid}/devices/${tokenId}`);
+    const deletedUserRef = db.doc(`deletedUsers/${user.uid}`);
     const now = Date.now();
     await db.runTransaction(async (transaction) => {
-      const registry = await transaction.get(registryRef);
+      const [registry, deletedUser] = await Promise.all([
+        transaction.get(registryRef),
+        transaction.get(deletedUserRef),
+      ]);
+      if (deletedUser.exists) {
+        throw new VideoAuthError(
+          "This account has been deleted.",
+          410,
+          "account_deleted",
+        );
+      }
       const previousOwner = registry.data()?.uid;
       if (typeof previousOwner === "string" && previousOwner !== user.uid) {
         transaction.delete(

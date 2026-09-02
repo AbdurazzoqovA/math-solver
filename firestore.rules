@@ -11,6 +11,11 @@ service cloud.firestore {
       return hasVerifiedEmail() && request.auth.uid == userId;
     }
 
+    function ownsActiveUserData(userId) {
+      return ownsUserData(userId)
+        && !exists(/databases/$(database)/documents/deletedUsers/$(userId));
+    }
+
     function isValidChat(chatId) {
       let data = request.resource.data;
       return data.keys().hasOnly([
@@ -43,15 +48,23 @@ service cloud.firestore {
     }
 
     match /users/{userId}/chats/{chatId} {
-      allow read, delete: if ownsUserData(userId);
-      allow create, update: if ownsUserData(userId) && isValidChat(chatId);
+      allow read, delete: if ownsActiveUserData(userId);
+      allow create, update: if ownsActiveUserData(userId)
+        && isValidChat(chatId);
     }
 
     match /users/{userId}/chatDeletions/{chatId} {
-      allow read, delete: if ownsUserData(userId);
-      allow create, update: if ownsUserData(userId)
+      allow read, delete: if ownsActiveUserData(userId);
+      allow create, update: if ownsActiveUserData(userId)
         && request.resource.data.keys().hasOnly(['deletedAt'])
         && request.resource.data.deletedAt is int;
+    }
+
+    // Account-deletion tombstones are permanent and server-only. They close
+    // the race where an already-authorized notebook write commits after the
+    // account's user subtree has been recursively deleted.
+    match /deletedUsers/{userId} {
+      allow read, write: if false;
     }
 
     // Video jobs and quota documents are server-only. The web player accesses

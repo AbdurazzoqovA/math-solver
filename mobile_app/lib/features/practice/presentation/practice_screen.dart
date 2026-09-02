@@ -119,12 +119,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             ? null
                             : _startPractice,
                         style: FilledButton.styleFrom(
-                          backgroundColor:
-                              colors.brightness == Brightness.dark
+                          backgroundColor: colors.brightness == Brightness.dark
                               ? AppTheme.mint
                               : AppTheme.ink,
-                          foregroundColor:
-                              colors.brightness == Brightness.dark
+                          foregroundColor: colors.brightness == Brightness.dark
                               ? AppTheme.ink
                               : Colors.white,
                         ),
@@ -270,6 +268,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     : 'Daily warm-up',
                 questions: questions,
               ),
+              onCompleted: (score, total) =>
+                  widget.controller.maybeRequestReviewAfterPractice(
+                    score: score,
+                    questionCount: total,
+                  ),
               onAnswered: (question, correct) =>
                   widget.controller.recordPracticeAnswer(
                     question: question,
@@ -312,6 +315,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 .toList(growable: false),
           ),
           reviewMode: true,
+          onCompleted: (score, total) =>
+              widget.controller.maybeRequestReviewAfterPractice(
+                score: score,
+                questionCount: total,
+              ),
           onAnswered: (question, correct) =>
               widget.controller.recordPracticeAnswer(
                 question: question,

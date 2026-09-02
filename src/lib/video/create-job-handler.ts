@@ -135,6 +135,7 @@ export async function handleCreateVideoJob(
             attempt: job.attempt,
           },
           job.expiresAt,
+          job.objectPrefix,
         );
       } catch (error) {
         console.error("Could not enqueue video render:", {

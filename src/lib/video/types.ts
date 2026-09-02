@@ -156,4 +156,6 @@ export type VideoCleanupTaskPayload = {
   schemaVersion: 1;
   uid: string;
   jobId: string;
+  expiresAt: number;
+  objectPrefix: string;
 };

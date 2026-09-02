@@ -14,12 +14,19 @@ import type {
 import { isVideoJobDocument } from "@/lib/video/validation";
 import { createPlaybackManifest } from "@/lib/video/storage";
 import {
+  canRestartFailedVideoJob,
+  isVideoJobExpired,
+  MAX_VIDEO_JOB_ATTEMPTS,
+  needsLegacyVideoJobObjectFiltering,
+  VIDEO_JOB_RETENTION_MS,
+  videoGenerationObjectPrefix,
+} from "@/lib/video/lifecycle";
+import {
   DEFAULT_DAILY_VIDEO_LIMIT,
   normalizeDailyVideoQuota,
   type DailyVideoQuota,
 } from "@/lib/video/quota";
 
-const JOB_RETENTION_MS = 14 * 24 * 60 * 60 * 1_000;
 const MAX_UNSUPPORTED_ATTEMPTS = 2;
 
 function getFreeVideoLimit(): number {
@@ -51,6 +58,21 @@ function summarizeProblem(problem: string): string {
   return compact.length > 140 ? `${compact.slice(0, 137)}…` : compact;
 }
 
+function accountDeletedError(): VideoJobServiceError {
+  return new VideoJobServiceError(
+    "This account has been deleted.",
+    410,
+    "account_deleted",
+  );
+}
+
+async function assertVideoAccountActive(uid: string): Promise<void> {
+  const deletedUser = await getAdminFirestore()
+    .doc(`deletedUsers/${uid}`)
+    .get();
+  if (deletedUser.exists) throw accountDeletedError();
+}
+
 export async function createOrRestartVideoJob(
   uid: string,
   input: CreateVideoJobInput,
@@ -62,25 +84,35 @@ export async function createOrRestartVideoJob(
   const jobId = buildJobId(uid, input.requestKey);
   const jobRef = db.doc(`users/${uid}/videoJobs/${jobId}`);
   const quotaRef = db.doc(`users/${uid}/entitlements/video`);
+  const deletedUserRef = db.doc(`deletedUsers/${uid}`);
   const now = Date.now();
 
   return db.runTransaction(async (transaction) => {
-    const [jobSnapshot, quotaSnapshot] = await Promise.all([
+    const [jobSnapshot, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
       transaction.get(jobRef),
       transaction.get(quotaRef),
+      transaction.get(deletedUserRef),
     ]);
+    if (deletedUserSnapshot.exists) {
+      throw accountDeletedError();
+    }
     const quota = quotaFromData(quotaSnapshot.data(), now);
     const existingData = jobSnapshot.data();
-    const existing = isVideoJobDocument(existingData) ? existingData : null;
+    const storedExisting = isVideoJobDocument(existingData)
+      ? existingData
+      : null;
+    const existing =
+      storedExisting && !isVideoJobExpired(storedExisting, now)
+        ? storedExisting
+        : null;
 
     const canRestartUnsupported =
       existing?.status === "unsupported" &&
       existing.attempt < MAX_UNSUPPORTED_ATTEMPTS;
-    if (
-      existing &&
-      existing.status !== "failed" &&
-      !canRestartUnsupported
-    ) {
+    const canRestartFailed =
+      existing?.status === "failed" &&
+      canRestartFailedVideoJob(existing.attempt);
+    if (existing && !canRestartFailed && !canRestartUnsupported) {
       return { job: existing, shouldEnqueue: false };
     }
 
@@ -94,6 +126,7 @@ export async function createOrRestartVideoJob(
     }
 
     const attempt = (existing?.attempt ?? 0) + 1;
+    const expiresAt = now + VIDEO_JOB_RETENTION_MS;
     const nextJob: VideoJobDocument = {
       schemaVersion: 1,
       id: jobId,
@@ -109,8 +142,8 @@ export async function createOrRestartVideoJob(
       quotaPeriodKey: quota.periodKey,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
-      expiresAt: now + JOB_RETENTION_MS,
-      objectPrefix: `video-lessons/${uid}/${jobId}/`,
+      expiresAt,
+      objectPrefix: videoGenerationObjectPrefix(uid, jobId, expiresAt),
     };
 
     transaction.set(jobRef, {
@@ -142,12 +175,15 @@ export async function markVideoJobDispatchFailure(
   const db = getAdminFirestore();
   const jobRef = db.doc(`users/${uid}/videoJobs/${jobId}`);
   const quotaRef = db.doc(`users/${uid}/entitlements/video`);
+  const deletedUserRef = db.doc(`deletedUsers/${uid}`);
 
   await db.runTransaction(async (transaction) => {
-    const [jobSnapshot, quotaSnapshot] = await Promise.all([
+    const [jobSnapshot, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
       transaction.get(jobRef),
       transaction.get(quotaRef),
+      transaction.get(deletedUserRef),
     ]);
+    if (deletedUserSnapshot.exists) return;
     const value = jobSnapshot.data();
     if (!isVideoJobDocument(value) || value.attempt !== attempt) return;
 
@@ -213,11 +249,21 @@ export async function getPublicVideoJob(
   jobId: string,
 ): Promise<PublicVideoJob> {
   const db = getAdminFirestore();
-  const [job, quotaSnapshot] = await Promise.all([
+  const [job, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
     getVideoJobDocument(uid, jobId),
     db.doc(`users/${uid}/entitlements/video`).get(),
+    db.doc(`deletedUsers/${uid}`).get(),
   ]);
+  if (deletedUserSnapshot.exists) throw accountDeletedError();
   const quota = quotaFromData(quotaSnapshot.data());
+
+  if (isVideoJobExpired(job)) {
+    throw new VideoJobServiceError(
+      "This video explanation was not found.",
+      404,
+      "job_not_found",
+    );
+  }
 
   const publicJob: PublicVideoJob = {
     id: job.id,
@@ -233,11 +279,19 @@ export async function getPublicVideoJob(
   };
 
   if (job.error) {
-    publicJob.error =
+    if (
       job.status === "unsupported" &&
       job.attempt < MAX_UNSUPPORTED_ATTEMPTS
-        ? { ...job.error, retryable: true }
-        : job.error;
+    ) {
+      publicJob.error = { ...job.error, retryable: true };
+    } else if (
+      job.status === "failed" &&
+      job.attempt >= MAX_VIDEO_JOB_ATTEMPTS
+    ) {
+      publicJob.error = { ...job.error, retryable: false };
+    } else {
+      publicJob.error = job.error;
+    }
   }
   if (job.status === "ready") {
     if (!job.manifestObjectKey) {
@@ -247,9 +301,13 @@ export async function getPublicVideoJob(
         "missing_manifest",
       );
     }
+    // Keep URL minting behind the tombstone. The second check below prevents
+    // URLs minted during a concurrent deletion from being returned.
+    await assertVideoAccountActive(uid);
     publicJob.lesson = await createPlaybackManifest(job);
   }
 
+  await assertVideoAccountActive(uid);
   return publicJob;
 }
 
@@ -258,20 +316,22 @@ export async function listPublicVideoJobs(uid: string): Promise<{
   quota: PublicVideoQuota;
 }> {
   const db = getAdminFirestore();
-  const [jobsSnapshot, quotaSnapshot] = await Promise.all([
+  const [jobsSnapshot, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
     db
       .collection(`users/${uid}/videoJobs`)
       .orderBy("updatedAt", "desc")
       .limit(24)
       .get(),
     db.doc(`users/${uid}/entitlements/video`).get(),
+    db.doc(`deletedUsers/${uid}`).get(),
   ]);
+  if (deletedUserSnapshot.exists) throw accountDeletedError();
   const now = Date.now();
   const storedJobs = jobsSnapshot.docs
     .map((snapshot) => snapshot.data())
     .filter(
       (value): value is VideoJobDocument =>
-        isVideoJobDocument(value) && value.expiresAt > now,
+        isVideoJobDocument(value) && !isVideoJobExpired(value, now),
     );
   const summaries = await Promise.all(
     storedJobs.map(async (job): Promise<PublicVideoJobSummary> => {
@@ -286,7 +346,13 @@ export async function listPublicVideoJobs(uid: string): Promise<{
         updatedAt: job.updatedAt,
         expiresAt: job.expiresAt,
       };
-      if (job.error) summary.error = job.error;
+      if (job.error) {
+        summary.error =
+          job.status === "failed" &&
+          job.attempt >= MAX_VIDEO_JOB_ATTEMPTS
+            ? { ...job.error, retryable: false }
+            : job.error;
+      }
       if (job.status !== "ready") return summary;
 
       try {
@@ -307,6 +373,9 @@ export async function listPublicVideoJobs(uid: string): Promise<{
     }),
   );
 
+  // Gallery metadata includes newly signed poster URLs. Do not return either
+  // those URLs or private problem summaries if deletion started mid-request.
+  await assertVideoAccountActive(uid);
   return {
     jobs: summaries,
     quota: publicQuota(quotaFromData(quotaSnapshot.data())),
@@ -318,9 +387,29 @@ export async function deleteVideoLesson(
   jobId: string,
 ): Promise<void> {
   const job = await getVideoJobDocument(uid, jobId);
-  const { deleteLessonObjects } = await import("@/lib/video/storage");
-  await deleteLessonObjects(job.objectPrefix);
-  await getAdminFirestore()
-    .doc(`users/${uid}/videoJobs/${jobId}`)
-    .delete();
+  const { deleteLegacyJobLessonObjects, deleteLessonObjects } = await import(
+    "@/lib/video/storage"
+  );
+  if (needsLegacyVideoJobObjectFiltering(job)) {
+    await deleteLegacyJobLessonObjects(job.objectPrefix);
+  } else {
+    await deleteLessonObjects(job.objectPrefix);
+  }
+
+  // Remove private media first so a transient storage failure leaves the job
+  // available for a safe retry. The generation prefix is immutable, and this
+  // conditional delete cannot remove a concurrently recreated generation.
+  const db = getAdminFirestore();
+  const jobRef = db.doc(`users/${uid}/videoJobs/${jobId}`);
+  await db.runTransaction(async (transaction) => {
+    const currentSnapshot = await transaction.get(jobRef);
+    const current = currentSnapshot.data();
+    if (
+      isVideoJobDocument(current) &&
+      current.objectPrefix === job.objectPrefix &&
+      current.expiresAt === job.expiresAt
+    ) {
+      transaction.delete(jobRef);
+    }
+  });
 }

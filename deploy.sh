@@ -71,7 +71,9 @@ update_secrets="GOOGLE_CLOUD_API_KEY=${web_gemini_secret}:${web_gemini_secret_ve
 deploy_args=(
   --memory 4Gi
   --cpu 2
+  --min-instances 1
   --max-instances 20
+  --cpu-boost
 )
 if [[ -n "${TELEGRAM_CHAT_ID:-}" ]]; then
   telegram_bot_secret="${TELEGRAM_BOT_SECRET:-mathsolver-telegram-bot-token}"

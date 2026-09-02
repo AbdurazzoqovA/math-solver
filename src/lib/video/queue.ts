@@ -5,6 +5,7 @@ import type {
   VideoCleanupTaskPayload,
   VideoRenderTaskPayload,
 } from "@/lib/video/types";
+import { videoCleanupTaskId } from "@/lib/video/lifecycle";
 
 let tasksClient: CloudTasksClient | null = null;
 
@@ -21,10 +22,6 @@ function requiredEnvironment(name: string): string {
 
 function safeTaskId(jobId: string, attempt: number): string {
   return `video-${jobId}-${attempt}`.replace(/[^a-zA-Z0-9_-]/g, "-");
-}
-
-function cleanupTaskId(jobId: string): string {
-  return `cleanup-${jobId}`.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
 function taskConfiguration() {
@@ -67,7 +64,6 @@ async function createIdempotentTask(
 
 async function enqueueCleanupWithCloudTasks(
   payload: VideoCleanupTaskPayload,
-  expiresAt: number,
 ): Promise<void> {
   const {
     project,
@@ -83,9 +79,9 @@ async function enqueueCleanupWithCloudTasks(
       project,
       location,
       queue,
-      cleanupTaskId(payload.jobId),
+      videoCleanupTaskId(payload.jobId, payload.expiresAt),
     ),
-    scheduleTime: { seconds: Math.floor(expiresAt / 1_000) },
+    scheduleTime: { seconds: Math.floor(payload.expiresAt / 1_000) },
     dispatchDeadline: { seconds: 300 },
     httpRequest: {
       httpMethod: "POST",
@@ -158,6 +154,7 @@ async function dispatchDirectly(
 export async function enqueueVideoRender(
   payload: VideoRenderTaskPayload,
   expiresAt: number,
+  objectPrefix: string,
 ): Promise<void> {
   const mode =
     process.env.VIDEO_QUEUE_MODE ||
@@ -169,8 +166,9 @@ export async function enqueueVideoRender(
         schemaVersion: 1,
         uid: payload.uid,
         jobId: payload.jobId,
+        expiresAt,
+        objectPrefix,
       },
-      expiresAt,
     );
     await enqueueWithCloudTasks(payload);
     return;

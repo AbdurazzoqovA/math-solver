@@ -10,6 +10,27 @@ import '../../core/widgets/screen_layout.dart';
 import '../app/app_controller.dart';
 import 'account_sheet.dart';
 
+@visibleForTesting
+Future<bool> performLocalAccountCleanup({
+  required Future<void> Function() clearOfflineVideos,
+  required Future<void> Function() clearNotebook,
+  required Future<void> Function() clearNotificationPreferences,
+}) async {
+  var complete = true;
+  for (final cleanup in [
+    clearOfflineVideos,
+    clearNotebook,
+    clearNotificationPreferences,
+  ]) {
+    try {
+      await cleanup();
+    } on Object {
+      complete = false;
+    }
+  }
+  return complete;
+}
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({
     super.key,
@@ -597,16 +618,34 @@ class _AccountCard extends StatelessWidget {
       ),
     );
     if (password == null || !context.mounted) return;
+    final deletedUserId = account.userId;
+    if (deletedUserId == null || deletedUserId.isEmpty) return;
 
     try {
       await account.reauthenticateForDeletion(password);
+      if (account.userId != deletedUserId) {
+        throw const AccountException(
+          'The signed-in account changed. Please try deleting it again.',
+        );
+      }
       await videoApi.disableReadyNotifications();
       await account.deleteAccount();
-      await VideoOfflineCache.clearAll();
-      await controller.clearPersonalData();
+      final localCleanupComplete = await performLocalAccountCleanup(
+        clearOfflineVideos: () =>
+            VideoOfflineCache.clearOwner(ownerUserId: deletedUserId),
+        clearNotebook: () => controller.clearOwnerPersonalData(deletedUserId),
+        clearNotificationPreferences: () =>
+            videoApi.clearReadyNotificationPreferences(deletedUserId),
+      );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Your account and data were deleted.')),
+          SnackBar(
+            content: Text(
+              localCleanupComplete
+                  ? 'Your account and data were deleted.'
+                  : 'Your account was deleted, but some local files could not be cleared from this device.',
+            ),
+          ),
         );
       }
     } on AccountException catch (error) {
