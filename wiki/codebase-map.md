@@ -70,7 +70,7 @@ src/
       VideoLibraryPage.tsx # account-owned ready/active/failed video cards + playback
     layout/
       Header.tsx           # mobile header; logo links to home
-      Sidebar.tsx          # home-linked brand, navigation (incl. UTM-tagged external AI Humanizer / AI Detector links), local-first recent chats, account control
+      Sidebar.tsx          # home-linked brand, navigation (incl. the dofollow, UTM/ref-tagged external AI Tutor link to eduzen.ai), local-first recent chats, account control
       SplitLayoutWrapper.tsx # resizable split view (solver | practice panel) via react-resizable-panels
     providers/
       ThemeProvider.tsx    # next-themes light/dark/system

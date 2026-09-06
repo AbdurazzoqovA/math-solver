@@ -374,3 +374,11 @@ Added two `target="_blank"` sidebar nav entries directly under **Practice Tests*
 ## [2026-09-02] change | Added GA4 attribution to external tool links
 
 Tagged the sidebar links to AI Humanizer and AI Detector with `utm_source=math-solver.io`, `utm_medium=referral`, `utm_campaign=sidebar_cross_promotion`, and a tool-specific `utm_content`. Their destination GA4 properties can now report MathSolver referrals even though the links retain `rel="noopener noreferrer"`.
+
+## [2026-09-06] change | Replaced AI Humanizer / AI Detector sidebar links with AI Tutor (eduzen.ai)
+
+Removed the two outbound essay-tool nav entries (`texttohuman.com`, `detecting-ai.com`) from `src/components/layout/Sidebar.tsx` and replaced them with a single **AI Tutor** entry pointing at `https://eduzen.ai/` (`GraduationCap` icon, same nav styling, label hidden when collapsed, closes the mobile drawer on click). Rationale: an AI tutor is topically coherent with a math study site in a way the essay tools were not, and the sidebar renders from the root layout so every nav slot is sitewide.
+
+Deliberately **dofollow** — `rel="noopener"` only. `noreferrer` was dropped so the `Referer` header reaches eduzen.ai and GA4 attributes the visit as a referral rather than direct; `nofollow` was not added because the link is intended to pass equity to the new domain. The URL carries `ref=math-solver.io` plus the existing UTM convention (`utm_source` / `utm_medium=referral` / `utm_campaign=sidebar_cross_promotion` / `utm_content=ai_tutor`). Source-side CTR is now measurable too: the link fires `trackEvent("outbound_tool_click", { tool: "ai_tutor" })`.
+
+Open item on the receiving side: eduzen.ai needs a self-referencing canonical on `/` so the `?ref=…&utm_*` variants consolidate into the root URL instead of being indexed separately. `tsc --noEmit` and `eslint` are clean.
