@@ -3,6 +3,7 @@
 import HeroInput from "./HeroInput";
 import SeoSections from "./SeoSections";
 import Link from "next/link";
+import MobileAppLinks from "@/components/marketing/MobileAppLinks";
 
 export default function EmptyState({ onStartChat }: { onStartChat: (message: string, images?: { url: string; ocrText: string }[]) => void }) {
   return (
@@ -26,6 +27,13 @@ export default function EmptyState({ onStartChat }: { onStartChat: (message: str
             }
           }} 
         />
+
+        <div className="mt-7 flex w-full flex-col items-center gap-3">
+          <p className="text-sm font-medium text-muted-foreground">
+            Take MathSolver with you — free on iPhone and Android
+          </p>
+          <MobileAppLinks placement="homepage_hero" />
+        </div>
       </div>
 
       {/* Content below the fold */}

@@ -29,9 +29,9 @@ src/
     terms/page.tsx         # web/mobile terms, free-product and update-policy contract
     account-deletion/page.tsx # public Apple/Play account and data deletion instructions
     api/
-      solve/route.ts       # POST — Gemini streamed steps + trusted calculator-mode lookup
-      ocr/route.ts         # POST — Gemini 3.1 flash-lite, image/PDF/drawing → expression text
-      practice/route.ts    # POST — Gemini, generates MCQ quiz JSON from a solution
+      solve/route.ts       # POST — selected Azure/Gemini LLM streamed steps + trusted calculator-mode lookup
+      ocr/route.ts         # POST — selected Azure/Gemini LLM, image/PDF/drawing → expression text
+      practice/route.ts    # POST — selected LLM, generates MCQ quiz JSON from a solution
       practice/steps/route.ts # POST — per-question step-by-step explanation
       contact/route.ts     # POST — validate/rate-limit and deliver contact form to Telegram
       video/jobs/route.ts  # GET private library; POST verified auth/quota/queue dispatch
@@ -39,8 +39,8 @@ src/
   components/
     chat/                  # the solver UI (the heart of the app)
       ChatArea.tsx         # top-level solver plus shared full-height ChatConversation transcript
-      EmptyState.tsx       # homepage hero + footer
-      SeoSections.tsx      # homepage SEO blocks + priority calculator internal links
+      EmptyState.tsx       # homepage hero, mobile-store CTA + footer
+      SeoSections.tsx      # homepage SEO blocks, mobile-app promo + priority calculator internal links; FAQ renders from the `faqItems` array (no FAQPage schema)
       HeroInput.tsx        # first-message input (landing)
       ChatInput.tsx        # in-conversation input; file/paste/drag upload → /api/ocr
       MessageList.tsx      # messages: markdown+KaTeX, step dividers, quick actions + practice
@@ -49,6 +49,8 @@ src/
       MathKeyboard.tsx     # Σ on-screen math keyboard
       DrawingCanvas.tsx    # hand-draw a problem → JPEG → /api/ocr (source:"drawing")
       DraggableCalculator.tsx # basic arithmetic calc (framer-motion draggable); uses new Function()
+    marketing/
+      MobileAppLinks.tsx   # reusable tracked App Store / Google Play download buttons
     calculators/
       CalculatorPage.tsx   # server-rendered calculator article layout
       CalculatorExperience.tsx # swaps calculator article for the shared chat after submission
@@ -90,12 +92,16 @@ src/
     statistics-calculators.ts # 5 Statistics definitions and safeguards
     general-precalculus-calculators.ts # 4 General Math + 3 Precalculus definitions
     graphing-calculator.ts # Graphing definition and client-tool configuration
-    gemini.ts              # server-only Gemini text/JSON generation + SSE stream adapter
+    llm.ts                 # server-only Azure Responses / Gemini switch; text, JSON, images/PDFs, safe SSE
+    llm-image.ts           # bounded BMP/TIFF → PNG conversion for Azure OCR
+    gemini.ts              # retained Gemini generation / SSE implementation behind llm.ts
+    math-review.ts         # selected-provider handwritten-work and completed-solution review
     math-expression.ts     # safe recursive-descent expression parser used by graphing
     math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
     analytics.ts          # privacy-safe GA4 events + local return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
+    mobile-apps.ts         # canonical public iOS and Android store destinations
     pressroom.ts          # server-only sanitized list/article API, types, 5-minute cache
     pressroom-math.ts     # HTML-aware \\(...\\)/\\[...\\] authoring markers → safe server-rendered KaTeX
     firebase-auth-actions.ts # action-mode validation + same-origin continue URL guard
@@ -157,7 +163,7 @@ package.json               # deps & scripts
 firebase.json              # Firestore rules/emulator configuration
 firestore.rules            # verified-owner-only notebook rules + document validation
 .firebaserc                # Firebase default math-solver-e3a55 + non-default Cloud Run alias
-.env.example               # public Firebase names + server-only Gemini/Pressroom names
+.env.example               # public Firebase names + server-only Azure/Gemini/Pressroom configuration
 tests/firestore.rules.test.mjs # verified-owner/isolation/validation emulator tests
 tests/firebase-auth-actions.test.mjs # email action mode/redirect safety tests
 tests/post-solution-actions.test.mjs # short/long step extraction + prompt contract tests
@@ -167,7 +173,8 @@ tests/learning-progress.test.mjs # spaced-review and local activity-state tests
 tests/analytics.test.mjs # low-cardinality return interval contract
 tests/video-problem-context.test.mjs # problem/solution selection including OCR context
 tests/video-validation.test.mjs # request, manifest, and object-key safety contract
-services/video-renderer/   # private FastAPI + schema-v2 pedagogy gate/review/TTS + meaning-first Manim/FFmpeg worker
+services/video-renderer/   # private FastAPI + independent VIDEO_LLM_PROVIDER planning/review + Azure/Gemini TTS + Gemini transcription QA + meaning-first Manim/FFmpeg worker
+services/video-renderer/tests/test_render_state.py # real reused-process audio/video regression; required Docker build gate
 infra/video/               # idempotent GCS/Cloud Tasks/IAM/TTL/CORS/lifecycle setup
 ```
 
@@ -184,9 +191,9 @@ account deletion, plus the public server-controlled app-version policy.
 
 ## Data flow (one-liner)
 
-Input (type / paste / photo / draw) → optional `/api/ocr` (Gemini) to get text → `/api/solve` (Gemini, streamed) → `MessageList` renders steps → optional `/api/practice` builds a Gemini-generated quiz → `PracticePanel`. First misses attach a review schedule to the saved question; `/practice-tests` reopens up to five due items in the same panel. State remains local-first in `ChatContext`; configured verified users also sync their private text/OCR/practice/review notebook through Firestore after streaming finishes. `LearningProgressContext` separately counts distinct local-day solve/practice/review activity for the sidebar goal and streak.
+Input (type / paste / photo / draw) → optional `/api/ocr` (selected LLM) to get text → `/api/solve` (selected LLM, streamed) → `MessageList` renders steps → optional `/api/practice` builds a quiz through the selected LLM → `PracticePanel`. First misses attach a review schedule to the saved question; `/practice-tests` reopens up to five due items in the same panel. State remains local-first in `ChatContext`; configured verified users also sync their private text/OCR/practice/review notebook through Firestore after streaming finishes. `LearningProgressContext` separately counts distinct local-day solve/practice/review activity for the sidebar goal and streak.
 
-For “Generate video explanation,” `MessageList` selects the completed problem/solution pair → `/api/video/jobs` verifies a fresh Firebase ID token and email verification → a Firestore transaction reserves one of 10 generations in the current UTC-day bucket and creates an idempotent job → the originating assistant message syncs the private job ID/version and `InlineVideoLesson` shows progress independently of the modal → Cloud Tasks calls the private renderer with OIDC → Gemini treats the written solution only as an accuracy reference and plans a schema-v2 visual lesson → Pydantic rejects any plan missing orientation, concept modeling, strategy reasoning, misconception contrast, representation connection, verification/generalization, non-equation visuals, construct/highlight/compare actions, or a safe complete `finalAnswerLatex` → a separate Gemini reviewer checks both mathematics and teaching value, including the final result and its spoken verification, with one bounded feedback-guided revision and an explicit-clarification path for damaged input → verified phrase-level TTS feeds deterministic Manim scenes → the final scene always replaces its teaching visual with a 3.5-second `FINAL ANSWER` card → FFmpeg assembles one continuous H.264/AAC lesson MP4 and one continuous WebVTT timeline → private GCS stores the single-video manifest/media → the authorized job API validates object keys and returns 45-minute signed playback URLs to `VideoLessonPlayer`. The ready player replaces the inline progress attachment, exposes no chapter boundaries, keeps captions outside the math canvas, and can show one optional transfer check only after the full video. The control rail remains visible and includes full-screen. A missing Manim assembly fragment gets one fresh-directory retry; unsuccessful jobs refund only the matching daily bucket. The same endpoint's authenticated `GET` powers `/video-library`, which lists up to 24 unexpired account-owned jobs with short-lived signed posters; selecting a ready card reopens the existing lesson without regenerating or consuming another daily slot.
+For “Generate video explanation,” `MessageList` selects the completed problem/solution pair → `/api/video/jobs` verifies a fresh Firebase ID token and email verification → a Firestore transaction reserves one of 10 generations in the current UTC-day bucket and creates an idempotent job → the originating assistant message syncs the private job ID/version and `InlineVideoLesson` shows progress independently of the modal → Cloud Tasks calls the private renderer with OIDC → the independently selected `VIDEO_LLM_PROVIDER` planner (currently Gemini) treats the written solution only as an accuracy reference and plans a schema-v2 visual lesson → Pydantic rejects any plan missing orientation, concept modeling, strategy reasoning, misconception contrast, representation connection, verification/generalization, non-equation visuals, construct/highlight/compare actions, or a safe complete `finalAnswerLatex` → a separate selected-provider reviewer checks both mathematics and teaching value, including the final result and its spoken verification, with one bounded feedback-guided revision and an explicit-clarification path for damaged input → verified phrase-level TTS feeds deterministic Manim scenes → the final scene always replaces its teaching visual with a 3.5-second `FINAL ANSWER` card → FFmpeg assembles one continuous H.264/AAC lesson MP4 and one continuous WebVTT timeline → private GCS stores the single-video manifest/media → the authorized job API validates object keys and returns 45-minute signed playback URLs to `VideoLessonPlayer`. The ready player replaces the inline progress attachment, exposes no chapter boundaries, keeps captions outside the math canvas, and can show one optional transfer check only after the full video. The control rail remains visible and includes full-screen. Manim output settings are cleared/scoped per scene under a process lock so a reused worker cannot target deleted job files; a missing assembly fragment also gets one fresh-directory retry; unsuccessful jobs refund only the matching daily bucket. The same endpoint's authenticated `GET` powers `/video-library`, which lists up to 24 unexpired account-owned jobs with short-lived signed posters; selecting a ready card reopens the existing lesson without regenerating or consuming another daily slot.
 
 The Flutter client is a separate loop-first product: Home scan/photo/paste/type → crop/worksheet selection → editable OCR readback → streamed `/api/mobile/v1/solve` response → native step/LaTeX rendering with hint-first reveal and independent verification → private continuous video playback with optional practice pauses/offline/share → optional practice and scheduled mistake review. Check My Work uses its own multimodal route to diagnose the learner's first incorrect handwritten line. It deliberately imports no web UI code. Native Firebase Authentication provides verified Email/Password, Google, and Apple sessions with SDK-managed persistence; `AccountController` hydrates cold starts from the initial `authStateChanges()` event, tracks later sign-in/sign-out changes, and does not discard a restored session when a transient stream error occurs. Verified owners use UID-scoped notebook/offline stores; dirty retries, deletion tombstones, and post-save convergence prevent account switching or a stale in-flight upload from resurrecting another owner's data. The native store review API has two quiet milestones: at least three saved solutions plus 75% or better on a four-or-more-question practice/review set, or the fifth saved solve after its independent review is checked and the complete answer is visible for two seconds. Both share one local 120-day cooldown, with no custom sentiment gate or five-star copy. Video rendering is server-side: app inactivity stops only polling, then resume reauthorizes and continues the same deterministic job without a duplicate POST. App Check protects the mobile gateway without applying the web fallback quota. FCM registration follows an explicit per-account `Notify me when ready` choice and is removed on sign-out/account deletion; optional app updates are dismissible while hard gates require an explicit server-declared security or incompatible-protocol minimum. Store credentials and later native-only surfaces are the remaining boundaries. See [[mobile-app-concept]].
 

@@ -7,6 +7,7 @@ import math
 import re
 import shutil
 import subprocess
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -37,6 +38,7 @@ from manim import (
     TransformMatchingTex,
     VGroup,
     config,
+    tempconfig,
 )
 from models import (
     BalanceVisual,
@@ -65,6 +67,7 @@ COLORS = {
 
 LOGGER = logging.getLogger(__name__)
 MEDIA_ASSEMBLY_ATTEMPTS = 2
+_MANIM_RENDER_LOCK = threading.RLock()
 
 
 @dataclass(frozen=True)
@@ -105,12 +108,12 @@ def _render_scene_movie(
     media_root: Path,
     attempts: int = MEDIA_ASSEMBLY_ATTEMPTS,
 ) -> Path:
-    """Render one scene in fresh Manim media directories.
+    """Scope Manim's mutable configuration to one scene and render attempt.
 
-    Manim/PyAV can occasionally lose an intermediate partial movie while
-    combining fragments. A fresh directory avoids cross-clip collisions, and
-    one bounded retry recovers the transient assembly failure without
-    regenerating the lesson plan or narration.
+    Manim's file-ready callback writes the absolute movie path into the global
+    output_file setting. Without clearing and restoring it, the next scene
+    overwrites that movie, and a later job targets a deleted temporary folder.
+    A lock also protects the global config if callers use different threads.
     """
 
     attempts = max(1, min(attempts, MEDIA_ASSEMBLY_ATTEMPTS))
@@ -119,18 +122,22 @@ def _render_scene_movie(
         if attempt_dir.exists():
             shutil.rmtree(attempt_dir)
         attempt_dir.mkdir(parents=True, exist_ok=True)
-        config.media_dir = str(attempt_dir)
-        scene = scene_type()
         try:
-            scene.render()
-            source_path = Path(scene.renderer.file_writer.movie_file_path)
-            if not source_path.exists():
-                raise FileNotFoundError(
-                    errno.ENOENT,
-                    "Manim produced no movie",
-                    str(source_path),
-                )
-            return source_path
+            with _MANIM_RENDER_LOCK, tempconfig(
+                {"media_dir": str(attempt_dir), "output_file": ""}
+            ):
+                scene = scene_type()
+                scene.render()
+                source_path = Path(scene.renderer.file_writer.movie_file_path)
+                if not source_path.resolve().is_relative_to(attempt_dir.resolve()):
+                    raise RuntimeError("Manim movie escaped its render attempt")
+                if not source_path.exists():
+                    raise FileNotFoundError(
+                        errno.ENOENT,
+                        "Manim produced no movie",
+                        str(source_path),
+                    )
+                return source_path
         except OSError as error:
             is_missing_media = getattr(error, "errno", None) == errno.ENOENT
             if not is_missing_media or attempt_index + 1 >= attempts:

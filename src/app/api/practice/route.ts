@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
-import { generateGeminiText } from '@/lib/gemini';
+import { generateText } from '@/lib/llm';
 
 const PRACTICE_PROMPT = `You are MathSolver, an expert AI math tutor. 
 Generate exactly 4 multiple-choice practice questions based on the provided math topic or problem.
@@ -52,7 +52,7 @@ export async function POST(
       );
     }
 
-    const content = await generateGeminiText({
+    const content = await generateText({
       systemInstruction: PRACTICE_PROMPT,
       messages: [
         {

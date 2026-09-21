@@ -1,6 +1,6 @@
 import "server-only";
 
-const DEFAULT_MODEL = "gemini-3.1-flash-lite";
+import { generateText } from "./llm.ts";
 
 export const REVIEW_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -37,7 +37,7 @@ export type SolutionVerification = {
   issues: string[];
 };
 
-type GeminiPart =
+type ReviewPart =
   | { text: string }
   | { inlineData: { mimeType: string; data: string } };
 
@@ -49,69 +49,27 @@ function cleanJson(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
-function readGeminiText(value: unknown): string {
-  if (!value || typeof value !== "object") return "";
-  const candidates = (value as { candidates?: unknown }).candidates;
-  if (!Array.isArray(candidates)) return "";
-  const first = candidates[0];
-  if (!first || typeof first !== "object") return "";
-  const content = (first as { content?: unknown }).content;
-  if (!content || typeof content !== "object") return "";
-  const parts = (content as { parts?: unknown }).parts;
-  if (!Array.isArray(parts)) return "";
-  return parts
-    .map((part) =>
-      part && typeof part === "object" && "text" in part
-        ? String(part.text)
-        : "",
-    )
-    .join("");
-}
-
 async function generateReviewJson({
   systemInstruction,
   parts,
   maxOutputTokens,
 }: {
   systemInstruction: string;
-  parts: GeminiPart[];
+  parts: ReviewPart[];
   maxOutputTokens: number;
 }): Promise<unknown> {
-  const apiKey = process.env.GOOGLE_CLOUD_API_KEY;
-  const model =
-    process.env.GEMINI_REVIEW_MODEL ||
-    process.env.GEMINI_MODEL ||
-    DEFAULT_MODEL;
-  if (!apiKey) {
-    throw new Error("Missing GOOGLE_CLOUD_API_KEY environment variable");
-  }
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens,
-          responseMimeType: "application/json",
-        },
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    console.error("Gemini math review failed with status", response.status);
-    throw new Error(`Gemini math review failed (${response.status})`);
-  }
-  const text = readGeminiText(await response.json());
-  if (!text) throw new Error("Gemini math review returned no content");
+  const text = await generateText({
+    systemInstruction,
+    messages: [{
+      role: "user",
+      text: parts.flatMap((part) => "text" in part ? [part.text] : []).join("\n"),
+      attachments: parts.flatMap((part) => "inlineData" in part ? [part.inlineData] : []),
+    }],
+    temperature: 0,
+    maxOutputTokens,
+    responseMimeType: "application/json",
+    geminiModel: process.env.GEMINI_REVIEW_MODEL,
+  });
   return cleanJson(text);
 }
 

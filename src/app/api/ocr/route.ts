@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { generateText, getLLMProvider } from '@/lib/llm';
+import { prepareLLMImage } from '@/lib/llm-image';
 import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
 
 const ACCEPTED_TYPES = [
@@ -12,7 +14,7 @@ const ACCEPTED_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const GEMINI_TIMEOUT_MS = 25_000;
+const OCR_TIMEOUT_MS = 60_000;
 
 export async function POST(
   req: Request,
@@ -54,7 +56,7 @@ export async function POST(
       );
     }
 
-    const text = await recognizeWithGemini(base64, mimeType, source);
+    const text = await recognizeMathExpression(base64, mimeType, source);
     if (text && text.trim()) {
       return NextResponse.json({ text: text.trim() });
     }
@@ -79,69 +81,24 @@ export async function POST(
   }
 }
 
-/**
- * Use Google Gemini to directly interpret the document or hand-drawn math expression.
- */
-async function recognizeWithGemini(base64: string, mimeType: string, source?: string): Promise<string> {
-  const apiKey = process.env.GOOGLE_CLOUD_API_KEY;
-  const modelName = 'gemini-3.1-flash-lite';
-
-  if (!apiKey) {
-    throw new Error('Missing GOOGLE_CLOUD_API_KEY environment variable');
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-
+async function recognizeMathExpression(base64: string, mimeType: string, source?: string): Promise<string> {
   const systemInstructionText = source === 'drawing' 
     ? 'You are a math expression recognizer. The user has drawn a math problem by hand on a digital canvas. Your job is to accurately interpret the hand-drawn mathematical expression and output it as clean text.\n\nRules:\n- Output ONLY the mathematical expression/equation, nothing else.\n- Use standard math notation. For complex expressions use LaTeX.\n- Do NOT solve the problem.\n- Do NOT add explanations or commentary.\n- Be very careful with superscripts (exponents), subscripts, fractions, and operators.\n- If you see something like "2x²=4" write it as "2x^2 = 4" or in LaTeX as "2x^{2} = 4".\n- If multiple expressions are drawn, separate them with newlines.'
     : 'You are an OCR and Document Parsing expert for a math solver app. The user has uploaded an image or PDF of a math problem. Extract ONLY the actual math problem/equation from the document. Return it as clean, readable text. If there are LaTeX expressions, keep them. Remove problem numbers, noise, and duplicates.\n\nRules:\n- Return ONLY the cleaned math problem, nothing else.\n- Do NOT add explanations or commentary.\n- Do NOT solve the problem.\n- If there are multiple problems, separate them with newlines.\n- Keep the math notation as-is (LaTeX or plain text).';
 
-  const response = await fetch(url, {
-    method: 'POST',
-    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [
-          {
-            text: systemInstructionText
-          }
-        ]
-      },
-      contents: [
-        {
-          parts: [
-            {
-              text: 'What mathematical expression is in this file? Output only the expression.'
-            },
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: base64
-              }
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 1000,
-      }
-    }),
+  const attachment = getLLMProvider() === "azure"
+    ? await prepareLLMImage(base64, mimeType)
+    : { data: base64, mimeType };
+  const text = await generateText({
+    systemInstruction: systemInstructionText,
+    messages: [{
+      role: "user",
+      text: "What mathematical expression is in this file? Output only the expression.",
+      attachments: [attachment],
+    }],
+    temperature: 0,
+    maxOutputTokens: 1000,
+    signal: AbortSignal.timeout(OCR_TIMEOUT_MS),
   });
-
-  if (!response.ok) {
-    console.error('Gemini recognition failed with status', response.status);
-    throw new Error('Failed to recognize math expression');
-  }
-
-  const data = await response.json();
-  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  
-  // Gemini sometimes includes markdown code block formatting like ```latex ... ```
-  // We'll strip that out so we only return the raw text/latex
-  return textContent.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
+  return text.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '').trim();
 }

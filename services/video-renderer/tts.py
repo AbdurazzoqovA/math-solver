@@ -8,6 +8,7 @@ import re
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import wave
 from dataclasses import dataclass
@@ -17,9 +18,13 @@ from typing import Any
 
 from gemini import transcribe_audio
 
-
 TTS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions"
 DEFAULT_TTS_MODEL = "gemini-3.1-flash-tts-preview"
+DEFAULT_TTS_STYLE = (
+    "Warm, precise, patient math tutor. Speak naturally at a focused "
+    "teaching pace. Pronounce variables, signs and numbers crisply. "
+    "Do not sound theatrical."
+)
 WORD_PATTERN = re.compile(r"[a-z]+|\d+(?:\.\d+)?")
 SMALL_NUMBERS = (
     "zero",
@@ -152,14 +157,7 @@ def _gemini_tts(narration: str, destination: Path) -> None:
     if not api_key:
         raise RuntimeError("GOOGLE_CLOUD_API_KEY is not configured")
     voice_name = os.environ.get("VIDEO_TTS_VOICE", "Sulafat")
-    style = os.environ.get(
-        "VIDEO_TTS_STYLE",
-        (
-            "Warm, precise, patient math tutor. Speak naturally at a focused "
-            "teaching pace. Pronounce variables, signs and numbers crisply. "
-            "Do not sound theatrical."
-        ),
-    )
+    style = os.environ.get("VIDEO_TTS_STYLE", DEFAULT_TTS_STYLE)
     prompt = (
         "Speak only the text between <script> and </script>, exactly once. "
         "Begin immediately and stop after the final word. Do not repeat, add, "
@@ -193,6 +191,64 @@ def _gemini_tts(narration: str, destination: Path) -> None:
     audio = _find_audio_data(body)
     if not audio:
         raise RuntimeError("Gemini TTS returned no audio")
+    _write_wave(destination, audio)
+
+
+def _azure_tts(narration: str, destination: Path) -> None:
+    # Dedicated variables prevent legacy Azure chat credentials or Gemini voice
+    # settings from changing the speech deployment when switching providers.
+    api_key = os.environ.get("AZURE_TTS_API_KEY", "").strip()
+    endpoint = os.environ.get("AZURE_TTS_ENDPOINT", "").strip()
+    if not api_key:
+        raise RuntimeError("AZURE_TTS_API_KEY is not configured")
+    parsed = urllib.parse.urlsplit(endpoint)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.fragment
+        or not re.fullmatch(r"/openai/deployments/[^/]+/audio/speech", parsed.path)
+        or not urllib.parse.parse_qs(parsed.query).get("api-version")
+    ):
+        raise RuntimeError(
+            "AZURE_TTS_ENDPOINT must be a complete HTTPS deployment speech URL "
+            "with api-version"
+        )
+    payload = {
+        # Azure requires the deployment in the body as well as the URL.
+        "model": urllib.parse.unquote(parsed.path.split("/")[3]),
+        "input": narration,
+        "voice": os.environ.get("AZURE_TTS_VOICE", "coral"),
+        "instructions": os.environ.get("VIDEO_TTS_STYLE", DEFAULT_TTS_STYLE),
+        # Both providers feed the same 24 kHz mono PCM verification/render path.
+        "response_format": "pcm",
+    }
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json", "api-key": api_key},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=150) as response:
+            audio = response.read()
+            content_type = response.headers.get_content_type()
+    except urllib.error.HTTPError as error:
+        # Never include provider response bodies, credentials, or narration.
+        error.close()
+        raise RuntimeError(f"Azure TTS failed ({error.code})") from None
+    except (urllib.error.URLError, TimeoutError):
+        raise RuntimeError("Azure TTS request failed") from None
+    if (
+        not audio
+        or len(audio) % 2
+        or not (
+            content_type.startswith("audio/")
+            or content_type == "application/octet-stream"
+        )
+    ):
+        raise RuntimeError("Azure TTS returned invalid PCM audio")
     _write_wave(destination, audio)
 
 
@@ -284,7 +340,9 @@ def synthesize_verified_phrase(
         except ValueError:
             attempts = 5
     attempts = max(1, min(attempts, 6))
-    provider = os.environ.get("VIDEO_TTS_PROVIDER", "gemini")
+    provider = os.environ.get("VIDEO_TTS_PROVIDER", "gemini").strip().lower()
+    if provider not in {"azure", "gemini", "mock"}:
+        raise RuntimeError("VIDEO_TTS_PROVIDER must be azure, gemini, or mock")
     qa_enabled = os.environ.get("VIDEO_VOICE_QA", "true").lower() != "false"
     maximum_duration = max(5.0, len(narration.split()) / 1.65 + 2.5)
     last_error: Exception | None = None
@@ -298,8 +356,8 @@ def synthesize_verified_phrase(
                 _mock_wave(candidate, narration)
             elif provider == "gemini":
                 _gemini_tts(narration, candidate)
-            else:
-                raise RuntimeError(f"Unsupported VIDEO_TTS_PROVIDER: {provider}")
+            elif provider == "azure":
+                _azure_tts(narration, candidate)
 
             normalized = destination.with_suffix(".normalized.wav")
             _run(

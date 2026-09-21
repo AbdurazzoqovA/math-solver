@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
 import { getCalculator } from '@/lib/calculators';
-import { streamGeminiText, type GeminiMessage } from '@/lib/gemini';
+import { streamText, type LLMMessage } from '@/lib/llm';
 
 // System prompt defining the AI's persona and formatting rules
 const MATH_TUTOR_PROMPT = `You are MathSolver, an expert AI math tutor. Your goal is to provide clear, visually distinct, and step-by-step solutions to mathematical problems. Start directly with the steps.
@@ -58,7 +58,7 @@ The user started this chat from the ${calculator.name}. Apply this trusted topic
 ${calculator.solverInstruction}`
       : MATH_TUTOR_PROMPT;
 
-    const geminiMessages = messages.flatMap((message): GeminiMessage[] => {
+    const llmMessages = messages.flatMap((message): LLMMessage[] => {
       if (!message || typeof message !== 'object') return [];
       const role = 'role' in message ? message.role : undefined;
       const content = 'content' in message ? message.content : undefined;
@@ -71,7 +71,7 @@ ${calculator.solverInstruction}`
       return [{ role: role === 'assistant' ? 'model' : 'user', text: content }];
     });
 
-    if (geminiMessages.length === 0) {
+    if (llmMessages.length === 0) {
       return NextResponse.json(
         { error: 'Invalid request format. Expected text messages.' },
         { status: 400 }
@@ -80,9 +80,9 @@ ${calculator.solverInstruction}`
 
     // Calculator instructions are looked up from the server registry, never
     // trusted from client text.
-    const stream = await streamGeminiText({
+    const stream = await streamText({
       systemInstruction: systemPrompt,
-      messages: geminiMessages,
+      messages: llmMessages,
       temperature: 0.2,
       maxOutputTokens: 2000,
     });

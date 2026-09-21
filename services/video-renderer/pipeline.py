@@ -15,7 +15,7 @@ from firebase_admin import credentials, firestore, messaging
 from google.cloud import storage
 from google.cloud.firestore_v1 import Client as FirestoreClient
 from google.cloud.storage import Client as StorageClient
-from gemini import GeminiValidationError
+from llm import LLMValidationError
 from lifecycle import (
     ACTIVE_STATUSES,
     MAX_RENDER_ATTEMPTS,
@@ -440,7 +440,7 @@ def _create_reviewed_plan(
                 solution,
                 correction=feedback,
             )
-        except GeminiValidationError as error:
+        except LLMValidationError as error:
             last_failure_was_generation = True
             feedback = (
                 "The previous plan failed the deterministic lesson contract. "

@@ -43,8 +43,24 @@ latest_enabled_secret_version() {
   printf '%s' "$version"
 }
 
+llm_overrides=()
+for variable_name in LLM_PROVIDER AZURE_LLM_ENDPOINT AZURE_LLM_DEPLOYMENT \
+  WEB_AZURE_LLM_SECRET WEB_AZURE_LLM_SECRET_VERSION; do
+  if [[ -n "${!variable_name+x}" ]]; then
+    llm_overrides+=("${variable_name}=${!variable_name}")
+  fi
+done
+load_env_file "$repo_dir/.env"
 load_env_file "$repo_dir/.env.local"
 load_env_file "$repo_dir/.env.development.local"
+for setting in ${llm_overrides[@]+"${llm_overrides[@]}"}; do
+  export "$setting"
+done
+llm_provider="${LLM_PROVIDER:-gemini}"
+if [[ "$llm_provider" != "azure" && "$llm_provider" != "gemini" ]]; then
+  printf 'LLM_PROVIDER must be azure or gemini.\n' >&2
+  exit 1
+fi
 
 for required_variable in \
   NEXT_PUBLIC_FIREBASE_API_KEY \
@@ -68,6 +84,19 @@ turnstile_secret_version="$(latest_enabled_secret_version \
   "$turnstile_secret" \
   "${TURNSTILE_SECRET_VERSION:-}")"
 update_secrets="GOOGLE_CLOUD_API_KEY=${web_gemini_secret}:${web_gemini_secret_version},TURNSTILE_SECRET_KEY=${turnstile_secret}:${turnstile_secret_version}"
+llm_runtime_env="LLM_PROVIDER=${llm_provider}"
+if [[ "$llm_provider" == "azure" ]]; then
+  require_env AZURE_LLM_ENDPOINT
+  azure_llm_secret="${WEB_AZURE_LLM_SECRET:-mathsolver-web-azure-llm-api-key}"
+  azure_llm_version="$(latest_enabled_secret_version \
+    "$azure_llm_secret" "${WEB_AZURE_LLM_SECRET_VERSION:-}")"
+  update_secrets+=",AZURE_LLM_API_KEY=${azure_llm_secret}:${azure_llm_version}"
+  llm_runtime_env+="|AZURE_LLM_ENDPOINT=${AZURE_LLM_ENDPOINT}|AZURE_LLM_DEPLOYMENT=${AZURE_LLM_DEPLOYMENT:-gpt-4.1-nano}"
+fi
+if [[ "${AZURE_LLM_ENDPOINT:-}${AZURE_LLM_DEPLOYMENT:-}" == *'|'* ]]; then
+  printf 'Azure LLM configuration cannot contain the reserved | separator.\n' >&2
+  exit 1
+fi
 deploy_args=(
   --memory 4Gi
   --cpu 2
@@ -81,10 +110,7 @@ if [[ -n "${TELEGRAM_CHAT_ID:-}" ]]; then
     "$telegram_bot_secret" \
     "${TELEGRAM_BOT_SECRET_VERSION:-}")"
   update_secrets+=",TELEGRAM_BOT_TOKEN=${telegram_bot_secret}:${telegram_bot_secret_version}"
-  deploy_args+=(
-    --update-env-vars
-    "^:^TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}:CONTACT_TURNSTILE_HOSTNAMES=${CONTACT_TURNSTILE_HOSTNAMES:-math-solver.io,www.math-solver.io}"
-  )
+  llm_runtime_env+="|TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}|CONTACT_TURNSTILE_HOSTNAMES=${CONTACT_TURNSTILE_HOSTNAMES:-math-solver.io,www.math-solver.io}"
 fi
 image_tag="${DEPLOY_IMAGE_TAG:-$(git -C "$repo_dir" rev-parse --short HEAD)}"
 image_uri="${cloud_region}-docker.pkg.dev/${cloud_project}/cloud-run-source-deploy/mathsolver:${image_tag}"
@@ -101,7 +127,8 @@ gcloud run deploy mathsolver \
   --region "$cloud_region" \
   --platform managed \
   --allow-unauthenticated \
-  --remove-env-vars "GOOGLE_CLOUD_API_KEY,TURNSTILE_SECRET_KEY" \
+  --remove-env-vars "GOOGLE_CLOUD_API_KEY,TURNSTILE_SECRET_KEY,AZURE_LLM_API_KEY" \
+  --update-env-vars "^|^${llm_runtime_env}" \
   --update-secrets "$update_secrets" \
   "${deploy_args[@]}" \
   --project "$cloud_project"

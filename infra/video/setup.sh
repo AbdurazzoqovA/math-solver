@@ -11,6 +11,9 @@ renderer_service="${VIDEO_RENDERER_SERVICE:-mathsolver-video-renderer}"
 renderer_account_name="mathsolver-video-renderer"
 task_account_name="mathsolver-video-tasks"
 renderer_secret_name="${VIDEO_GEMINI_SECRET:-mathsolver-gemini-api-key}"
+azure_tts_secret_name="${VIDEO_AZURE_TTS_SECRET:-mathsolver-azure-tts-api-key}"
+renderer_llm_secret_name="${VIDEO_AZURE_LLM_SECRET:-mathsolver-video-azure-llm-api-key}"
+web_llm_secret_name="${WEB_AZURE_LLM_SECRET:-mathsolver-web-azure-llm-api-key}"
 web_secret_name="${WEB_GEMINI_SECRET:-mathsolver-web-gemini-api-key}"
 turnstile_secret_name="${TURNSTILE_SECRET_NAME:-mathsolver-turnstile-secret}"
 renderer_storage_role_id="mathsolverVideoRendererStorage"
@@ -212,10 +215,25 @@ gcloud iam service-accounts add-iam-policy-binding "$task_account" \
   --project "$cloud_project"
 
 ensure_secret "$renderer_secret_name"
+ensure_secret "$azure_tts_secret_name"
+ensure_secret "$renderer_llm_secret_name"
+ensure_secret "$web_llm_secret_name"
 ensure_secret "$web_secret_name"
 ensure_secret "$turnstile_secret_name"
 gcloud secrets add-iam-policy-binding "$renderer_secret_name" \
   --member "serviceAccount:${renderer_account}" \
+  --role roles/secretmanager.secretAccessor \
+  --project "$cloud_project"
+gcloud secrets add-iam-policy-binding "$azure_tts_secret_name" \
+  --member "serviceAccount:${renderer_account}" \
+  --role roles/secretmanager.secretAccessor \
+  --project "$cloud_project"
+gcloud secrets add-iam-policy-binding "$renderer_llm_secret_name" \
+  --member "serviceAccount:${renderer_account}" \
+  --role roles/secretmanager.secretAccessor \
+  --project "$cloud_project"
+gcloud secrets add-iam-policy-binding "$web_llm_secret_name" \
+  --member "serviceAccount:${web_account}" \
   --role roles/secretmanager.secretAccessor \
   --project "$cloud_project"
 gcloud secrets add-iam-policy-binding "$web_secret_name" \

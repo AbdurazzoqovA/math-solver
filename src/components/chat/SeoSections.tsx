@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Calculator, Camera, BookOpen, LineChart, Zap, MessageCircle } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, Calculator, Camera, BookOpen, LineChart, Zap, MessageCircle, ScanLine, CircleCheckBig, Clapperboard } from "lucide-react";
+import MobileAppLinks from "@/components/marketing/MobileAppLinks";
+import { MOBILE_APP_STORES } from "@/lib/mobile-apps";
 
 const popularCalculators = [
   {
@@ -74,6 +77,67 @@ const popularCalculators = [
   },
 ];
 
+const faqLinkClass =
+  "font-medium text-primary-700 underline decoration-primary-300 underline-offset-4 hover:text-primary-600 dark:text-primary-300 dark:decoration-primary-700";
+
+// Single source of truth for the FAQ block. No FAQPage JSON-LD by design:
+// Google retired FAQ rich results, so visible FAQs carry the value. See [[tech-and-ops]].
+const faqItems: { question: string; answer: React.ReactNode }[] = [
+  {
+    question: "What is MathSolver?",
+    answer:
+      "MathSolver is a free AI-powered math solver that delivers step-by-step solutions for algebra, calculus, geometry, trigonometry, statistics, and more. Simply type an equation or upload a photo of your math problem to get an instant, detailed breakdown.",
+  },
+  {
+    question: "Can MathSolver solve math from a photo?",
+    answer:
+      "Yes. Upload a picture of any handwritten or printed problem and MathSolver will read it, extract the equation, and return a full step-by-step solution automatically.",
+  },
+  {
+    question: "What subjects does MathSolver cover?",
+    answer:
+      "It covers arithmetic, pre-algebra, algebra, geometry, trigonometry, precalculus, calculus, linear algebra, differential equations, statistics, probability, plus physics and chemistry questions.",
+  },
+  {
+    question: "Is MathSolver completely free?",
+    answer:
+      "Yes. You can solve unlimited problems, view every step-by-step explanation, and generate practice quizzes, all at no cost, with no account required.",
+  },
+  {
+    question: "Can teachers tell if I used an AI math solver?",
+    answer: (
+      <>
+        The numbers and steps are just math, so there is nothing to detect. What teachers and AI checkers look at is the written explanation. If you paste AI-generated text into a report or homework write-up, it can be flagged. Use the steps to learn the method, then write the explanation in your own words. If you want to be sure before you submit, run the text through an{" "}
+        <a href="https://detecting-ai.com/" className={faqLinkClass}>
+          AI detector
+        </a>{" "}
+        first.
+      </>
+    ),
+  },
+  {
+    question: "How accurate is the AI math solver?",
+    answer:
+      "MathSolver uses advanced AI models trained on millions of math problems. While it handles most problems with high accuracy, we always recommend double-checking critical calculations, especially for exams or professional work.",
+  },
+  {
+    question: "Does MathSolver have iPhone and Android apps?",
+    answer: (
+      <>
+        Yes. MathSolver is available on the{" "}
+        <a href={MOBILE_APP_STORES.ios.url} target="_blank" rel="noopener noreferrer" className={faqLinkClass}>
+          App Store
+        </a>{" "}
+        and{" "}
+        <a href={MOBILE_APP_STORES.android.url} target="_blank" rel="noopener noreferrer" className={faqLinkClass}>
+          Google Play
+        </a>.
+        You can scan problems directly with your camera, check handwritten work, practice, and save video lessons for offline viewing. The browser version also continues to work on phones and tablets without installing anything.
+      </>
+    ),
+  },
+];
+
 export default function SeoSections() {
   return (
     <div className="w-full px-4 relative z-10 mt-8 mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
@@ -132,6 +196,57 @@ export default function SeoSections() {
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
+      </div>
+
+      {/* Mobile app download section */}
+      <div className="flex justify-center mt-16">
+        <section
+          aria-labelledby="mobile-app-title"
+          className="relative w-full max-w-5xl overflow-hidden rounded-3xl border border-primary-200/70 bg-gradient-to-br from-primary-50 via-white to-indigo-50 p-6 shadow-sm dark:border-primary-900/60 dark:from-primary-950/35 dark:via-zinc-900/70 dark:to-indigo-950/30 sm:p-10"
+        >
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary-400/15 blur-3xl" aria-hidden="true" />
+          <div className="relative grid items-center gap-10 lg:grid-cols-[1.12fr_0.88fr] lg:gap-14">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary-700 dark:text-primary-300">
+                MathSolver mobile apps
+              </p>
+              <h2 id="mobile-app-title" className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Your free math tutor, wherever homework happens
+              </h2>
+              <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-600 dark:text-zinc-300 sm:text-lg">
+                Scan a problem from your camera, check your handwritten work, and keep learning with practice and private video explanations. Core solving works without an account, and there is no subscription.
+              </p>
+
+              <ul className="mt-7 grid gap-3 text-sm text-foreground sm:grid-cols-3">
+                <li className="flex items-center gap-2 rounded-xl bg-white/75 px-3 py-3 shadow-sm dark:bg-white/5">
+                  <ScanLine className="h-5 w-5 shrink-0 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                  Scan any problem
+                </li>
+                <li className="flex items-center gap-2 rounded-xl bg-white/75 px-3 py-3 shadow-sm dark:bg-white/5">
+                  <CircleCheckBig className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                  Check your work
+                </li>
+                <li className="flex items-center gap-2 rounded-xl bg-white/75 px-3 py-3 shadow-sm dark:bg-white/5">
+                  <Clapperboard className="h-5 w-5 shrink-0 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+                  Watch visual lessons
+                </li>
+              </ul>
+
+              <MobileAppLinks placement="homepage_mobile_section" className="mt-8 items-start" />
+            </div>
+
+            <div className="mx-auto w-full max-w-[330px] lg:max-w-[360px]">
+              <Image
+                src="/mobile-app-preview.webp"
+                alt="MathSolver mobile app showing camera, photo, typing, and Check My Work options"
+                width={560}
+                height={1120}
+                sizes="(max-width: 1024px) 330px, 360px"
+                className="h-auto w-full rounded-[2rem] border border-black/5 shadow-2xl shadow-primary-950/15 dark:border-white/10"
+              />
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Block 2: Core Features */}
@@ -248,37 +363,12 @@ export default function SeoSections() {
             Frequently Asked Questions
           </h2>
           <div className="mt-8 flex flex-col gap-12">
-            
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">What is MathSolver?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">MathSolver is a free AI-powered math solver that delivers step-by-step solutions for algebra, calculus, geometry, trigonometry, statistics, and more. Simply type an equation or upload a photo of your math problem to get an instant, detailed breakdown.</p>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Can MathSolver solve math from a photo?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Yes. Upload a picture of any handwritten or printed problem and MathSolver will read it, extract the equation, and return a full step-by-step solution automatically.</p>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">What subjects does MathSolver cover?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">It covers arithmetic, pre-algebra, algebra, geometry, trigonometry, precalculus, calculus, linear algebra, differential equations, statistics, probability, plus physics and chemistry questions.</p>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Is MathSolver completely free?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Yes. You can solve unlimited problems, view every step-by-step explanation, and generate practice quizzes, all at no cost, with no account required.</p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">How accurate is the AI math solver?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">MathSolver uses advanced AI models trained on millions of math problems. While it handles most problems with high accuracy, we always recommend double-checking critical calculations, especially for exams or professional work.</p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <h3 className="text-xl font-normal text-foreground dark:text-gray-200">Does MathSolver work on mobile?</h3>
-              <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">Absolutely. MathSolver runs in any modern browser on phones and tablets with no app install needed. The full math solver experience, including photo upload, works exactly the same on mobile.</p>
-            </div>
-
+            {faqItems.map((item) => (
+              <div key={item.question} className="flex flex-col gap-3">
+                <h3 className="text-xl font-normal text-foreground dark:text-gray-200">{item.question}</h3>
+                <p className="text-gray-500 dark:text-zinc-400 leading-relaxed">{item.answer}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

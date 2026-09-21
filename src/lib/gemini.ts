@@ -5,14 +5,17 @@ type GeminiRole = "user" | "model";
 export type GeminiMessage = {
   role: GeminiRole;
   text: string;
+  attachments?: Array<{ mimeType: string; data: string }>;
 };
 
-type GenerateOptions = {
+export type GenerateOptions = {
   systemInstruction: string;
   messages: GeminiMessage[];
   temperature: number;
   maxOutputTokens: number;
   responseMimeType?: "application/json";
+  signal?: AbortSignal;
+  geminiModel?: string;
 };
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
@@ -35,7 +38,10 @@ function buildPayload(options: GenerateOptions) {
     },
     contents: options.messages.map((message) => ({
       role: message.role,
-      parts: [{ text: message.text }],
+      parts: [
+        { text: message.text },
+        ...(message.attachments ?? []).map((inlineData) => ({ inlineData })),
+      ],
     })),
     generationConfig: {
       temperature: options.temperature,
@@ -51,7 +57,8 @@ async function callGemini(
   options: GenerateOptions,
   stream: boolean,
 ): Promise<Response> {
-  const { apiKey, model } = getGeminiConfig();
+  const { apiKey, model: defaultModel } = getGeminiConfig();
+  const model = options.geminiModel || defaultModel;
   const operation = stream ? "streamGenerateContent" : "generateContent";
   const query = stream ? "?alt=sse" : "";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${operation}${query}`;
@@ -63,6 +70,7 @@ async function callGemini(
       "x-goog-api-key": apiKey,
     },
     body: JSON.stringify(buildPayload(options)),
+    signal: options.signal,
   });
 
   if (!response.ok) {

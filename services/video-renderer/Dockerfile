@@ -29,4 +29,8 @@ RUN useradd --create-home --uid 10001 renderer \
     && chown -R renderer:renderer /app
 USER renderer
 
+# A successful first job does not prove that a reused process can render.
+# This real Manim/FFmpeg regression must pass before an image can be released.
+RUN PYTHONPATH=/app python tests/test_render_state.py -q
+
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1"]

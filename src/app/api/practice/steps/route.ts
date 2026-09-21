@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/captcha';
-import { generateGeminiText } from '@/lib/gemini';
+import { generateText } from '@/lib/llm';
 
 const STEPS_PROMPT = `You are MathSolver, an expert AI math tutor. 
 Generate a step-by-step explanation for the provided multiple-choice math question.
@@ -55,7 +55,7 @@ Options: ${JSON.stringify(options)}
 Correct Answer: Option ${correctAnswerIndex + 1} ("${correctOptionText}")
 `;
 
-    const content = await generateGeminiText({
+    const content = await generateText({
       systemInstruction: STEPS_PROMPT,
       messages: [
         { role: 'user', text: userPrompt },
