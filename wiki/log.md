@@ -425,7 +425,9 @@ A third exact-input production fixture completed a 68-second lesson, passed full
 
 ## [2026-09-22] change | Published pending homepage FAQ source
 
-Prepared the existing homepage FAQ update for `main`: one `faqItems` array now drives the visible questions, including the AI-detector link and native-app download answer. Included the already-deployed mobile promotion, Azure solver/narration support, independent Gemini lesson planning, and reused-worker rendering fix so the release source preserves current production behavior. The separate Azure hosting migration remains pending. Updated [[codebase-map]]; deployment verification is recorded below when complete.
+Pushed the existing homepage FAQ update to `main` in source commit `8c1eec9`: one `faqItems` array now drives the visible questions, including the AI-detector link and native-app download answer. Included the already-deployed mobile promotion, Azure solver/narration support, independent Gemini lesson planning, and reused-worker rendering fix so the release source preserves current production behavior. The separate Azure hosting migration remains pending. Updated [[codebase-map]].
+
+Deployed an isolated snapshot of that commit as Cloud Run revision `mathsolver-00050-rwh`, serving 100% traffic; build `21a28cb2-f2a5-4a4b-b819-84ab938509a8` produced image `faq-8c1eec9-20260922` (`sha256:c05e88d897546f456973f3f0dc05c480a9756b87ffb4c61688fc02d27d8807cc`). All 69 web unit tests, TypeScript, targeted ESLint, the production build, and 36 live smoke checks passed, including streamed solving, practice, video authentication guards, mobile app configuration, public pages, and static assets. Browser and server-rendered HTML checks confirmed the new FAQ appears once with the intended link. The already-fixed video renderer was not redeployed. Updated [[tech-and-ops]].
 
 ## [2026-09-22] change | Added homepage AI-detection FAQ and made the FAQ data-driven
 
