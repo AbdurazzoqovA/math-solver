@@ -84,6 +84,34 @@ export default function MessageList({
   );
   const [isVideoLessonSuspended, setIsVideoLessonSuspended] =
     useState(false);
+  const [printSolution, setPrintSolution] = useState<{
+    problem: string | null;
+    solution: string;
+  } | null>(null);
+  const [PrintSolutionComponent, setPrintSolutionComponent] = useState<
+    typeof import("./PrintSolution").default | null
+  >(null);
+  const [preparingPrintId, setPreparingPrintId] = useState<string | null>(null);
+  const [printErrorId, setPrintErrorId] = useState<string | null>(null);
+  const closePrintSolution = useCallback(() => setPrintSolution(null), []);
+
+  const handlePrintClick = async (message: Message) => {
+    setPreparingPrintId(message.id);
+    setPrintErrorId(null);
+    try {
+      // The printable renderer is downloaded only when someone asks to print.
+      const { default: Component } = await import("./PrintSolution");
+      setPrintSolutionComponent(() => Component);
+      setPrintSolution({
+        problem: getProblemForAssistantMessage(messages, message.id),
+        solution: message.content,
+      });
+    } catch {
+      setPrintErrorId(message.id);
+    } finally {
+      setPreparingPrintId(null);
+    }
+  };
 
   useEffect(() => {
     const resumeVideoLesson = () => setIsVideoLessonSuspended(false);
@@ -277,6 +305,25 @@ export default function MessageList({
                     {preprocessMathMarkdown(message.content)}
                   </ReactMarkdown>
                 </div>
+
+                {(!isLatestAssistant || !isLoading) && isActionableSolution(message.content) && (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => void handlePrintClick(message)}
+                      disabled={preparingPrintId !== null}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 dark:hover:bg-white/5"
+                      aria-label="Print solution or save as PDF"
+                    >
+                      {preparingPrintId === message.id ? "Preparing print…" : "Print solution"}
+                    </button>
+                    {printErrorId === message.id && (
+                      <p className="text-sm text-amber-700 dark:text-amber-400" role="alert">
+                        Printing is unavailable. Please try again.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {showQuickActions ? (
                   <section
@@ -506,6 +553,13 @@ export default function MessageList({
         onJobAttached={handleVideoJobAttached}
         onDeleted={handleVideoDeleted}
       />
+      {printSolution && PrintSolutionComponent && (
+        <PrintSolutionComponent
+          problem={printSolution.problem}
+          solution={printSolution.solution}
+          onClose={closePrintSolution}
+        />
+      )}
 
       {/* Loading Skeleton */}
       {isLoading && messages[messages.length - 1]?.role === 'user' && (

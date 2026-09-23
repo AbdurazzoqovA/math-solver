@@ -93,6 +93,70 @@
   display: block;
 }
 
+/* A separate print sheet keeps the chat layout and scroll container out of paper/PDF output. */
+#mathsolver-print-root {
+  display: none;
+}
+
+@media print {
+  body.mathsolver-print-active {
+    background: #fff !important;
+    color: #111827 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.mathsolver-print-active > :not(#mathsolver-print-root) {
+    display: none !important;
+  }
+
+  #mathsolver-print-root {
+    display: block !important;
+    color: #111827 !important;
+    font: 10.5pt/1.35 Arial, sans-serif;
+  }
+
+  #mathsolver-print-root .mathsolver-print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 3mm;
+    color: #334155;
+  }
+
+  #mathsolver-print-root h1 {
+    margin: 4mm 0 1.5mm;
+    color: #111827;
+    font-size: 13pt;
+    break-after: avoid-page;
+  }
+
+  #mathsolver-print-root .prose {
+    max-width: none;
+    color: #111827;
+    font-size: 10.5pt;
+    line-height: 1.35;
+  }
+
+  #mathsolver-print-root .prose :is(p, ul, ol, li, .math-display, hr) {
+    margin-top: 0.3em;
+    margin-bottom: 0.3em;
+  }
+
+  #mathsolver-print-root .prose :is(ul, ol) {
+    padding-left: 1.25em;
+  }
+
+  #mathsolver-print-root .prose :is(p, li, .math-display) {
+    break-inside: avoid-page;
+  }
+
+  #mathsolver-print-root .math-display {
+    overflow: visible;
+  }
+}
+
 /* ── MathLive: hide built-in toolbar buttons (we use our own keyboard) ── */
 math-field::part(virtual-keyboard-toggle),
 math-field::part(menu-toggle) {
