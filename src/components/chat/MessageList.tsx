@@ -5,6 +5,7 @@ import {
   Edit2,
   FileText,
   Loader2,
+  Printer,
   RefreshCw,
   Video,
 } from "lucide-react";
@@ -241,6 +242,23 @@ export default function MessageList({
         const stepNumbers = showQuickActions
           ? getSolutionStepNumbers(message.content)
           : [];
+        const canPrint =
+          (!isLatestAssistant || !isLoading) &&
+          isActionableSolution(message.content);
+        const printButton = canPrint ? (
+          <button
+            type="button"
+            onClick={() => void handlePrintClick(message)}
+            disabled={preparingPrintId !== null}
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-primary-600 bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:border-primary-700 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 dark:border-primary-500 dark:bg-primary-500 dark:text-white dark:hover:border-primary-400 dark:hover:bg-primary-400"
+            aria-label="Print solution or save as PDF"
+          >
+            <Printer className="h-4 w-4" aria-hidden="true" />
+            {preparingPrintId === message.id
+              ? "Preparing print…"
+              : "Print / Save PDF"}
+          </button>
+        ) : null;
 
         return (
           <div key={message.id} className="group w-full">
@@ -306,17 +324,9 @@ export default function MessageList({
                   </ReactMarkdown>
                 </div>
 
-                {(!isLatestAssistant || !isLoading) && isActionableSolution(message.content) && (
+                {canPrint && !showQuickActions && (
                   <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => void handlePrintClick(message)}
-                      disabled={preparingPrintId !== null}
-                      className="inline-flex min-h-10 items-center rounded-full border border-primary-600 bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:border-primary-700 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 dark:border-primary-500 dark:bg-primary-500 dark:text-white dark:hover:border-primary-400 dark:hover:bg-primary-400"
-                      aria-label="Print solution or save as PDF"
-                    >
-                      {preparingPrintId === message.id ? "Preparing print…" : "Print / Save PDF"}
-                    </button>
+                    {printButton}
                     {printErrorId === message.id && (
                       <p className="text-sm text-amber-700 dark:text-amber-400" role="alert">
                         Printing is unavailable. Please try again.
@@ -333,7 +343,8 @@ export default function MessageList({
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground md:text-center">
                       Keep learning
                     </p>
-                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:justify-center">
+                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:overflow-visible">
+                      {printButton}
                       {stepNumbers.length > 0 && (
                         <label className="relative shrink-0">
                           <span className="sr-only">
@@ -467,6 +478,11 @@ export default function MessageList({
                             : "Quiz me"}
                       </button>
                     </div>
+                    {printErrorId === message.id && (
+                      <p className="mt-3 text-sm text-amber-700 dark:text-amber-400" role="alert">
+                        Printing is unavailable. Please try again.
+                      </p>
+                    )}
                     {practiceError?.messageId === message.id && (
                       <p
                         className="mt-3 text-sm text-amber-700 dark:text-amber-400"
