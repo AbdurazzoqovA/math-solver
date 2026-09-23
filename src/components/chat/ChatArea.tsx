@@ -36,7 +36,7 @@ export function ChatConversation({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading]);
 
   return (
     <div className="flex flex-col h-full w-full relative">

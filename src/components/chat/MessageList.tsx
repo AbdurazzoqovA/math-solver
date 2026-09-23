@@ -312,10 +312,10 @@ export default function MessageList({
                       type="button"
                       onClick={() => void handlePrintClick(message)}
                       disabled={preparingPrintId !== null}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 dark:hover:bg-white/5"
+                      className="inline-flex min-h-10 items-center rounded-full border border-primary-600 bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:border-primary-700 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 dark:border-primary-500 dark:bg-primary-500 dark:text-white dark:hover:border-primary-400 dark:hover:bg-primary-400"
                       aria-label="Print solution or save as PDF"
                     >
-                      {preparingPrintId === message.id ? "Preparing print…" : "Print solution"}
+                      {preparingPrintId === message.id ? "Preparing print…" : "Print / Save PDF"}
                     </button>
                     {printErrorId === message.id && (
                       <p className="text-sm text-amber-700 dark:text-amber-400" role="alert">
