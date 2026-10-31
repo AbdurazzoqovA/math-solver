@@ -15,7 +15,7 @@ Catalog of the MathSolver knowledge base. Entry point for agents: read this, the
 | [[calculator-pages]] | Shipped calculator routes, keyword map, reusable architecture, SEO contract, and launch checks. |
 | [[mathgpt-video-research]] | Verified public behavior, likely architecture, cost model, and a Firebase-aware plan for explanation videos. |
 | [[mobile-app-concept]] | The iOS/Android direction: July 2026 market research, positioning, roadmap, and status of the standalone Flutter implementation in `mobile_app/`. |
-| [[monetization]] | Pricing ladder (Free / Plus / Unlimited), unit economics, revenue range, and the Stripe billing implementation: files, env vars, webhook setup, entitlement model, launch checklist, and what is not built yet. |
+| [[monetization]] | Pricing ladder (Free / Plus / Unlimited), unit economics, revenue range, and the Stripe billing implementation: files, env vars, webhook setup, entitlement model, Telegram owner alerts, the 2026-10-31 launch record, and what is not built yet. |
 
 ## Special files
 

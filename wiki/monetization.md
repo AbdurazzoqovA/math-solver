@@ -1,6 +1,6 @@
 # Monetization
 
-Pricing recommendation drafted 2026-10-31 at the owner's request and accepted the same day. Status: **billing implemented in the working tree on 2026-10-31, not deployed**; the live site still has no billing. Implementation details are in the "Implementation (2026-10-31)" section below; the ladder, economics, and revenue range are unchanged from the proposal. Market context and competitor prices come from [[growth-strategy]]; per-request costs from [[mathgpt-video-research]] and [[mobile-app-concept]]; entitlement storage from [[tech-and-ops]]. Index: [[index]].
+Pricing recommendation drafted 2026-10-31 at the owner's request and accepted the same day. Status: **live in production since 2026-10-31** with live Stripe keys, the registered webhook, and Telegram owner alerts; the release record is in [[azure-migration]]. Implementation details are in the "Implementation (2026-10-31)" section below; the ladder, economics, and revenue range are unchanged from the proposal. Market context and competitor prices come from [[growth-strategy]]; per-request costs from [[mathgpt-video-research]] and [[mobile-app-concept]]; entitlement storage from [[tech-and-ops]]. Index: [[index]].
 
 ## Inputs
 
@@ -63,7 +63,7 @@ Growth comes from traffic and from better gate moments, not from raising prices.
 - Payment provider: Stripe vs merchant-of-record.
 - Whether to enable regional pricing at launch.
 
-## Implementation (2026-10-31, working tree, not deployed)
+## Implementation (2026-10-31, live)
 
 **Approach.** Stripe-hosted Checkout and Customer Portal, web only; no Stripe.js on our pages and no card data on our servers. Prices are found by Stripe *lookup key* so the app needs no per-price env vars; `node scripts/stripe-setup.mjs` idempotently creates the two products, four recurring prices, and a Customer Portal configuration (cancel at period end, switch price with proration, update card, invoices). It refuses a live key without `--live`. The sandbox already contains these objects.
 
@@ -77,11 +77,9 @@ Growth comes from traffic and from better gate moments, not from raising prices.
 
 **Tests.** `tests/billing.test.mjs` (catalog, entitlement mapping, grace, event ordering, public shape), `tests/billing-checkout-route.test.mjs` (auth, catalog validation, customer parameters, no trial period, 409 for subscribers), `tests/billing-webhook-route.test.mjs` (real signature verification, tamper rejection, retry on failure), and `tests/billing-integration.test.mjs`, the local sandbox of the whole chain against an in-process Firestore fake (`tests/helpers/fake-firestore.mjs`): checkout completion → plan doc → video allowance and unlimited scans; free-account Firestore metering and UTC reset; guest cookie metering, tampering, and separate counters; the real OCR/practice handlers returning 429 and setting cookies; event ordering and cancellation back to free; account-bound success sync; deletion cancelling the Stripe subscription. The Firestore emulator was not used because this machine has no Java runtime. Run with `node --test tests/billing*.test.mjs`.
 
-**Launch checklist (owner).**
-1. Deployment secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PORTAL_CONFIGURATION_ID`, `GUEST_USAGE_SECRET` (one long random string shared by all instances). `STRIPE_AUTOMATIC_TAX` stays `false` until Stripe Tax is enabled.
-2. Switch to live: put the live secret key in ignored `.env`, run `node scripts/stripe-setup.mjs --live --webhook` once. It creates the live products/prices/portal configuration, registers `https://math-solver.io/api/billing/webhook` for the four events, and prints the webhook signing secret exactly once; store it as `STRIPE_WEBHOOK_SECRET` and the printed `STRIPE_PORTAL_CONFIGURATION_ID`. Complete Stripe business details (public name, support email, statement descriptor, receipt emails) in the Dashboard.
-3. Optional: create a `FOUNDING` promotion code in the Dashboard (promotion codes are enabled at checkout); enable Stripe Tax if taxes must be collected.
-4. Deploy, then test one sandbox purchase end to end before switching to live keys.
+**Owner alerts.** `src/lib/billing/alerts.ts` posts plain-text messages to a private Telegram chat (`BILLING_TELEGRAM_BOT_TOKEN`, `BILLING_TELEGRAM_CHAT_ID`, server-only, separate from the contact-form bot) for every billing incident and payment: checkout or portal could not be opened (Stripe or server error, not sign-in or validation 4xx), the success-page sync failed, webhook processing failed (Stripe will retry), a webhook signature was rejected (one alert per 15 minutes, with a suppressed count), a billable subscription could not be matched to an account or catalog price, a renewal payment failed (`invoice.payment_failed`, registered on the endpoint), plus ✅ payment received (plan, amount, email, account, whether the plan is active) and ℹ️ subscription ended. Delivery never throws, times out after 5 s, and carries ids and error summaries only. Tested in `tests/billing-alerts.test.mjs`.
+
+**Launch record (2026-10-31).** Live keys were stored in the ignored root `.env` (sandbox pair kept as `STRIPE_SANDBOX_*`) and `node scripts/stripe-setup.mjs --live --webhook` created the live products, four prices, the default portal configuration `bpc_1UWgE7BW7J8wsv3I8ma8Cl2y`, and webhook `we_1UWgE8BW7J8wsv3IfMBSjxKu` on `https://math-solver.io/api/billing/webhook`. The live account is activated (charges and payouts enabled, statement descriptor `MATH SOLVER`), and a live Checkout Session was created and expired as a smoke check. Production secrets `stripe-secret-key`, `stripe-webhook-secret`, `guest-usage-secret` (generated for production, different from local), `billing-telegram-bot-token`, `billing-telegram-chat-id` were added to the Azure Container App and bound in the release template; see [[azure-migration]] for the revision, checks, and rollback. Still optional for the owner: a support email in the Stripe Dashboard business profile, a `FOUNDING` promotion code, and Stripe Tax (`STRIPE_AUTOMATIC_TAX=true`) once enabled in the Dashboard.
 
 **Not built yet (follow-ups).**
 - Anonymous mobile scans and quizzes are unmetered until the Flutter app sends the Firebase ID token on `/api/mobile/v1/ocr` and `/api/mobile/v1/practice` (a store release); the server already meters signed-in mobile users.

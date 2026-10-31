@@ -138,7 +138,8 @@ src/
       stripe.ts            # server-only Stripe client, price lookup by key, webhook secret, return origin
       entitlements.ts      # server-only Firestore: users/{uid}/entitlements/plan + /billing
       events.ts            # server-only webhook/sync handlers; cancel subscription on account deletion
-      route-helpers.ts     # no-store JSON + Stripe/auth error mapping for the billing routes
+      route-helpers.ts     # no-store JSON + Stripe/auth error mapping for the billing routes; 5xx outcomes raise an owner alert
+      alerts.ts            # server-only Telegram owner alerts: failed checkout/portal/sync/webhook, unmatched paid subscription, failed renewal, payments, ended subscriptions
       client.ts            # browser fetchers for status/checkout/portal/sync
       limits.ts            # client-safe limit contract: 429 code, event name, parser, error class
       usage.ts             # server-only daily scan/quiz metering: Firestore bucket for users, signed cookie for guests
