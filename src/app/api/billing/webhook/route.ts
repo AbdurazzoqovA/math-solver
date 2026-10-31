@@ -11,6 +11,24 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function looksLikeStripeEvent(payload: string): boolean {
+  try {
+    const parsed = JSON.parse(payload) as {
+      object?: unknown;
+      id?: unknown;
+      type?: unknown;
+    } | null;
+    return (
+      parsed?.object === "event" &&
+      typeof parsed.id === "string" &&
+      parsed.id.startsWith("evt_") &&
+      typeof parsed.type === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function json(body: unknown, status: number) {
   const response = NextResponse.json(body, { status });
   response.headers.set("Cache-Control", "no-store");
@@ -38,9 +56,13 @@ export async function POST(request: Request) {
       });
       return json({ error: error.message }, error.status);
     }
-    await sendBillingAlert("webhook_signature_invalid", {
-      error: describeError(error),
-    });
+    // Probes and release checks post arbitrary bodies; only a Stripe-shaped
+    // event with a bad signature points at a misconfigured secret.
+    if (looksLikeStripeEvent(payload)) {
+      await sendBillingAlert("webhook_signature_invalid", {
+        error: describeError(error),
+      });
+    }
     return json({ error: "Invalid signature." }, 400);
   }
 

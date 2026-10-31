@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportProviderFailure } from "./llm-alerts.ts";
+
 type GeminiRole = "user" | "model";
 
 export type GeminiMessage = {
@@ -76,6 +78,8 @@ async function callGemini(
 
   if (!response.ok) {
     console.error("Gemini API request failed with status", response.status);
+    const body = await response.text().catch(() => "");
+    void reportProviderFailure("gemini", response.status, body);
     throw new Error(`Gemini API request failed (${response.status})`);
   }
 

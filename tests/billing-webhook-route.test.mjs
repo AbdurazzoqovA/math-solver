@@ -7,7 +7,7 @@ import Stripe from "stripe";
 // recorded instead of touching Firestore.
 process.env.STRIPE_SECRET_KEY = "sk_test_local_placeholder";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_local_test_secret";
-const fixture = { events: [], fail: false };
+const fixture = { events: [], alerts: [], fail: false };
 globalThis.__mathsolverWebhookTest = fixture;
 const dataModule = (source) => ({ url: `data:text/javascript,${encodeURIComponent(source)}`, shortCircuit: true });
 const local = (path) => ({ url: new URL(`../src/lib/${path}`, import.meta.url).href, shortCircuit: true });
@@ -17,6 +17,10 @@ registerHooks({
     if (specifier === "next/server") return dataModule('export const NextResponse = { json: (body, init) => Response.json(body, init) };');
     if (specifier === "@/lib/billing/events") return dataModule(`
       export async function processStripeEvent(event) { const f = globalThis.__mathsolverWebhookTest; if (f.fail) throw new Error("boom"); f.events.push(event); return { handled: true, applied: true }; }
+    `);
+    if (specifier === "@/lib/billing/alerts") return dataModule(`
+      export async function sendBillingAlert(kind, fields) { globalThis.__mathsolverWebhookTest.alerts.push({ kind, fields }); return true; }
+      export function describeError(error) { return error instanceof Error ? error.name + ": " + error.message : typeof error; }
     `);
     if (specifier.startsWith("@/lib/")) return local(specifier.slice("@/lib/".length) + ".ts");
     return nextResolve(specifier, context);
@@ -63,4 +67,19 @@ test("a processing failure returns 500 so Stripe retries the delivery", async ()
   const signature = signer.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET });
   const response = await webhook(request(payload, signature));
   assert.equal(response.status, 500);
+});
+
+test("signature alerts fire only for Stripe-shaped bodies; processing failures always alert", async () => {
+  Object.assign(fixture, { events: [], alerts: [], fail: false });
+  const forgedProbe = signer.webhooks.generateTestHeaderString({ payload: "{}", secret: "whsec_someone_else" });
+  assert.equal((await webhook(request("{}", forgedProbe))).status, 400);
+  assert.equal(fixture.alerts.length, 0, "a probe or release check must not page the owner");
+  const forgedEvent = signer.webhooks.generateTestHeaderString({ payload, secret: "whsec_someone_else" });
+  assert.equal((await webhook(request(payload, forgedEvent))).status, 400);
+  assert.deepEqual(fixture.alerts.map((a) => a.kind), ["webhook_signature_invalid"]);
+  Object.assign(fixture, { alerts: [], fail: true });
+  const valid = signer.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET });
+  assert.equal((await webhook(request(payload, valid))).status, 500);
+  assert.deepEqual(fixture.alerts.map((a) => a.kind), ["webhook_failed"]);
+  assert.equal(fixture.alerts[0].fields.event, "customer.subscription.updated");
 });

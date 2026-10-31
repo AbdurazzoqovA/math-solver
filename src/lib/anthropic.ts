@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { GenerateOptions } from "./gemini.ts";
+import { reportProviderFailure } from "./llm-alerts.ts";
 import { prepareLLMImage } from "./llm-image.ts";
 
 const ENDPOINT = "https://api.anthropic.com/v1/messages";
@@ -50,7 +51,8 @@ async function callAnthropic(options: GenerateOptions, stream: boolean) {
     }),
   });
   if (!response.ok) {
-    await response.body?.cancel();
+    const body = await response.text().catch(() => "");
+    void reportProviderFailure("anthropic", response.status, body);
     throw new Error(`Anthropic LLM request failed (${response.status})`);
   }
   return response;

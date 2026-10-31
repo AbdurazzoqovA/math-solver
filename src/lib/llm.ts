@@ -1,6 +1,7 @@
 import "server-only";
 
 import { generateAnthropicText, streamAnthropicText } from "./anthropic.ts";
+import { reportProviderFailure } from "./llm-alerts.ts";
 
 import {
   generateGeminiText,
@@ -102,7 +103,8 @@ async function callAzure(
     }),
   });
   if (!response.ok) {
-    await response.body?.cancel();
+    const body = await response.text().catch(() => "");
+    void reportProviderFailure("azure", response.status, body);
     throw new Error(`Azure LLM request failed (${response.status})`);
   }
   return response;
