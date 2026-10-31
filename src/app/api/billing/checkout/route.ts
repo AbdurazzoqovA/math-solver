@@ -25,8 +25,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  let uid: string | undefined;
+  let plan: string | undefined;
   try {
     const user = await verifyBillingRequest(request);
+    uid = user.uid;
     const { tier, interval } = await readJsonBody(request);
     if (!isPaidPlanTier(tier) || !isBillingInterval(interval)) {
       return noStoreJson(
@@ -34,6 +37,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    plan = `${tier}/${interval}`;
 
     const [entitlement, customerId] = await Promise.all([
       getPlanEntitlement(user.uid),
@@ -87,6 +91,7 @@ export async function POST(request: Request) {
     return billingErrorResponse(
       error,
       "Checkout could not be started. Please try again.",
+      { alert: "checkout_failed", uid, fields: { plan } },
     );
   }
 }

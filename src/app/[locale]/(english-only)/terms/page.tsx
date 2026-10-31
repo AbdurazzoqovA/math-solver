@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
   title: "Terms of Service | MathSolver",
-  description: "Terms for using the MathSolver website, paid plans, and mobile apps.",
+  description: "Terms for using the MathSolver website and mobile apps.",
   alternates: { canonical: "/terms" },
 };
 

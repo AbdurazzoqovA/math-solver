@@ -3,7 +3,21 @@ import "server-only";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { VideoAuthError } from "@/lib/firebase-admin";
+import {
+  describeError,
+  sendBillingAlert,
+  type BillingAlertFields,
+  type BillingAlertKind,
+} from "./alerts.ts";
 import { BillingServiceError } from "./stripe.ts";
+
+// Which owner alert a failing route raises; expected 4xx outcomes (sign-in,
+// validation, 409) are not incidents and never alert.
+export type BillingErrorContext = {
+  alert: Extract<BillingAlertKind, "checkout_failed" | "portal_failed" | "sync_failed">;
+  uid?: string;
+  fields?: BillingAlertFields;
+};
 
 export function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
@@ -11,8 +25,13 @@ export function noStoreJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
-export function billingErrorResponse(error: unknown, fallback: string) {
+export async function billingErrorResponse(
+  error: unknown,
+  fallback: string,
+  context?: BillingErrorContext,
+) {
   if (error instanceof VideoAuthError || error instanceof BillingServiceError) {
+    if (context && error.status >= 500) await alertOwner(context, error);
     return noStoreJson(
       { error: error.message, code: error.code },
       { status: error.status },
@@ -24,6 +43,7 @@ export function billingErrorResponse(error: unknown, fallback: string) {
       code: error.code,
       statusCode: error.statusCode,
     });
+    if (context) await alertOwner(context, error);
     return noStoreJson(
       { error: fallback, code: "payment_provider_error" },
       { status: 502 },
@@ -33,7 +53,16 @@ export function billingErrorResponse(error: unknown, fallback: string) {
     "Billing request failed:",
     error instanceof Error ? error.name : typeof error,
   );
+  if (context) await alertOwner(context, error);
   return noStoreJson({ error: fallback, code: "billing_error" }, { status: 500 });
+}
+
+function alertOwner(context: BillingErrorContext, error: unknown) {
+  return sendBillingAlert(context.alert, {
+    ...context.fields,
+    user: context.uid ?? "not signed in",
+    error: describeError(error),
+  });
 }
 
 export async function readJsonBody(

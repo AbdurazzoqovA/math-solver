@@ -8,3 +8,8 @@ Dockerfile
 .dockerignore
 README.md
 .gemini
+.azure-migration
+mobile_app
+services
+wiki
+infra

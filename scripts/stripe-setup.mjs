@@ -28,6 +28,7 @@ const WEBHOOK_EVENTS = [
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "invoice.payment_failed",
 ];
 
 for (const file of [".env.development.local", ".env.local", ".env"]) {

@@ -10,8 +10,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  let uid: string | undefined;
   try {
     const user = await verifyBillingRequest(request);
+    uid = user.uid;
     const customerId = await getStripeCustomerId(user.uid);
     if (!customerId) {
       return noStoreJson(
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
     return billingErrorResponse(
       error,
       "The billing portal could not be opened. Please try again.",
+      { alert: "portal_failed", uid },
     );
   }
 }

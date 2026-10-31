@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { describeError, sendBillingAlert } from "@/lib/billing/alerts";
 import { processStripeEvent } from "@/lib/billing/events";
 import {
   BillingServiceError,
@@ -31,8 +32,15 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (error instanceof BillingServiceError) {
+      await sendBillingAlert("webhook_failed", {
+        stage: "configuration",
+        error: describeError(error),
+      });
       return json({ error: error.message }, error.status);
     }
+    await sendBillingAlert("webhook_signature_invalid", {
+      error: describeError(error),
+    });
     return json({ error: "Invalid signature." }, 400);
   }
 
@@ -44,6 +52,11 @@ export async function POST(request: Request) {
     console.error("Stripe webhook failed:", {
       type: event.type,
       name: error instanceof Error ? error.name : typeof error,
+    });
+    await sendBillingAlert("webhook_failed", {
+      event: event.type,
+      id: event.id,
+      error: describeError(error),
     });
     return json({ error: "Webhook processing failed." }, 500);
   }

@@ -13,8 +13,11 @@ export const dynamic = "force-dynamic";
 // Called from the checkout success page so the plan is visible immediately,
 // even before Stripe's webhook has been delivered.
 export async function POST(request: Request) {
+  let uid: string | undefined;
+  let session: string | undefined;
   try {
     const user = await verifyBillingRequest(request);
+    uid = user.uid;
     const { sessionId } = await readJsonBody(request);
     if (typeof sessionId !== "string" || !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
       return noStoreJson(
@@ -22,6 +25,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    session = sessionId;
     const result = await syncCheckoutSession(user.uid, sessionId);
     return noStoreJson({
       ...result,
@@ -31,6 +35,7 @@ export async function POST(request: Request) {
     return billingErrorResponse(
       error,
       "Your purchase could not be confirmed yet. It will appear shortly.",
+      { alert: "sync_failed", uid, fields: { session } },
     );
   }
 }
