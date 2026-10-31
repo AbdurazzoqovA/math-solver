@@ -14,6 +14,7 @@ export type GenerateOptions = {
   temperature: number;
   maxOutputTokens: number;
   responseMimeType?: "application/json";
+  jsonSchema?: Record<string, unknown>;
   signal?: AbortSignal;
   geminiModel?: string;
 };

@@ -88,6 +88,12 @@ const ACCOUNT_AUTH_MESSAGES: VerifiedRequestMessages = {
   emailVerificationRequired: "Verify your email before managing your account.",
 };
 
+const BILLING_AUTH_MESSAGES: VerifiedRequestMessages = {
+  authenticationRequired: "Sign in to continue to checkout.",
+  invalidSession: "Your session expired. Sign in again and retry.",
+  emailVerificationRequired: "Verify your email before upgrading your plan.",
+};
+
 function readBearerToken(
   request: Request,
   messages: VerifiedRequestMessages,
@@ -150,4 +156,10 @@ export function verifyAccountRequest(
   request: Request,
 ): Promise<DecodedIdToken> {
   return verifyVerifiedRequest(request, ACCOUNT_AUTH_MESSAGES);
+}
+
+export function verifyBillingRequest(
+  request: Request,
+): Promise<DecodedIdToken> {
+  return verifyVerifiedRequest(request, BILLING_AUTH_MESSAGES);
 }

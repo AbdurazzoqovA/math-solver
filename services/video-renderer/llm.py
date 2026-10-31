@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any, Literal, TypeVar
+from typing import Any, Callable, Literal, TypeVar
 from urllib.parse import urlsplit
 
 import requests
@@ -70,7 +70,8 @@ def generate_json(
     temperature: float = 0.15,
     max_output_tokens: int = 8_000,
     retries: int = 3,
-) -> T:
+    parser: Callable[[str], Any] | None = None,
+) -> Any:
     provider = lesson_provider()
     if provider == "gemini":
         return generate_gemini_json(
@@ -81,6 +82,7 @@ def generate_json(
             temperature=temperature,
             max_output_tokens=max_output_tokens,
             retries=retries,
+            parser=parser,
         )
     if provider != "azure":
         raise LLMRequestError("LLM_PROVIDER must be azure or gemini")
@@ -157,7 +159,7 @@ def generate_json(
             )
             if not text:
                 raise LLMError("Azure LLM returned no structured output")
-            return model_type.model_validate_json(text)
+            return (parser or model_type.model_validate_json)(text)
         except LLMRequestError:
             raise
         except ValidationError as error:

@@ -60,7 +60,7 @@ if [[ -z "$secret_version" ]]; then
   exit 1
 fi
 
-runtime_env="FIREBASE_ADMIN_PROJECT_ID=${firebase_project}|VIDEO_STORAGE_BUCKET=${bucket_name}|VIDEO_STORAGE_PROJECT=${cloud_project}|VIDEO_PLAN_ATTEMPTS=2|VIDEO_TTS_ATTEMPTS=5|VIDEO_TTS_WORKERS=1|VIDEO_TTS_PROVIDER=${tts_provider}|VIDEO_VOICE_QA=true|VIDEO_TTS_MODEL=${VIDEO_TTS_MODEL:-gemini-3.1-flash-tts-preview}|VIDEO_TTS_VOICE=${VIDEO_TTS_VOICE:-Sulafat}"
+runtime_env="FIREBASE_ADMIN_PROJECT_ID=${firebase_project}|VIDEO_STORAGE_BUCKET=${bucket_name}|VIDEO_STORAGE_PROJECT=${cloud_project}|VIDEO_PLAN_ATTEMPTS=3|VIDEO_TTS_ATTEMPTS=5|VIDEO_TTS_WORKERS=3|VIDEO_TTS_PROVIDER=${tts_provider}|VIDEO_VOICE_QA=true|VIDEO_TTS_MODEL=${VIDEO_TTS_MODEL:-gemini-3.1-flash-tts-preview}|VIDEO_TTS_VOICE=${VIDEO_TTS_VOICE:-Sulafat}"
 runtime_secrets="GOOGLE_CLOUD_API_KEY=${secret_name}:${secret_version}"
 runtime_env+="|LLM_PROVIDER=${llm_provider}|VIDEO_LLM_PROVIDER=${llm_provider}"
 if [[ "$llm_provider" == "azure" ]]; then

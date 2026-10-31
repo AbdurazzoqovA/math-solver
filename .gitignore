@@ -47,3 +47,6 @@ next-env.d.ts
 __pycache__/
 *.py[cod]
 .ruff_cache/
+
+# Private cloud-migration snapshots and runtime configuration
+/.azure-migration/

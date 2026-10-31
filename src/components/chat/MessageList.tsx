@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/LanguageContext";
 import {
   BookOpenCheck,
   CheckCircle2,
@@ -16,13 +17,17 @@ import 'katex/dist/katex.min.css';
 import { useUI, Question } from "@/context/UIContext";
 import { useChatContext } from "@/context/ChatContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
+import { useAuth } from "@/context/AuthContext";
+import {
+  announceUsageLimit,
+  readUsageLimitError,
+  UsageLimitReachedError,
+} from "@/lib/billing/limits";
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import {
-  buildStepExplanationPrompt,
   getSolutionStepNumbers,
   isActionableSolution,
-  SIMILAR_PROBLEM_PROMPT,
 } from "@/lib/post-solution-actions";
 import { preprocessMathMarkdown } from "@/lib/math-markdown";
 import VideoLessonDialog, {
@@ -31,6 +36,7 @@ import VideoLessonDialog, {
 import { getProblemForAssistantMessage } from "@/lib/video/problem-context";
 import InlineVideoLesson from "@/components/video/InlineVideoLesson";
 import type { PublicVideoJob } from "@/lib/video/types";
+import type { Locale } from "@/lib/i18n/locales";
 
 export type PracticeAttempt = {
   id: string;
@@ -44,6 +50,7 @@ export type Message = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  language?: Locale;
   isCorrect?: boolean;
   images?: { url?: string; ocrText: string }[];
   practiceTest?: {
@@ -64,6 +71,7 @@ export default function MessageList({
   messages: Message[];
   isLoading?: boolean;
 }) {
+  const { locale, direction, t } = useLanguage();
   const { openPracticePanel } = useUI();
   const {
     activeChatId,
@@ -72,6 +80,7 @@ export default function MessageList({
     sendMessage,
   } = useChatContext();
   const { getToken } = useTurnstile();
+  const { getAuthToken } = useAuth();
   const [loadingMessageId, setLoadingMessageId] = useState<string | null>(null);
   const [pendingFollowUp, setPendingFollowUp] = useState<string | null>(null);
   const [practiceError, setPracticeError] = useState<{
@@ -136,12 +145,23 @@ export default function MessageList({
     setLoadingMessageId(messageId);
     try {
       const captchaToken = getToken();
+      const authToken = await getAuthToken();
       const res = await fetch("/api/practice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: content, captchaToken }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ topic: content, captchaToken, language: locale }),
       });
-      if (!res.ok) throw new Error("Failed to generate practice questions");
+      if (!res.ok) {
+        const limit = readUsageLimitError(
+          res.status,
+          await res.json().catch(() => null),
+        );
+        if (limit) throw new UsageLimitReachedError(limit);
+        throw new Error("Failed to generate practice questions");
+      }
       const data: unknown = await res.json();
       if (
         !data ||
@@ -160,14 +180,19 @@ export default function MessageList({
       const questions = (data.questions as Question[]).map((question) => ({
         ...question,
         id: question.id || crypto.randomUUID(),
+        language: locale,
       }));
       savePracticeToMessage(messageId, { title, questions });
       openPracticePanel(title, questions, messageId);
     } catch (error) {
+      if (error instanceof UsageLimitReachedError) {
+        announceUsageLimit(error.detail);
+        return;
+      }
       console.error("Failed to fetch practice questions:", error);
       setPracticeError({
         messageId,
-        message: "The quiz could not be created. Please try again.",
+        message: t("quizError"),
       });
     } finally {
       setLoadingMessageId(null);
@@ -230,7 +255,7 @@ export default function MessageList({
   };
 
   return (
-    <div className="flex flex-col gap-12">
+    <div lang={locale} dir={direction} className="flex flex-col gap-12">
       {messages.map((message) => {
         const isLatestAssistant =
           message.role === "assistant" &&
@@ -251,12 +276,12 @@ export default function MessageList({
             onClick={() => void handlePrintClick(message)}
             disabled={preparingPrintId !== null}
             className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-primary-600 bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:border-primary-700 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 dark:border-primary-500 dark:bg-primary-500 dark:text-white dark:hover:border-primary-400 dark:hover:bg-primary-400"
-            aria-label="Print solution or save as PDF"
+            aria-label={t("print")}
           >
             <Printer className="h-4 w-4" aria-hidden="true" />
             {preparingPrintId === message.id
-              ? "Preparing print…"
-              : "Print / Save PDF"}
+              ? t("preparingPrint")
+              : t("print")}
           </button>
         ) : null;
 
@@ -265,7 +290,7 @@ export default function MessageList({
             {message.role === 'user' ? (
               <div className="flex justify-end ml-auto max-w-[85%] relative">
               <div className="absolute top-2 -left-12 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-70 transition-opacity">
-                <button className="p-1.5 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors" title="Edit message">
+                <button className="p-1.5 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors" title={t("editMessage")}>
                   <Edit2 className="w-4 h-4" />
                 </button>
               </div>
@@ -284,12 +309,12 @@ export default function MessageList({
                     ))}
                   </div>
                 )}
-                <div className="prose md:prose-lg max-w-none text-white leading-relaxed prose-p:m-0 prose-math:text-white dark:prose-math:text-white">
+                <div dir="auto" className="prose md:prose-lg max-w-none text-white leading-relaxed prose-p:m-0 prose-math:text-white dark:prose-math:text-white">
                   <ReactMarkdown
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
-                    {preprocessMathMarkdown(message.content)}
+                    {preprocessMathMarkdown(message.content === "Solve the above math problem." ? t("imageProblem") : message.content)}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -310,17 +335,17 @@ export default function MessageList({
                 {message.isCorrect && (
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/50 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium text-sm mb-4 mt-1.5">
                     <CheckCircle2 className="w-4 h-4" />
-                    Correct Approach
+                    {t("correctApproach")}
                   </div>
                 )}
 
                 {/* Advanced Markdown Rendering */}
-                <div className="assistant-prose prose md:prose-lg max-w-none text-foreground leading-loose text-[1.1rem] dark:prose-invert prose-p:mb-4 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400 [&_.math-display]:my-8 [&_.math-display]:text-xl md:[&_.math-display]:text-2xl [&_.math-display]:tracking-wider [&>hr]:my-12 [&>hr]:border-t-2 [&>hr]:border-black/5 dark:[&>hr]:border-white/5 [&>hr]:w-[calc(100%+2rem)] [&>hr]:-ml-4">
+                <div lang={message.language ?? locale} dir="auto" className="assistant-prose prose md:prose-lg max-w-none text-foreground leading-loose text-[1.1rem] dark:prose-invert prose-p:mb-4 prose-pre:bg-zinc-100 dark:prose-pre:bg-zinc-800/50 prose-pre:border prose-pre:border-black/5 dark:prose-pre:border-white/5 prose-math:text-primary-600 dark:prose-math:text-primary-400 [&_.math-display]:my-8 [&_.math-display]:text-xl md:[&_.math-display]:text-2xl [&_.math-display]:tracking-wider [&>hr]:my-12 [&>hr]:border-t-2 [&>hr]:border-black/5 dark:[&>hr]:border-white/5 [&>hr]:w-[calc(100%+2rem)] [&>hr]:-ml-4">
                   <ReactMarkdown
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                   >
-                    {preprocessMathMarkdown(message.content)}
+                    {preprocessMathMarkdown(message.content === "Solve the above math problem." ? t("imageProblem") : message.content)}
                   </ReactMarkdown>
                 </div>
 
@@ -329,7 +354,7 @@ export default function MessageList({
                     {printButton}
                     {printErrorId === message.id && (
                       <p className="text-sm text-amber-700 dark:text-amber-400" role="alert">
-                        Printing is unavailable. Please try again.
+                        {t("printError")}
                       </p>
                     )}
                   </div>
@@ -337,18 +362,18 @@ export default function MessageList({
 
                 {showQuickActions ? (
                   <section
-                    aria-label="Continue learning"
+                    aria-label={t("keepLearning")}
                     className="mt-8 border-t border-black/8 pt-5 dark:border-white/10"
                   >
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground md:text-center">
-                      Keep learning
+                      {t("keepLearning")}
                     </p>
                     <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:overflow-visible">
                       {printButton}
                       {stepNumbers.length > 0 && (
                         <label className="relative shrink-0">
                           <span className="sr-only">
-                            Choose a solution step to explain
+                            {t("explainStep")}
                           </span>
                           {pendingFollowUp?.startsWith(
                             `${message.id}:step:`,
@@ -364,14 +389,14 @@ export default function MessageList({
                             />
                           )}
                           <select
-                            aria-label="Explain a solution step"
+                            aria-label={t("explainStep")}
                             value=""
                             onChange={(event) => {
                               const stepNumber = Number(event.target.value);
                               if (!Number.isInteger(stepNumber)) return;
                               void handleFollowUp(
                                 `${message.id}:step:${stepNumber}`,
-                                buildStepExplanationPrompt(stepNumber),
+                                t("explainStepRequest", { number: stepNumber }),
                               );
                             }}
                             disabled={
@@ -381,11 +406,11 @@ export default function MessageList({
                             className="min-h-10 cursor-pointer appearance-none rounded-full border border-black/10 bg-white py-2 pl-10 pr-8 text-sm font-medium text-foreground outline-none transition-colors hover:border-primary-300 hover:bg-primary-50 focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-55 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-primary-800 dark:hover:bg-primary-950/25"
                           >
                             <option value="" disabled>
-                              Explain a step
+                              {t("explainStep")}
                             </option>
                             {stepNumbers.map((stepNumber) => (
                               <option key={stepNumber} value={stepNumber}>
-                                Step {stepNumber}
+                                {t("step", { number: stepNumber })}
                               </option>
                             ))}
                           </select>
@@ -403,7 +428,7 @@ export default function MessageList({
                         onClick={() =>
                           void handleFollowUp(
                             `${message.id}:similar`,
-                            SIMILAR_PROBLEM_PROMPT,
+                            t("similarProblemRequest"),
                           )
                         }
                         disabled={
@@ -423,7 +448,7 @@ export default function MessageList({
                             aria-hidden="true"
                           />
                         )}
-                        Similar problem
+                        {t("similarProblem")}
                       </button>
 
                       <button
@@ -437,8 +462,8 @@ export default function MessageList({
                       >
                         <Video className="h-4 w-4" aria-hidden="true" />
                         {message.videoJob
-                          ? "Reopen video explanation"
-                          : "Generate video explanation"}
+                          ? t("reopenVideo")
+                          : t("video")}
                       </button>
 
                       <button
@@ -472,15 +497,15 @@ export default function MessageList({
                           />
                         )}
                         {loadingMessageId === message.id
-                          ? "Building quiz…"
+                          ? t("buildingQuiz")
                           : message.practiceTest
-                            ? "Practice again"
-                            : "Quiz me"}
+                            ? t("practiceAgain")
+                            : t("quizMe")}
                       </button>
                     </div>
                     {printErrorId === message.id && (
                       <p className="mt-3 text-sm text-amber-700 dark:text-amber-400" role="alert">
-                        Printing is unavailable. Please try again.
+                        {t("printError")}
                       </p>
                     )}
                     {practiceError?.messageId === message.id && (
@@ -503,14 +528,14 @@ export default function MessageList({
                             message.practiceTest!,
                           )
                         }
-                        className="group flex items-center justify-between w-full p-3 sm:px-4 sm:py-3.5 rounded-2xl border border-[#A6C8FF] dark:border-blue-900/40 bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-[0_4px_16px_-4px_rgba(37,99,235,0.08)] dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 text-left"
+                        className="group flex items-center justify-between w-full p-3 sm:px-4 sm:py-3.5 rounded-2xl border border-[#A6C8FF] dark:border-blue-900/40 bg-white dark:bg-zinc-900 overflow-hidden transition-all hover:shadow-[0_4px_16px_-4px_rgba(37,99,235,0.08)] dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 text-start"
                       >
                         <div className="flex flex-col gap-0.5 pr-3">
                           <span className="text-[15px] sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
                             {message.practiceTest.title}
                           </span>
                           <span className="text-xs sm:text-[13px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
-                            {message.practiceTest.questions.length} questions
+                            {t("questionCount", { count: message.practiceTest.questions.length })}
                           </span>
                         </div>
                         <div className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#E8F8F0] dark:bg-emerald-500/10 flex items-center justify-center text-[#10B981] dark:text-emerald-500 group-hover:scale-[1.03] transition-transform">
@@ -521,14 +546,14 @@ export default function MessageList({
                       <button
                         onClick={() => handlePracticeClick(message.id, message.content)}
                         disabled={loadingMessageId === message.id}
-                        className="group flex items-center justify-between w-full p-3 sm:px-4 sm:py-3.5 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 transition-all hover:bg-black/5 dark:hover:bg-white/5 text-left disabled:opacity-50 disabled:pointer-events-none"
+                        className="group flex items-center justify-between w-full p-3 sm:px-4 sm:py-3.5 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 transition-all hover:bg-black/5 dark:hover:bg-white/5 text-start disabled:opacity-50 disabled:pointer-events-none"
                       >
                         <div className="flex flex-col gap-0.5 pr-3">
                           <span className="text-[15px] sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 transition-colors leading-tight">
-                            {loadingMessageId === message.id ? 'Generating Practice Test...' : 'Take a Practice Test'}
+                            {loadingMessageId === message.id ? t("buildingQuiz") : t("quizMe")}
                           </span>
                           <span className="text-xs sm:text-[13px] font-medium text-zinc-500 dark:text-zinc-400 leading-tight">
-                            {loadingMessageId === message.id ? 'Analyzing solver context to build questions' : 'Generate 4 multiple-choice questions based on this answer'}
+                            {loadingMessageId === message.id ? t("analyzing") : t("questionCount", { count: 4 })}
                           </span>
                         </div>
                         <div className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-black/5 dark:bg-white/10 flex items-center justify-center text-foreground group-hover:scale-[1.03] transition-transform">

@@ -70,7 +70,7 @@ export default function DraggableCalculator() {
   ];
 
   return (
-    <motion.div
+    <motion.div lang="en" dir="ltr"
       drag
       dragConstraints={{ left: -150, right: 150, top: -200, bottom: 400 }}
       dragMomentum={false}

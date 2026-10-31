@@ -56,7 +56,7 @@ export function ChatConversation({
   );
 }
 
-export default function ChatArea() {
+export default function ChatArea({ landingContent, storeLabels }: { landingContent: React.ReactNode; storeLabels: { appleEyebrow: string; googleEyebrow: string; ariaLabel: string } }) {
   const { messages, isLoading, sendMessage, activeChatId } = useChatContext();
 
   if (messages.length > 0) {
@@ -74,7 +74,7 @@ export default function ChatArea() {
     <div className="flex h-full w-full flex-col">
       <div className="relative z-0 w-full flex-1 overflow-y-auto">
         <div className="flex min-h-full w-full flex-col">
-          <EmptyState onStartChat={sendMessage} />
+          <EmptyState onStartChat={sendMessage} landingContent={landingContent} storeLabels={storeLabels} />
         </div>
       </div>
     </div>

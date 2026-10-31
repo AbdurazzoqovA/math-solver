@@ -54,7 +54,9 @@ class AzurePlanningTests(unittest.TestCase):
         self.assertEqual(payload["reasoning"], {"effort": "low"})
         self.assertEqual(payload["max_output_tokens"], 5000)
         schema = payload["text"]["format"]["schema"]
-        self.assertEqual(set(schema["required"]), {"valid", "reason"})
+        self.assertEqual(
+            set(schema["required"]), {"valid", "mathValid", "reason"}
+        )
         self.assertFalse(schema["additionalProperties"])
 
     def test_nano_deployment_and_default_omit_reasoning_parameters(self):

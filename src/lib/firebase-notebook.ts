@@ -9,6 +9,7 @@ import {
 import type { Chat } from "@/context/ChatContext";
 import type { Message } from "@/components/chat/MessageList";
 import { getFirebaseClient } from "@/lib/firebase-client";
+import { isLocale } from "@/lib/i18n/locales";
 
 const CHAT_SCHEMA_VERSION = 1;
 const FIRESTORE_BATCH_LIMIT = 200;
@@ -26,6 +27,10 @@ function sanitizeMessageForCloud(message: Message): Message {
 
   if (typeof message.isCorrect === "boolean") {
     sanitized.isCorrect = message.isCorrect;
+  }
+
+  if (isLocale(message.language)) {
+    sanitized.language = message.language;
   }
 
   // Browser data URLs can exceed Firestore's per-document size limit. Keep the

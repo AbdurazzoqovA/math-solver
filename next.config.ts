@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
+import { englishRouteRewrites, englishRouteRedirects } from "./src/lib/i18n/paths.ts";
 
 const nextConfig: NextConfig = {
   output: "standalone",
   reactCompiler: true,
+  async redirects() { return englishRouteRedirects(); },
+  async rewrites() { return { beforeFiles: englishRouteRewrites(), afterFiles: [], fallback: [] }; },
   serverExternalPackages: ["@google-cloud/tasks", "firebase-admin"],
   outputFileTracingIncludes: {
     "/api/video/jobs": [

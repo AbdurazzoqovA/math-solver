@@ -16,21 +16,46 @@ import { createPlaybackManifest } from "@/lib/video/storage";
 import {
   canRestartFailedVideoJob,
   isVideoJobExpired,
+  isVideoJobStalled,
   MAX_VIDEO_JOB_ATTEMPTS,
   needsLegacyVideoJobObjectFiltering,
   VIDEO_JOB_RETENTION_MS,
   videoGenerationObjectPrefix,
 } from "@/lib/video/lifecycle";
 import {
-  DEFAULT_DAILY_VIDEO_LIMIT,
   normalizeDailyVideoQuota,
   type DailyVideoQuota,
 } from "@/lib/video/quota";
+import {
+  dailyVideoLimitForPlan,
+  effectivePlanTier,
+} from "@/lib/billing/subscription-state";
 
 const MAX_UNSUPPORTED_ATTEMPTS = 2;
+const STALLED_JOB_ERROR = {
+  code: "render_stalled",
+  message:
+    "The video studio lost track of this lesson. Your free lesson was not used, so you can try again.",
+  retryable: true,
+} as const;
 
-function getFreeVideoLimit(): number {
-  return DEFAULT_DAILY_VIDEO_LIMIT;
+function presentStalledJob<
+  T extends Pick<
+    PublicVideoJob,
+    "status" | "progress" | "stageLabel" | "updatedAt" | "error"
+  >,
+>(job: T, attempt: number, now = Date.now()): T {
+  if (!isVideoJobStalled(job, now)) return job;
+  return {
+    ...job,
+    status: "failed",
+    progress: 0,
+    stageLabel: "The lesson needs another try",
+    error: {
+      ...STALLED_JOB_ERROR,
+      retryable: canRestartFailedVideoJob(attempt),
+    },
+  };
 }
 
 function buildJobId(uid: string, requestKey: string): string {
@@ -40,8 +65,29 @@ function buildJobId(uid: string, requestKey: string): string {
     .slice(0, 40);
 }
 
-function quotaFromData(value: unknown, now = Date.now()): DailyVideoQuota {
-  return normalizeDailyVideoQuota(value, getFreeVideoLimit(), now);
+// The daily allowance comes from the account's plan entitlement, which is
+// server-written by Stripe webhooks (see src/lib/billing). Persisted usage
+// buckets never grant more than the current plan allows.
+function quotaFromData(
+  value: unknown,
+  planValue: unknown,
+  now = Date.now(),
+): DailyVideoQuota {
+  return normalizeDailyVideoQuota(
+    value,
+    dailyVideoLimitForPlan(planValue, now),
+    now,
+  );
+}
+
+function planRef(uid: string) {
+  return getAdminFirestore().doc(`users/${uid}/entitlements/plan`);
+}
+
+function limitReachedMessage(limit: number, planValue: unknown): string {
+  return effectivePlanTier(planValue) === "unlimited"
+    ? `You have reached today's fair-use limit of ${limit} video lessons. More unlock after the daily reset.`
+    : `You have used all ${limit} video lessons available today on your plan. Upgrade for more lessons a day, or come back after the daily reset.`;
 }
 
 function publicQuota(quota: DailyVideoQuota): PublicVideoQuota {
@@ -88,15 +134,18 @@ export async function createOrRestartVideoJob(
   const now = Date.now();
 
   return db.runTransaction(async (transaction) => {
-    const [jobSnapshot, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
-      transaction.get(jobRef),
-      transaction.get(quotaRef),
-      transaction.get(deletedUserRef),
-    ]);
+    const [jobSnapshot, quotaSnapshot, planSnapshot, deletedUserSnapshot] =
+      await Promise.all([
+        transaction.get(jobRef),
+        transaction.get(quotaRef),
+        transaction.get(planRef(uid)),
+        transaction.get(deletedUserRef),
+      ]);
     if (deletedUserSnapshot.exists) {
       throw accountDeletedError();
     }
-    const quota = quotaFromData(quotaSnapshot.data(), now);
+    const planValue = planSnapshot.data();
+    const quota = quotaFromData(quotaSnapshot.data(), planValue, now);
     const existingData = jobSnapshot.data();
     const storedExisting = isVideoJobDocument(existingData)
       ? existingData
@@ -112,14 +161,25 @@ export async function createOrRestartVideoJob(
     const canRestartFailed =
       existing?.status === "failed" &&
       canRestartFailedVideoJob(existing.attempt);
-    if (existing && !canRestartFailed && !canRestartUnsupported) {
+    // A new attempt number invalidates the lost worker's lease, so a late
+    // write from it cannot overwrite the restarted lesson.
+    const canRestartStalled =
+      !!existing &&
+      isVideoJobStalled(existing, now) &&
+      canRestartFailedVideoJob(existing.attempt);
+    if (
+      existing &&
+      !canRestartFailed &&
+      !canRestartUnsupported &&
+      !canRestartStalled
+    ) {
       return { job: existing, shouldEnqueue: false };
     }
 
     const needsQuotaCharge = !existing?.quotaCharged;
     if (needsQuotaCharge && quota.used >= quota.limit) {
       throw new VideoJobServiceError(
-        `You have made all ${quota.limit} video explanations available today. You can make more after the daily reset.`,
+        limitReachedMessage(quota.limit, planValue),
         429,
         "free_video_limit_reached",
       );
@@ -178,11 +238,13 @@ export async function markVideoJobDispatchFailure(
   const deletedUserRef = db.doc(`deletedUsers/${uid}`);
 
   await db.runTransaction(async (transaction) => {
-    const [jobSnapshot, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
-      transaction.get(jobRef),
-      transaction.get(quotaRef),
-      transaction.get(deletedUserRef),
-    ]);
+    const [jobSnapshot, quotaSnapshot, planSnapshot, deletedUserSnapshot] =
+      await Promise.all([
+        transaction.get(jobRef),
+        transaction.get(quotaRef),
+        transaction.get(planRef(uid)),
+        transaction.get(deletedUserRef),
+      ]);
     if (deletedUserSnapshot.exists) return;
     const value = jobSnapshot.data();
     if (!isVideoJobDocument(value) || value.attempt !== attempt) return;
@@ -202,7 +264,7 @@ export async function markVideoJobDispatchFailure(
       },
     });
 
-    const quota = quotaFromData(quotaSnapshot.data(), now);
+    const quota = quotaFromData(quotaSnapshot.data(), planSnapshot.data(), now);
     const shouldRefund =
       value.quotaCharged && value.quotaPeriodKey === quota.periodKey;
     transaction.set(
@@ -249,13 +311,15 @@ export async function getPublicVideoJob(
   jobId: string,
 ): Promise<PublicVideoJob> {
   const db = getAdminFirestore();
-  const [job, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
-    getVideoJobDocument(uid, jobId),
-    db.doc(`users/${uid}/entitlements/video`).get(),
-    db.doc(`deletedUsers/${uid}`).get(),
-  ]);
+  const [job, quotaSnapshot, planSnapshot, deletedUserSnapshot] =
+    await Promise.all([
+      getVideoJobDocument(uid, jobId),
+      db.doc(`users/${uid}/entitlements/video`).get(),
+      planRef(uid).get(),
+      db.doc(`deletedUsers/${uid}`).get(),
+    ]);
   if (deletedUserSnapshot.exists) throw accountDeletedError();
-  const quota = quotaFromData(quotaSnapshot.data());
+  const quota = quotaFromData(quotaSnapshot.data(), planSnapshot.data());
 
   if (isVideoJobExpired(job)) {
     throw new VideoJobServiceError(
@@ -277,6 +341,11 @@ export async function getPublicVideoJob(
       ...publicQuota(quota),
     },
   };
+
+  if (isVideoJobStalled(job)) {
+    await assertVideoAccountActive(uid);
+    return presentStalledJob(publicJob, job.attempt);
+  }
 
   if (job.error) {
     if (
@@ -316,15 +385,17 @@ export async function listPublicVideoJobs(uid: string): Promise<{
   quota: PublicVideoQuota;
 }> {
   const db = getAdminFirestore();
-  const [jobsSnapshot, quotaSnapshot, deletedUserSnapshot] = await Promise.all([
-    db
-      .collection(`users/${uid}/videoJobs`)
-      .orderBy("updatedAt", "desc")
-      .limit(24)
-      .get(),
-    db.doc(`users/${uid}/entitlements/video`).get(),
-    db.doc(`deletedUsers/${uid}`).get(),
-  ]);
+  const [jobsSnapshot, quotaSnapshot, planSnapshot, deletedUserSnapshot] =
+    await Promise.all([
+      db
+        .collection(`users/${uid}/videoJobs`)
+        .orderBy("updatedAt", "desc")
+        .limit(24)
+        .get(),
+      db.doc(`users/${uid}/entitlements/video`).get(),
+      planRef(uid).get(),
+      db.doc(`deletedUsers/${uid}`).get(),
+    ]);
   if (deletedUserSnapshot.exists) throw accountDeletedError();
   const now = Date.now();
   const storedJobs = jobsSnapshot.docs
@@ -353,7 +424,9 @@ export async function listPublicVideoJobs(uid: string): Promise<{
             ? { ...job.error, retryable: false }
             : job.error;
       }
-      if (job.status !== "ready") return summary;
+      if (job.status !== "ready") {
+        return presentStalledJob(summary, job.attempt, now);
+      }
 
       try {
         const { createVideoGalleryMetadata } = await import(
@@ -378,7 +451,9 @@ export async function listPublicVideoJobs(uid: string): Promise<{
   await assertVideoAccountActive(uid);
   return {
     jobs: summaries,
-    quota: publicQuota(quotaFromData(quotaSnapshot.data())),
+    quota: publicQuota(
+      quotaFromData(quotaSnapshot.data(), planSnapshot.data()),
+    ),
   };
 }
 

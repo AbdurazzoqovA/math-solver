@@ -1,0 +1,179 @@
+{
+  "metaTitle": "Math Solver - Free AI Math Solver with Step-by-Step Solutions | MathSolver",
+  "metaDescription": "Solve any math problem instantly with MathSolver, the free AI math solver. Get step-by-Step solutions for algebra, calculus, geometry, and more. Upload a photo or type your equation.",
+  "socialTitle": "Math Solver - Free AI Math Solver with Step-by-Step Solutions",
+  "imageAlt": "MathSolver — free math solver with step-by-step solutions",
+  "introTitle": "Solve Any Math Problem in Seconds",
+  "introParagraphs": [
+    "Struggling with a tough equation? MathSolver is a free online math solver that turns complex problems into clear, step-by-step answers. Just type your equation, paste a word problem, or snap a photo of your homework and our AI does the rest.",
+    "From basic algebra and geometry to advanced calculus and statistics, MathSolver doesn't just give you the final answer. It shows you exactly how to get there, explaining every step along the way so you can learn the method and apply it on your own next time."
+  ],
+  "calculatorsTitle": "Popular math calculators",
+  "calculatorsDescription": "Start with the exact skill you are studying. Each calculator keeps the full explanation free.",
+  "browseCalculators": "Browse all calculators",
+  "popularCalculators": [
+    {
+      "name": "Solve for X",
+      "detail": "Linear and multistep equations"
+    },
+    {
+      "name": "Graphing",
+      "detail": "Plot and compare functions online"
+    },
+    {
+      "name": "Quadratic equations",
+      "detail": "Roots, discriminant, and formula"
+    },
+    {
+      "name": "Factoring",
+      "detail": "GCF, trinomials, and special products"
+    },
+    {
+      "name": "Fractions",
+      "detail": "Add, subtract, multiply, and divide"
+    },
+    {
+      "name": "Systems of equations",
+      "detail": "Substitution and elimination"
+    },
+    {
+      "name": "Inequalities",
+      "detail": "Intervals and sign changes"
+    },
+    {
+      "name": "Logarithms",
+      "detail": "Evaluate, expand, and solve logs"
+    },
+    {
+      "name": "Derivatives",
+      "detail": "Power, product, quotient, and chain rules"
+    },
+    {
+      "name": "Integrals",
+      "detail": "Antiderivatives and integration methods"
+    },
+    {
+      "name": "Matrices",
+      "detail": "Operations, transpose, and row reduction"
+    },
+    {
+      "name": "Determinants",
+      "detail": "2 by 2 and larger square matrices"
+    },
+    {
+      "name": "Trig identities",
+      "detail": "Verify and simplify exact identities"
+    },
+    {
+      "name": "Standard deviation",
+      "detail": "Sample and population spread"
+    }
+  ],
+  "mobileTag": "MathSolver mobile apps",
+  "mobileTitle": "Your free math tutor, wherever homework happens",
+  "mobileDescription": "Scan a problem from your camera, check your handwritten work, and keep learning with practice and private video explanations. Core solving works without an account, and there is no subscription.",
+  "mobileFeatures": [
+    "Scan any problem",
+    "Check your work",
+    "Watch visual lessons"
+  ],
+  "mobilePreviewAlt": "MathSolver mobile app showing camera, photo, typing, and Check My Work options",
+  "featuresTitle": "Everything You Need to Solve Math",
+  "featureCards": [
+    {
+      "title": "Step-by-Step Solutions",
+      "description": "No more guessing where you went wrong. MathSolver shows each calculation as a separate, numbered step with a plain-language explanation. You'll see exactly which formula was applied and why, whether it's factoring a quadratic, computing a derivative, or simplifying a fraction."
+    },
+    {
+      "title": "Photo Math Solver",
+      "description": "Take a picture of any handwritten or printed problem and drop it into MathSolver. Our image recognition reads the equation, converts it to text, and solves it on the spot. Perfect for quickly working through textbook exercises or checking your handwritten work."
+    },
+    {
+      "title": "Practice Quizzes",
+      "description": "Reading solutions is one thing, but testing yourself is where real learning happens. Generate a custom quiz on any topic and difficulty level to check whether you truly understand the material before exam day."
+    },
+    {
+      "title": "Graphing Calculator",
+      "description": "Plot functions, find intersections, and see how equations behave, all inside your browser. MathSolver's graphing tool lets you overlay multiple functions on one set of axes so you can compare, analyze, and understand relationships visually."
+    }
+  ],
+  "howTitle": "How the Math Solver Works",
+  "howSteps": [
+    {
+      "title": "1. Enter Your Problem",
+      "description": "Type an equation, describe a word problem in your own words, or upload a photo. Whatever is easiest for you."
+    },
+    {
+      "title": "2. Get a Step-by-Step Solution",
+      "description": "Our AI analyzes the problem, solves it, and returns each step with a clear explanation so you understand the \"why\", not just the \"what\"."
+    },
+    {
+      "title": "3. Ask Follow-Ups",
+      "description": "Didn't catch a step? Ask a follow-up question right in the chat. MathSolver remembers the context and explains further, like having a tutor on call."
+    }
+  ],
+  "subjectsTitle": "Subjects MathSolver Can Help With",
+  "subjectsParagraphs": [
+    "MathSolver covers every major math topic: arithmetic, pre-algebra, algebra I & II, geometry, trigonometry, precalculus, calculus (AP AB/BC and beyond), differential equations, linear algebra, probability, and statistics. It also handles common STEM crossover questions in physics and chemistry.",
+    "No matter how specific the problem is, whether it's a system of three equations, a polar-to-rectangular conversion, or a hypothesis test, MathSolver can break it down and walk you through the solution."
+  ],
+  "faqTitle": "Frequently Asked Questions",
+  "faqs": [
+    {
+      "question": "What is MathSolver?",
+      "answer": "MathSolver is a free AI-powered math solver that delivers step-by-step solutions for algebra, calculus, geometry, trigonometry, statistics, and more. Simply type an equation or upload a photo of your math problem to get an instant, detailed breakdown.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Can MathSolver solve math from a photo?",
+      "answer": "Yes. Upload a picture of any handwritten or printed problem and MathSolver will read it, extract the equation, and return a full step-by-step solution automatically.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Can I use MathSolver in my language?",
+      "answer": "Yes. Choose one of 16 languages using the globe selector in the sidebar or mobile header. Each language has its own shareable page URL. The solver interface, new step-by-step solutions, and practice questions use that page’s language. Calculator guides, articles, account screens, and video lessons are currently in English.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "What subjects does MathSolver cover?",
+      "answer": "It covers arithmetic, pre-algebra, algebra, geometry, trigonometry, precalculus, calculus, linear algebra, differential equations, statistics, probability, plus physics and chemistry questions.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Is MathSolver completely free?",
+      "answer": "Yes. You can solve unlimited problems, view every step-by-step explanation, and generate practice quizzes, all at no cost, with no account required.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Can teachers tell if I used an AI math solver?",
+      "answer": "The numbers and steps are just math, so there is nothing to detect. What teachers and AI checkers look at is the written explanation. If you paste AI-generated text into a report or homework write-up, it can be flagged. Use the steps to learn the method, then write the explanation in your own words. If you want to be sure before you submit, run the text through an",
+      "linkText": "AI detector",
+      "afterLink": "first."
+    },
+    {
+      "question": "How accurate is the AI math solver?",
+      "answer": "MathSolver uses advanced AI models trained on millions of math problems. While it handles most problems with high accuracy, we always recommend double-checking critical calculations, especially for exams or professional work.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Does MathSolver have iPhone and Android apps?",
+      "answer": "Yes. MathSolver is available on the App Store and Google Play. You can scan problems directly with your camera, check handwritten work, practice, and save video lessons for offline viewing. The browser version also continues to work on phones and tablets without installing anything.",
+      "linkText": "",
+      "afterLink": ""
+    }
+  ],
+  "copyright": "© 2026 MathSolver. All rights reserved.",
+  "englishGuidesNote": "Calculator guides, articles, legal pages, account screens, and video lessons are currently in English.",
+  "storeAppleEyebrow": "Download on the",
+  "storeGoogleEyebrow": "Get it on",
+  "storeAriaLabel": "Download MathSolver from {store} (opens in a new tab)",
+  "signInLabel": "Sign in to sync",
+  "signInHelp": "Sign in to sync your notebook",
+  "detectorLanguageNote": "Detecting AI also offers pages in several languages."
+}

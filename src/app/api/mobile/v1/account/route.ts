@@ -7,6 +7,7 @@ import {
 } from "@/lib/firebase-admin";
 import { mobileAppCheckFailure } from "@/lib/mobile-request";
 import { videoAccountDeletionPlan } from "@/lib/video/lifecycle";
+import { cancelSubscriptionForDeletedAccount } from "@/lib/billing/events";
 import {
   deleteLegacyJobLessonObjects,
   deleteLessonObjects,
@@ -90,6 +91,8 @@ export async function DELETE(request: Request) {
       }),
     );
 
+    // Stop billing before the entitlement records disappear with the subtree.
+    await cancelSubscriptionForDeletedAccount(user.uid);
     await db.recursiveDelete(userRef);
     await getAdminAuth().deleteUser(user.uid);
     return new Response(null, { status: 204 });

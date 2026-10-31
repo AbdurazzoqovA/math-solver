@@ -1,5 +1,7 @@
 import "server-only";
 
+import { generateAnthropicText, streamAnthropicText } from "./anthropic.ts";
+
 import {
   generateGeminiText,
   streamGeminiText,
@@ -10,10 +12,10 @@ import {
 export type LLMMessage = GeminiMessage;
 export type { GenerateOptions };
 
-export function getLLMProvider(): "azure" | "gemini" {
+export function getLLMProvider(): "azure" | "gemini" | "anthropic" {
   const provider = (process.env.LLM_PROVIDER || "gemini").trim().toLowerCase();
-  if (provider !== "azure" && provider !== "gemini") {
-    throw new Error("LLM_PROVIDER must be azure or gemini");
+  if (provider !== "azure" && provider !== "gemini" && provider !== "anthropic") {
+    throw new Error("LLM_PROVIDER must be azure, gemini, or anthropic");
   }
   return provider;
 }
@@ -126,6 +128,7 @@ function readAzureText(body: AzureOutput): string {
 }
 
 export async function generateText(options: GenerateOptions): Promise<string> {
+  if (getLLMProvider() === "anthropic") return generateAnthropicText(options);
   if (getLLMProvider() === "gemini") return generateGeminiText(options);
   const response = await callAzure(options, false);
   const text = readAzureText(await response.json()).trim();
@@ -136,6 +139,7 @@ export async function generateText(options: GenerateOptions): Promise<string> {
 export async function streamText(
   options: GenerateOptions,
 ): Promise<ReadableStream<Uint8Array>> {
+  if (getLLMProvider() === "anthropic") return streamAnthropicText(options);
   if (getLLMProvider() === "gemini") return streamGeminiText(options);
   const response = await callAzure(options, true);
   if (!response.body) throw new Error("Azure LLM returned no response body");

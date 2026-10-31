@@ -1,0 +1,72 @@
+{
+  "metaTitle": "Resolver problemas de matemáticas gratis con IA y paso a paso | MathSolver",
+  "metaDescription": "Resuelve problemas de matemáticas con MathSolver, el solucionador gratuito con IA. Obtén soluciones paso a paso de álgebra, cálculo, geometría y más. Sube una foto o escribe tu ecuación.",
+  "socialTitle": "Resolver matemáticas gratis con IA y soluciones paso a paso",
+  "imageAlt": "MathSolver: solucionador gratuito de matemáticas con soluciones paso a paso",
+  "introTitle": "Resuelve cualquier problema de matemáticas en segundos",
+  "introParagraphs": [
+    "¿Se te resiste una ecuación? MathSolver es un solucionador gratuito de matemáticas en línea que convierte problemas complejos en respuestas claras, paso a paso. Escribe tu ecuación, pega el enunciado de un problema o haz una foto de tus deberes; nuestra IA se encarga del resto.",
+    "Desde álgebra y geometría básicas hasta cálculo y estadística avanzados, MathSolver te ofrece mucho más que el resultado final. Te muestra cómo llegar a él y explica cada paso para que aprendas el método y puedas aplicarlo por tu cuenta la próxima vez."
+  ],
+  "calculatorsTitle": "Calculadoras de matemáticas populares",
+  "calculatorsDescription": "Empieza por el tema que estás estudiando. Todas las calculadoras ofrecen la explicación completa gratis.",
+  "browseCalculators": "Ver todas las calculadoras",
+  "popularCalculators": [
+    { "name": "Despejar X", "detail": "Ecuaciones lineales y de varios pasos" },
+    { "name": "Gráficas", "detail": "Representa y compara funciones en línea" },
+    { "name": "Ecuaciones de segundo grado", "detail": "Raíces, discriminante y fórmula general" },
+    { "name": "Factorización", "detail": "Máximo común divisor, trinomios y productos notables" },
+    { "name": "Fracciones", "detail": "Sumar, restar, multiplicar y dividir" },
+    { "name": "Sistemas de ecuaciones", "detail": "Sustitución y eliminación" },
+    { "name": "Inecuaciones", "detail": "Intervalos y cambios de signo" },
+    { "name": "Logaritmos", "detail": "Calcula, desarrolla y resuelve logaritmos" },
+    { "name": "Derivadas", "detail": "Reglas de la potencia, producto, cociente y cadena" },
+    { "name": "Integrales", "detail": "Primitivas y métodos de integración" },
+    { "name": "Matrices", "detail": "Operaciones, transpuesta y reducción por filas" },
+    { "name": "Determinantes", "detail": "Matrices cuadradas de 2 × 2 y de mayor tamaño" },
+    { "name": "Identidades trigonométricas", "detail": "Verifica y simplifica identidades exactas" },
+    { "name": "Desviación estándar", "detail": "Dispersión de una muestra o una población" }
+  ],
+  "mobileTag": "Aplicaciones móviles de MathSolver",
+  "mobileTitle": "Tu tutor de matemáticas gratuito, dondequiera que estudies",
+  "mobileDescription": "Escanea un problema con la cámara, comprueba tu trabajo escrito a mano y sigue aprendiendo con ejercicios y explicaciones privadas en vídeo. Puedes resolver problemas sin una cuenta y no hay suscripción.",
+  "mobileFeatures": ["Escanea cualquier problema", "Comprueba tu trabajo", "Mira lecciones visuales"],
+  "mobilePreviewAlt": "Aplicación móvil de MathSolver con opciones de cámara, foto, escritura y comprobación del trabajo",
+  "featuresTitle": "Todo lo que necesitas para resolver matemáticas",
+  "featureCards": [
+    { "title": "Soluciones paso a paso", "description": "Ya no tienes que adivinar dónde te equivocaste. MathSolver presenta cada cálculo como un paso numerado con una explicación sencilla. Verás qué fórmula se aplicó y por qué, tanto al factorizar una ecuación de segundo grado como al calcular una derivada o simplificar una fracción." },
+    { "title": "Resolver matemáticas con una foto", "description": "Haz una foto de un problema escrito a mano o impreso y súbela a MathSolver. Nuestro reconocimiento de imágenes lee la ecuación, la convierte en texto y la resuelve al momento. Es ideal para avanzar en los ejercicios del libro o comprobar tu trabajo escrito a mano." },
+    { "title": "Cuestionarios de práctica", "description": "Leer soluciones ayuda, pero ponerse a prueba es lo que permite afianzar el aprendizaje. Genera un cuestionario personalizado sobre cualquier tema y nivel de dificultad para comprobar si entiendes el contenido antes del examen." },
+    { "title": "Calculadora gráfica", "description": "Representa funciones, encuentra intersecciones y observa cómo se comportan las ecuaciones desde tu navegador. La herramienta gráfica de MathSolver permite superponer varias funciones sobre los mismos ejes para comparar, analizar y comprender sus relaciones de forma visual." }
+  ],
+  "howTitle": "Cómo funciona el solucionador de matemáticas",
+  "howSteps": [
+    { "title": "1. Introduce tu problema", "description": "Escribe una ecuación, describe un problema con tus propias palabras o sube una foto. Elige lo que te resulte más fácil." },
+    { "title": "2. Obtén una solución paso a paso", "description": "Nuestra IA analiza y resuelve el problema, y explica cada paso con claridad para que entiendas el porqué del resultado." },
+    { "title": "3. Haz preguntas de seguimiento", "description": "¿No has entendido un paso? Pregunta directamente en el chat. MathSolver recuerda el contexto y amplía la explicación, como un tutor al que puedes consultar." }
+  ],
+  "subjectsTitle": "Temas en los que MathSolver puede ayudarte",
+  "subjectsParagraphs": [
+    "MathSolver abarca los principales temas de matemáticas: aritmética, preálgebra, álgebra I y II, geometría, trigonometría, precálculo, cálculo (incluidos AP AB/BC y niveles superiores), ecuaciones diferenciales, álgebra lineal, probabilidad y estadística. También responde a preguntas habituales de física y química relacionadas con las matemáticas.",
+    "Por específico que sea el problema, ya se trate de un sistema de tres ecuaciones, una conversión de coordenadas polares a cartesianas o una prueba de hipótesis, MathSolver puede desglosarlo y guiarte hasta la solución."
+  ],
+  "faqTitle": "Preguntas frecuentes",
+  "faqs": [
+    { "question": "¿Qué es MathSolver?", "answer": "MathSolver es un solucionador gratuito de matemáticas con IA que ofrece soluciones paso a paso de álgebra, cálculo, geometría, trigonometría, estadística y más. Escribe una ecuación o sube una foto de tu problema para obtener una explicación detallada al instante.", "linkText": "", "afterLink": "" },
+    { "question": "¿Puede MathSolver resolver matemáticas a partir de una foto?", "answer": "Sí. Sube una imagen de un problema escrito a mano o impreso y MathSolver lo leerá, extraerá la ecuación y devolverá automáticamente una solución completa paso a paso.", "linkText": "", "afterLink": "" },
+    { "question": "¿Puedo usar MathSolver en mi idioma?", "answer": "Sí. Elige uno de los 16 idiomas con el selector del globo en la barra lateral o en la cabecera móvil. Cada idioma tiene una dirección de página propia que puedes compartir. La interfaz, las nuevas soluciones paso a paso y las preguntas de práctica usan el idioma de esa página. Las guías de calculadoras, los artículos, las pantallas de cuenta y las lecciones en vídeo están actualmente en inglés.", "linkText": "", "afterLink": "" },
+    { "question": "¿Qué temas cubre MathSolver?", "answer": "Abarca aritmética, preálgebra, álgebra, geometría, trigonometría, precálculo, cálculo, álgebra lineal, ecuaciones diferenciales, estadística y probabilidad, además de preguntas de física y química.", "linkText": "", "afterLink": "" },
+    { "question": "¿Es MathSolver completamente gratuito?", "answer": "Sí. Puedes resolver problemas sin límite, consultar todas las explicaciones paso a paso y generar cuestionarios de práctica sin coste y sin necesidad de una cuenta.", "linkText": "", "afterLink": "" },
+    { "question": "¿Pueden saber los profesores si he usado un solucionador de matemáticas con IA?", "answer": "Los números y los pasos son simplemente matemáticas, así que no hay nada que detectar en ellos. Lo que revisan los profesores y los detectores de IA es la explicación escrita. Si pegas texto generado por IA en un informe o una tarea, puede quedar señalado. Usa los pasos para aprender el método y después escribe la explicación con tus propias palabras. Si quieres comprobar el texto antes de entregarlo, pásalo por un", "linkText": "detector de IA", "afterLink": "primero." },
+    { "question": "¿Qué precisión tiene el solucionador de matemáticas con IA?", "answer": "MathSolver utiliza modelos de IA avanzados entrenados con millones de problemas de matemáticas. Aunque resuelve la mayoría de los problemas con gran precisión, recomendamos comprobar los cálculos importantes, sobre todo en exámenes o trabajos profesionales.", "linkText": "", "afterLink": "" },
+    { "question": "¿Tiene MathSolver aplicaciones para iPhone y Android?", "answer": "Sí. MathSolver está disponible en App Store y Google Play. Puedes escanear problemas con la cámara, comprobar tu trabajo escrito a mano, practicar y guardar lecciones en vídeo para verlas sin conexión. La versión web también funciona en teléfonos y tabletas sin instalar nada.", "linkText": "", "afterLink": "" }
+  ],
+  "copyright": "© 2026 MathSolver. Todos los derechos reservados.",
+  "englishGuidesNote": "Las guías de calculadoras, los artículos, las páginas legales, las pantallas de cuenta y las lecciones en vídeo están actualmente en inglés.",
+  "storeAppleEyebrow": "Descárgala en",
+  "storeGoogleEyebrow": "Disponible en",
+  "storeAriaLabel": "Descargar MathSolver desde {store} (se abre en una pestaña nueva)",
+  "signInLabel": "Inicia sesión para sincronizar",
+  "signInHelp": "Inicia sesión para sincronizar tu cuaderno",
+  "detectorLanguageNote": "Detecting AI también ofrece páginas en varios idiomas."
+}

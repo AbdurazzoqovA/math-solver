@@ -204,7 +204,7 @@ export default function MathKeyboard({
   const activeCategory = categories.find((c) => c.id === activeTab) ?? categories[0];
 
   return (
-    <div className="w-full animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col gap-3">
+    <div lang="en" dir="ltr" className="w-full animate-in fade-in slide-in-from-top-2 duration-200 flex flex-col gap-3">
       
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-black/5 dark:border-white/5 scrollbar-hide">

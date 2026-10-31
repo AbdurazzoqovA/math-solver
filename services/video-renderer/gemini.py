@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import Any, Literal, TypeVar
+from typing import Any, Callable, Literal, TypeVar
 
 import requests
 from pydantic import BaseModel, ValidationError
@@ -15,6 +15,9 @@ INTERACTIONS_ENDPOINT = (
     "https://generativelanguage.googleapis.com/v1beta/interactions"
 )
 DEFAULT_MODEL = "gemini-3.6-flash"
+# Provider hiccups (429/5xx/timeouts) are retried separately from contract
+# corrections so a brief outage cannot consume the correction budget.
+TRANSIENT_ATTEMPTS = 4
 
 
 class GeminiError(RuntimeError):
@@ -101,7 +104,8 @@ def generate_json(
     temperature: float = 0.15,
     max_output_tokens: int = 8_000,
     retries: int = 3,
-) -> T:
+    parser: Callable[[str], Any] | None = None,
+) -> Any:
     model = os.environ.get("VIDEO_PLANNER_MODEL", DEFAULT_MODEL)
     schema = (
         None
@@ -128,9 +132,13 @@ def generate_json(
         },
     }
 
+    parse = parser or model_type.model_validate_json
+    retries = max(1, retries)
     last_error: Exception | None = None
     validation_feedback: list[dict[str, str]] = []
-    for attempt in range(retries):
+    validation_failures = 0
+    transient_failures = 0
+    while True:
         try:
             response = requests.post(
                 INTERACTIONS_ENDPOINT,
@@ -166,11 +174,12 @@ def generate_json(
                     break
             if not text:
                 raise GeminiError("Gemini returned no structured plan")
-            return model_type.model_validate_json(text)
+            return parse(text)
         except GeminiRequestError:
             raise
         except ValidationError as error:
             last_error = error
+            validation_failures += 1
             validation_feedback = [
                 {
                     "path": ".".join(str(part) for part in item["loc"]),
@@ -181,24 +190,23 @@ def generate_json(
                     include_input=False,
                 )[:12]
             ]
-            if attempt + 1 < retries:
-                payload["input"] = (
-                    f"{prompt}\n\n"
-                    "<previous_output_validation_errors>\n"
-                    f"{dump_for_prompt(validation_feedback)}\n"
-                    "</previous_output_validation_errors>\n"
-                    "Generate the complete JSON object again and correct every "
-                    "listed structural error."
-                )
-                time.sleep(2**attempt)
-                continue
-            break
+            if validation_failures >= retries:
+                break
+            payload["input"] = (
+                f"{prompt}\n\n"
+                "<previous_output_validation_errors>\n"
+                f"{dump_for_prompt(validation_feedback)}\n"
+                "</previous_output_validation_errors>\n"
+                "Generate the complete JSON object again and correct every "
+                "listed structural error."
+            )
+            time.sleep(min(2 ** (validation_failures - 1), 4))
         except (requests.RequestException, ValueError, GeminiError) as error:
             last_error = error
-            if attempt + 1 < retries:
-                time.sleep(2**attempt)
-                continue
-            break
+            transient_failures += 1
+            if transient_failures >= TRANSIENT_ATTEMPTS:
+                break
+            time.sleep(min(2**transient_failures, 10))
     if isinstance(last_error, ValidationError):
         raise GeminiValidationError(
             "Gemini returned a plan that did not satisfy the lesson contract",
@@ -236,22 +244,29 @@ def transcribe_audio(audio: bytes, *, mime_type: str = "audio/wav") -> str:
         ],
         "generationConfig": {"temperature": 0, "maxOutputTokens": 800},
     }
-    response = requests.post(
-        url,
-        headers={"x-goog-api-key": _api_key()},
-        json=payload,
-        timeout=(15, 150),
-    )
+    try:
+        response = requests.post(
+            url,
+            headers={"x-goog-api-key": _api_key()},
+            json=payload,
+            timeout=(15, 90),
+        )
+    except requests.RequestException as error:
+        raise GeminiError(
+            f"Gemini transcription request failed ({type(error).__name__})"
+        ) from None
     if not response.ok:
         raise GeminiError(f"Gemini transcription failed ({response.status_code})")
-    body = response.json()
-    return (
-        body.get("candidates", [{}])[0]
-        .get("content", {})
-        .get("parts", [{}])[0]
-        .get("text", "")
-        .strip()
-    )
+    try:
+        body = response.json()
+        return str(
+            body.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        ).strip()
+    except (AttributeError, IndexError, TypeError, ValueError):
+        raise GeminiError("Gemini transcription was unreadable") from None
 
 
 def dump_for_prompt(value: Any) -> str:

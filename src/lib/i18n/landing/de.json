@@ -1,0 +1,72 @@
+{
+  "metaTitle": "Matheaufgaben kostenlos mit KI Schritt für Schritt lösen | MathSolver",
+  "metaDescription": "Löse Matheaufgaben mit MathSolver, dem kostenlosen KI-Mathelöser. Erhalte Schritt-für-Schritt-Lösungen für Algebra, Analysis, Geometrie und mehr. Lade ein Foto hoch oder gib eine Gleichung ein.",
+  "socialTitle": "Kostenloser KI-Mathelöser mit Schritt-für-Schritt-Lösungen",
+  "imageAlt": "MathSolver – kostenloser Mathelöser mit Schritt-für-Schritt-Lösungen",
+  "introTitle": "Löse jede Matheaufgabe in Sekunden",
+  "introParagraphs": [
+    "Eine schwierige Gleichung hält dich auf? MathSolver ist ein kostenloser Online-Mathelöser, der komplexe Aufgaben in verständliche Antworten mit einzelnen Rechenschritten verwandelt. Gib deine Gleichung ein, füge eine Textaufgabe ein oder fotografiere deine Hausaufgaben – unsere KI übernimmt den Rest.",
+    "Von den Grundlagen der Algebra und Geometrie bis zu fortgeschrittener Analysis und Statistik liefert MathSolver mehr als das Endergebnis. Du siehst, wie die Lösung entsteht, und bekommst jeden Schritt erklärt. So lernst du die Methode und kannst sie beim nächsten Mal selbst anwenden."
+  ],
+  "calculatorsTitle": "Beliebte Mathe-Rechner",
+  "calculatorsDescription": "Beginne mit genau dem Thema, das du gerade lernst. Jeder Rechner bietet die vollständige Erklärung kostenlos an.",
+  "browseCalculators": "Alle Rechner ansehen",
+  "popularCalculators": [
+    { "name": "Nach X auflösen", "detail": "Lineare Gleichungen und mehrstufige Lösungswege" },
+    { "name": "Funktionsgraphen", "detail": "Funktionen online zeichnen und vergleichen" },
+    { "name": "Quadratische Gleichungen", "detail": "Nullstellen, Diskriminante und Lösungsformel" },
+    { "name": "Faktorisieren", "detail": "Größter gemeinsamer Teiler, Trinome und besondere Produkte" },
+    { "name": "Brüche", "detail": "Addieren, subtrahieren, multiplizieren und dividieren" },
+    { "name": "Gleichungssysteme", "detail": "Einsetzungs- und Eliminationsverfahren" },
+    { "name": "Ungleichungen", "detail": "Intervalle und Vorzeichenwechsel" },
+    { "name": "Logarithmen", "detail": "Logarithmen berechnen, umformen und lösen" },
+    { "name": "Ableitungen", "detail": "Potenz-, Produkt-, Quotienten- und Kettenregel" },
+    { "name": "Integrale", "detail": "Stammfunktionen und Integrationsmethoden" },
+    { "name": "Matrizen", "detail": "Operationen, Transponieren und Zeilenreduktion" },
+    { "name": "Determinanten", "detail": "Quadratische Matrizen der Größe 2 × 2 und größer" },
+    { "name": "Trigonometrische Identitäten", "detail": "Exakte Identitäten überprüfen und vereinfachen" },
+    { "name": "Standardabweichung", "detail": "Streuung von Stichproben und Grundgesamtheiten" }
+  ],
+  "mobileTag": "MathSolver für Mobilgeräte",
+  "mobileTitle": "Dein kostenloser Mathe-Tutor, überall, wo du lernst",
+  "mobileDescription": "Scanne eine Aufgabe mit der Kamera, überprüfe deine handschriftlichen Rechenschritte und lerne mit Übungen und privaten Videoerklärungen weiter. Die grundlegende Aufgabenlösung funktioniert ohne Konto und es gibt kein Abo.",
+  "mobileFeatures": ["Jede Aufgabe scannen", "Deinen Lösungsweg prüfen", "Visuelle Lektionen ansehen"],
+  "mobilePreviewAlt": "MathSolver-App mit Kamera, Fotoimport, Texteingabe und Überprüfung des eigenen Lösungswegs",
+  "featuresTitle": "Alles, was du zum Lösen von Matheaufgaben brauchst",
+  "featureCards": [
+    { "title": "Schritt-für-Schritt-Lösungen", "description": "Du musst nicht mehr raten, wo der Fehler liegt. MathSolver zeigt jede Berechnung als eigenen, nummerierten Schritt mit einer verständlichen Erklärung. Du erkennst genau, welche Formel verwendet wurde und warum – beim Faktorisieren eines quadratischen Terms ebenso wie beim Ableiten einer Funktion oder Kürzen eines Bruchs." },
+    { "title": "Matheaufgaben per Foto lösen", "description": "Fotografiere eine handschriftliche oder gedruckte Aufgabe und lade sie in MathSolver hoch. Unsere Bilderkennung liest die Gleichung, wandelt sie in Text um und löst sie sofort. Praktisch, um Aufgaben aus dem Schulbuch durchzuarbeiten oder die eigenen handschriftlichen Rechnungen zu prüfen." },
+    { "title": "Übungsquiz", "description": "Lösungen zu lesen hilft, aber erst beim Testen deines Wissens festigt sich das Gelernte. Erstelle ein individuelles Quiz zu einem Thema und Schwierigkeitsgrad deiner Wahl und prüfe vor der Klassenarbeit, ob du den Stoff verstanden hast." },
+    { "title": "Grafikrechner", "description": "Zeichne Funktionen, finde Schnittpunkte und beobachte das Verhalten von Gleichungen direkt im Browser. Mit dem Grafikwerkzeug von MathSolver kannst du mehrere Funktionen in dasselbe Koordinatensystem eintragen, um sie zu vergleichen, zu analysieren und ihre Zusammenhänge anschaulich zu verstehen." }
+  ],
+  "howTitle": "So funktioniert der Mathelöser",
+  "howSteps": [
+    { "title": "1. Gib deine Aufgabe ein", "description": "Tippe eine Gleichung ein, beschreibe eine Textaufgabe mit eigenen Worten oder lade ein Foto hoch. Wähle, was für dich am einfachsten ist." },
+    { "title": "2. Erhalte eine Lösung mit Rechenschritten", "description": "Unsere KI analysiert und löst die Aufgabe. Sie erklärt jeden Schritt verständlich, damit du auch den Grund für das Ergebnis verstehst." },
+    { "title": "3. Stelle weitere Fragen", "description": "Einen Schritt nicht verstanden? Frage direkt im Chat nach. MathSolver behält den Zusammenhang im Blick und erklärt weiter – wie ein Tutor, den du jederzeit fragen kannst." }
+  ],
+  "subjectsTitle": "Bei diesen Themen hilft dir MathSolver",
+  "subjectsParagraphs": [
+    "MathSolver deckt die wichtigsten Mathegebiete ab: Arithmetik, Grundlagen der Algebra, Algebra I und II, Geometrie, Trigonometrie, Vorbereitung auf die Analysis, Analysis (einschließlich AP AB/BC und darüber hinaus), Differentialgleichungen, lineare Algebra, Wahrscheinlichkeitsrechnung und Statistik. Auch gängige fachübergreifende Fragen aus Physik und Chemie werden unterstützt.",
+    "Auch bei speziellen Aufgaben kann MathSolver den Lösungsweg aufschlüsseln und dich Schritt für Schritt begleiten – etwa bei einem System aus drei Gleichungen, der Umrechnung von Polar- in kartesische Koordinaten oder einem Hypothesentest."
+  ],
+  "faqTitle": "Häufige Fragen",
+  "faqs": [
+    { "question": "Was ist MathSolver?", "answer": "MathSolver ist ein kostenloser KI-Mathelöser mit Schritt-für-Schritt-Lösungen für Algebra, Analysis, Geometrie, Trigonometrie, Statistik und weitere Themen. Gib eine Gleichung ein oder lade ein Foto deiner Aufgabe hoch, um sofort eine ausführliche Erklärung zu erhalten.", "linkText": "", "afterLink": "" },
+    { "question": "Kann MathSolver Matheaufgaben aus einem Foto lösen?", "answer": "Ja. Lade ein Bild einer handschriftlichen oder gedruckten Aufgabe hoch. MathSolver liest sie, erkennt die Gleichung und erstellt automatisch eine vollständige Lösung mit einzelnen Rechenschritten.", "linkText": "", "afterLink": "" },
+    { "question": "Kann ich MathSolver in meiner Sprache verwenden?", "answer": "Ja. Wähle eine von 16 Sprachen über das Globussymbol in der Seitenleiste oder im mobilen Seitenkopf. Jede Sprache hat eine eigene Seitenadresse, die du teilen kannst. Die Oberfläche, neue Lösungen und Übungsfragen verwenden die Sprache dieser Seite. Rechneranleitungen, Artikel, Kontoseiten und Videolektionen sind derzeit auf Englisch.", "linkText": "", "afterLink": "" },
+    { "question": "Welche Themen deckt MathSolver ab?", "answer": "Dazu gehören Arithmetik, Grundlagen der Algebra, Algebra, Geometrie, Trigonometrie, Vorbereitung auf die Analysis, Analysis, lineare Algebra, Differentialgleichungen, Statistik und Wahrscheinlichkeitsrechnung sowie Fragen aus Physik und Chemie.", "linkText": "", "afterLink": "" },
+    { "question": "Ist MathSolver vollständig kostenlos?", "answer": "Ja. Du kannst unbegrenzt Aufgaben lösen, alle Erklärungen mit Rechenschritten ansehen und Übungsquiz erstellen – kostenlos und ohne Konto.", "linkText": "", "afterLink": "" },
+    { "question": "Können Lehrkräfte erkennen, dass ich einen KI-Mathelöser verwendet habe?", "answer": "Die Zahlen und Rechenschritte sind einfach Mathematik; daran gibt es nichts zu erkennen. Lehrkräfte und KI-Prüfprogramme betrachten die schriftliche Erklärung. Kopierst du einen KI-generierten Text in einen Bericht oder eine Hausaufgabe, kann er entsprechend markiert werden. Nutze die Rechenschritte, um die Methode zu lernen, und formuliere die Erklärung anschließend mit eigenen Worten. Wenn du deinen Text vor der Abgabe prüfen möchtest, nutze einen", "linkText": "KI-Detektor", "afterLink": "für die Überprüfung." },
+    { "question": "Wie genau arbeitet der KI-Mathelöser?", "answer": "MathSolver nutzt fortschrittliche KI-Modelle, die mit Millionen von Matheaufgaben trainiert wurden. Obwohl die meisten Aufgaben mit hoher Genauigkeit gelöst werden, empfehlen wir, wichtige Berechnungen zu überprüfen, besonders bei Prüfungen oder im beruflichen Einsatz.", "linkText": "", "afterLink": "" },
+    { "question": "Gibt es MathSolver als App für iPhone und Android?", "answer": "Ja. MathSolver ist im App Store und bei Google Play verfügbar. Du kannst Aufgaben mit der Kamera scannen, handschriftliche Rechenschritte prüfen, üben und Videolektionen zum Offline-Ansehen speichern. Die Browserversion funktioniert weiterhin auch auf Smartphones und Tablets, ohne dass du etwas installieren musst.", "linkText": "", "afterLink": "" }
+  ],
+  "copyright": "© 2026 MathSolver. Alle Rechte vorbehalten.",
+  "englishGuidesNote": "Rechneranleitungen, Artikel, rechtliche Hinweise, Kontoseiten und Videolektionen sind derzeit auf Englisch.",
+  "storeAppleEyebrow": "Laden im",
+  "storeGoogleEyebrow": "Jetzt bei",
+  "storeAriaLabel": "MathSolver bei {store} herunterladen (öffnet einen neuen Tab)",
+  "signInLabel": "Zum Synchronisieren anmelden",
+  "signInHelp": "Melde dich an, um dein Notizbuch zu synchronisieren",
+  "detectorLanguageNote": "Detecting AI bietet auch Seiten in mehreren Sprachen an."
+}

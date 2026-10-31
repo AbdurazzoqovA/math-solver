@@ -8,6 +8,7 @@ import { MOBILE_APP_STORES, type MobileAppPlatform } from "@/lib/mobile-apps";
 type MobileAppLinksProps = {
   placement: "homepage_hero" | "homepage_mobile_section";
   className?: string;
+  labels?: { appleEyebrow: string; googleEyebrow: string; ariaLabel: string };
 };
 
 function GooglePlayMark() {
@@ -48,6 +49,7 @@ const storeButtons: Array<{
 export default function MobileAppLinks({
   placement,
   className,
+  labels,
 }: MobileAppLinksProps) {
   return (
     <div className={clsx("flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row", className)}>
@@ -60,7 +62,7 @@ export default function MobileAppLinks({
             href={store.url}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Download MathSolver from ${store.name} (opens in a new tab)`}
+            aria-label={labels ? labels.ariaLabel.replace("{store}", store.name) : `Download MathSolver from ${store.name} (opens in a new tab)`}
             onClick={() =>
               trackEvent("mobile_app_store_click", {
                 platform,
@@ -72,7 +74,7 @@ export default function MobileAppLinks({
             {icon}
             <span className="min-w-0 leading-none">
               <span className="block text-[9px] font-medium uppercase tracking-[0.12em] text-white/70">
-                {eyebrow}
+                {labels ? (platform === "ios" ? labels.appleEyebrow : labels.googleEyebrow) : eyebrow}
               </span>
               <span className="mt-1 block whitespace-nowrap text-[17px] font-semibold tracking-tight">
                 {label}

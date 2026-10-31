@@ -1,12 +1,19 @@
 "use client";
 
+import { useLanguage } from "@/context/LanguageContext";
 import { useState, useRef, useEffect } from "react";
 import { ArrowUpCircle, ImagePlus, Calculator, Loader2, X, Pen } from "lucide-react";
 import MathKeyboard from "./MathKeyboard";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import DrawingCanvas from "./DrawingCanvas";
-import { useUI } from "@/context/UIContext";
+import { useUI, EMPTY_COMPOSER_DRAFT } from "@/context/UIContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
+import { useAuth } from "@/context/AuthContext";
+import {
+  announceUsageLimit,
+  readUsageLimitError,
+  UsageLimitReachedError,
+} from "@/lib/billing/limits";
 
 const ACCEPTED_FILE_TYPES = [
   "image/jpeg",
@@ -20,24 +27,30 @@ const ACCEPTED_FILE_TYPES = [
 
 export default function HeroInput({
   onSubmit,
-  placeholder = "Type your math problem, or click Σ Math to insert a formula…",
+  placeholder,
   inputId = "hero-input",
 }: {
   onSubmit: (val: string, images?: { url: string; ocrText: string }[]) => void;
   placeholder?: string;
   inputId?: string;
 }) {
+  const { locale, direction, t } = useLanguage();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState<{ url: string; ocrText: string }[]>([]);
   const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
-  const { isCalculatorOpen, toggleCalculator, registerInsertCallback, unregisterInsertCallback } = useUI();
+  const { isCalculatorOpen, toggleCalculator, registerInsertCallback, unregisterInsertCallback, composerDrafts, updateComposerDraft, clearComposerDraft } = useUI();
+  const draft = composerDrafts[inputId] ?? EMPTY_COMPOSER_DRAFT;
   const { getToken } = useTurnstile();
+  const { getAuthToken } = useAuth();
+  const uploadedImages = draft.images;
+  const isUploading = draft.pendingUploads > 0;
+  const setUploadedImages = (update: (images: typeof uploadedImages) => typeof uploadedImages) => {
+    updateComposerDraft(inputId, (current) => ({ ...current, images: update(current.images) }));
+  };
 
   // Register insert callback so the floating calculator can inject values
   useEffect(() => {
@@ -113,23 +126,32 @@ export default function HeroInput({
   const handleFileUpload = async (files: File[], source?: string) => {
     const validFiles = files.filter(f => ACCEPTED_FILE_TYPES.includes(f.type) && f.size <= 10 * 1024 * 1024);
     if (validFiles.length === 0) {
-      alert("No valid files to upload. Check file types (Images/PDFs) and size (max 10MB).");
+      alert(t("invalidFiles"));
       return;
     }
 
-    setIsUploading(true);
+    updateComposerDraft(inputId, (current) => ({ ...current, pendingUploads: current.pendingUploads + 1 }));
 
     try {
       const results = await Promise.all(validFiles.map(async file => {
         const base64 = await fileToBase64(file);
         const captchaToken = getToken();
+        const authToken = await getAuthToken();
         const response = await fetch("/api/ocr", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
           body: JSON.stringify({ base64, mimeType: file.type, captchaToken, source }),
         });
 
         if (!response.ok) {
+          const limit = readUsageLimitError(
+            response.status,
+            await response.json().catch(() => null),
+          );
+          if (limit) throw new UsageLimitReachedError(limit);
           throw new Error("Failed to extract text from file.");
         }
 
@@ -144,13 +166,17 @@ export default function HeroInput({
       if (newImages.length > 0) {
         setUploadedImages(prev => [...prev, ...newImages]);
       } else {
-        alert("No text could be extracted from these files. Please try clearer images.");
+        alert(t("noText"));
       }
     } catch (error) {
+      if (error instanceof UsageLimitReachedError) {
+        announceUsageLimit(error.detail);
+        return;
+      }
       console.error("OCR upload error:", error);
-      alert(error instanceof Error ? error.message : "Failed to process the uploaded files.");
+      alert(t("uploadError"));
     } finally {
-      setIsUploading(false);
+      updateComposerDraft(inputId, (current) => ({ ...current, pendingUploads: Math.max(0, current.pendingUploads - 1) }));
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -158,7 +184,7 @@ export default function HeroInput({
   };
 
   return (
-    <div 
+    <div lang={locale} dir={direction}
       className="w-full max-w-3xl mx-auto mt-6 relative z-10"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -178,7 +204,7 @@ export default function HeroInput({
         }}
       />
 
-      <div className={`bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-200 text-left relative ${
+      <div className={`bg-white/70 dark:bg-zinc-900/50 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-200 text-start relative ${
         isDragging 
           ? "border-2 border-primary-500 scale-[1.02] shadow-[0_8px_40px_rgb(59,130,246,0.15)] ring-4 ring-primary-500/20" 
           : "border border-black/5 dark:border-white/5 focus-within:ring-2 focus-within:ring-primary-500/30 focus-within:shadow-[0_8px_40px_rgb(0,0,0,0.08)]"
@@ -190,7 +216,7 @@ export default function HeroInput({
             <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-4 animate-bounce">
               <ImagePlus className="w-8 h-8 text-primary-600 dark:text-primary-400" />
             </div>
-            <h3 className="text-xl font-bold text-primary-700 dark:text-primary-300">Drop your problem here</h3>
+            <h3 className="text-xl font-bold text-primary-700 dark:text-primary-300">{t("dropImage")}</h3>
             <p className="text-primary-600/80 dark:text-primary-400/80 mt-1 font-medium">Image or PDF</p>
           </div>
         )}
@@ -201,8 +227,8 @@ export default function HeroInput({
             <div className="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-4">
               <Loader2 className="w-8 h-8 text-primary-600 dark:text-primary-400 animate-spin" />
             </div>
-            <h3 className="text-lg font-bold text-foreground">Extracting text…</h3>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">Analyzing your documents with AI</p>
+            <h3 className="text-lg font-bold text-foreground">{t("extracting")}</h3>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">{t("analyzing")}</p>
           </div>
         )}
 
@@ -217,9 +243,7 @@ export default function HeroInput({
             <ImagePlus className="w-4.5 h-4.5 text-primary-500" />
           </div>
           <p className="text-sm font-medium text-muted-foreground">
-            Drag &amp; drop or{" "}
-            <span className="text-primary-600 dark:text-primary-400">upload</span>{" "}
-            an image or PDF
+            <span className="text-primary-600 dark:text-primary-400">{t("upload")}</span>
           </p>
         </div>
 
@@ -252,7 +276,9 @@ export default function HeroInput({
         <div className="p-3">
           <InlineMathInput
             ref={inputRef}
-            placeholder={placeholder}
+            initialDraft={draft.segments}
+            onDraftChange={(segments) => updateComposerDraft(inputId, (current) => ({ ...current, segments }))}
+            placeholder={placeholder ?? t("inputPlaceholder")}
             onSubmit={() => {
               if (inputRef.current) {
                 const val = inputRef.current.getValue();
@@ -260,7 +286,7 @@ export default function HeroInput({
                   onSubmit(val, uploadedImages.length > 0 ? uploadedImages : undefined);
                 }
                 inputRef.current.clear();
-                setUploadedImages([]);
+                clearComposerDraft(inputId);
               }
             }}
           />
@@ -277,7 +303,7 @@ export default function HeroInput({
                     ? "bg-primary-500/10 text-primary-600"
                     : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
                 }`}
-                title="Calculator"
+                title={t("calculator")}
               >
                 <Calculator className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
               </button>
@@ -287,13 +313,14 @@ export default function HeroInput({
                 onClick={() => setIsDrawingModalOpen(true)}
                 onMouseDown={(e) => e.preventDefault()}
                 className="flex items-center justify-center p-2.5 rounded-xl transition-colors group text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                title="Draw Problem"
+                title={t("drawProblem")}
               >
                 <Pen className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
               </button>
 
               {/* Math keyboard toggle */}
               <button
+                aria-label={t("mathInput")}
                 onClick={handleMathButtonClick}
                 onMouseDown={(e) => e.preventDefault()}
                 className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl transition-colors group ${
@@ -303,13 +330,13 @@ export default function HeroInput({
                 }`}
               >
                 <SigmaIcon className="w-4 h-4 group-hover:text-primary-500 transition-colors" />
-                <span>Math</span>
+                <span className="hidden sm:inline">{t("mathInput")}</span>
               </button>
             </div>
 
             {/* Submit */}
             <button
-              aria-label="Solve problem"
+              aria-label={t("solve")}
               onClick={() => {
                 if (inputRef.current) {
                   const val = inputRef.current.getValue();
@@ -317,7 +344,7 @@ export default function HeroInput({
                     onSubmit(val, uploadedImages.length > 0 ? uploadedImages : undefined);
                   }
                   inputRef.current.clear();
-                  setUploadedImages([]);
+                  clearComposerDraft(inputId);
                 }
               }}
               className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white flex items-center justify-center shadow-lg shadow-primary-500/25 transition-all outline-none scale-95 hover:scale-100 active:scale-95"

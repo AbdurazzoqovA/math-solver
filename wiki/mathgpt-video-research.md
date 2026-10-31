@@ -257,3 +257,10 @@ The current 43–74 second render measurements fit a Cloud Tasks-to-private-Clou
 - Cloud Run pricing: https://cloud.google.com/run/pricing
 - Cloud Tasks pricing: https://cloud.google.com/tasks/pricing
 - OpenAI TTS guide: https://developers.openai.com/api/docs/guides/text-to-speech
+
+
+## September 30 public comparison and historical text finding
+
+A broader public-content comparison found that `src/components/chat/SeoSections.tsx` in commit `ce5351d` (2026-03-13) contains nine paragraph blocks matching the current [MathGPT homepage](https://math-gpt.org/) after normalizing brand names, case, punctuation, and whitespace (411 normalized word tokens). Commit `83a2c9f` (2026-03-15) replaced those passages; the current homepage uses different wording. This establishes textual similarity, not authorship priority, ownership, licensing, public deployment, or legal liability. Preserve existing Git and deployment records; do not rewrite history.
+
+Current homepage, calculator-directory/topic samples, legal pages, blog indexes, and practice/video organization were compared. Private MathGPT code was unavailable, screenshots were unreliable, and only one site's new sample solve completed, so visual, source-code, mobile, and generated-video comparisons remain unresolved. A detailed local report was delivered in the September 30 chat. This evidence qualifies any assertion that every historical marketing element was independently authored; it does not establish that the solver implementation was copied. Context: [[product-overview]], [[codebase-map]], [[log]].

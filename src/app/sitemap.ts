@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { calculatorDefinitions } from "@/lib/calculators";
 import { getAllPosts } from "@/lib/pressroom";
+import { LANGUAGES } from "@/lib/i18n/locales";
+import { languageAlternates } from "@/lib/i18n/paths";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +18,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   return [
+    ...LANGUAGES.map(({ code }) => ({
+      url: code === "en" ? baseUrl : `${baseUrl}/${code}`,
+      lastModified: new Date("2026-10-07T00:00:00.000Z"),
+      alternates: { languages: languageAlternates() },
+    })),
     {
-      url: baseUrl,
+      url: `${baseUrl}/pricing`,
+      lastModified: new Date("2026-10-31T00:00:00.000Z"),
     },
     {
       url: `${baseUrl}/privacy`,

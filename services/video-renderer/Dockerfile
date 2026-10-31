@@ -9,6 +9,8 @@ RUN apt-get update \
       build-essential \
       dvisvgm \
       ffmpeg \
+      fonts-noto-cjk \
+      fonts-noto-core \
       libcairo2-dev \
       libpango1.0-dev \
       pkg-config \
@@ -32,5 +34,8 @@ USER renderer
 # A successful first job does not prove that a reused process can render.
 # This real Manim/FFmpeg regression must pass before an image can be released.
 RUN PYTHONPATH=/app python tests/test_render_state.py -q
+# Broken formulas, non-Latin text, and undrawable visuals must degrade to a
+# simpler scene in the real TeX/Pango toolchain, never fail the lesson.
+RUN PYTHONPATH=/app python tests/test_render_resilience.py -q
 
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1"]

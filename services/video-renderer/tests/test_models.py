@@ -375,7 +375,7 @@ class LessonModelTests(unittest.TestCase):
         with patch.dict(os.environ, {"VIDEO_PLAN_ATTEMPTS": "12"}):
             self.assertEqual(_planning_attempt_limit(), 3)
         with patch.dict(os.environ, {"VIDEO_PLAN_ATTEMPTS": "invalid"}):
-            self.assertEqual(_planning_attempt_limit(), 2)
+            self.assertEqual(_planning_attempt_limit(), 3)
 
     def test_invalid_generated_plans_receive_bounded_correction(self) -> None:
         task = RenderTask(

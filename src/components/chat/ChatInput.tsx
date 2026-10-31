@@ -1,12 +1,19 @@
 "use client";
 
+import { useLanguage } from "@/context/LanguageContext";
 import { useState, useRef } from "react";
 import { Calculator, ArrowUpCircle, ImagePlus, Loader2, X, Pen } from "lucide-react";
 import InlineMathInput, { type InlineMathInputHandle } from "./InlineMathInput";
 import MathKeyboard from "./MathKeyboard";
 import DrawingCanvas from "./DrawingCanvas";
-import { useUI } from "@/context/UIContext";
+import { useUI, EMPTY_COMPOSER_DRAFT } from "@/context/UIContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
+import { useAuth } from "@/context/AuthContext";
+import {
+  announceUsageLimit,
+  readUsageLimitError,
+  UsageLimitReachedError,
+} from "@/lib/billing/limits";
 
 const ACCEPTED_FILE_TYPES = [
   "image/jpeg",
@@ -25,16 +32,23 @@ export default function ChatInput({
   onSubmit?: (val: string, images?: { url: string; ocrText: string }[]) => void;
   disabled?: boolean;
 }) {
+  const { locale, direction, t } = useLanguage();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedImages, setUploadedImages] = useState<{ url: string; ocrText: string }[]>([]);
   const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
   const inputRef = useRef<InlineMathInputHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
-  const { isCalculatorOpen, toggleCalculator } = useUI();
+  const { isCalculatorOpen, toggleCalculator, composerDrafts, updateComposerDraft, clearComposerDraft } = useUI();
+  const inputId = "chat-input";
+  const draft = composerDrafts[inputId] ?? EMPTY_COMPOSER_DRAFT;
   const { getToken } = useTurnstile();
+  const { getAuthToken } = useAuth();
+  const uploadedImages = draft.images;
+  const isUploading = draft.pendingUploads > 0;
+  const setUploadedImages = (update: (images: typeof uploadedImages) => typeof uploadedImages) => {
+    updateComposerDraft(inputId, (current) => ({ ...current, images: update(current.images) }));
+  };
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -80,23 +94,32 @@ export default function ChatInput({
   const handleFileUpload = async (files: File[], source?: string) => {
     const validFiles = files.filter(f => ACCEPTED_FILE_TYPES.includes(f.type) && f.size <= 10 * 1024 * 1024);
     if (validFiles.length === 0) {
-      alert("No valid files to upload. Check file types (Images/PDFs) and size (max 10MB).");
+      alert(t("invalidFiles"));
       return;
     }
 
-    setIsUploading(true);
+    updateComposerDraft(inputId, (current) => ({ ...current, pendingUploads: current.pendingUploads + 1 }));
 
     try {
       const results = await Promise.all(validFiles.map(async file => {
         const base64 = await fileToBase64(file);
         const captchaToken = getToken();
+        const authToken = await getAuthToken();
         const response = await fetch("/api/ocr", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
           body: JSON.stringify({ base64, mimeType: file.type, captchaToken, source }),
         });
 
         if (!response.ok) {
+          const limit = readUsageLimitError(
+            response.status,
+            await response.json().catch(() => null),
+          );
+          if (limit) throw new UsageLimitReachedError(limit);
           throw new Error("Failed to extract text from file.");
         }
 
@@ -111,13 +134,17 @@ export default function ChatInput({
       if (newImages.length > 0) {
         setUploadedImages(prev => [...prev, ...newImages]);
       } else {
-        alert("No text could be extracted from these files. Please try clearer images.");
+        alert(t("noText"));
       }
     } catch (error) {
+      if (error instanceof UsageLimitReachedError) {
+        announceUsageLimit(error.detail);
+        return;
+      }
       console.error("OCR upload error:", error);
-      alert(error instanceof Error ? error.message : "Failed to process the uploaded files.");
+      alert(t("uploadError"));
     } finally {
-      setIsUploading(false);
+      updateComposerDraft(inputId, (current) => ({ ...current, pendingUploads: Math.max(0, current.pendingUploads - 1) }));
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -143,7 +170,7 @@ export default function ChatInput({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
+    <div lang={locale} dir={direction} className="w-full max-w-3xl mx-auto flex flex-col items-center">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -174,7 +201,7 @@ export default function ChatInput({
             <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-2 animate-bounce">
               <ImagePlus className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
-            <h3 className="text-lg font-bold text-primary-700 dark:text-primary-300">Drop image here</h3>
+            <h3 className="text-lg font-bold text-primary-700 dark:text-primary-300">{t("dropImage")}</h3>
           </div>
         )}
 
@@ -184,8 +211,8 @@ export default function ChatInput({
             <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center mb-2">
               <Loader2 className="w-6 h-6 text-primary-600 dark:text-primary-400 animate-spin" />
             </div>
-            <h3 className="text-sm font-bold text-foreground">Extracting text…</h3>
-            <p className="text-muted-foreground mt-0.5 text-xs font-medium">Analyzing your documents</p>
+            <h3 className="text-sm font-bold text-foreground">{t("extracting")}</h3>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">{t("analyzing")}</p>
           </div>
         )}
 
@@ -200,10 +227,8 @@ export default function ChatInput({
           <div className="w-8 h-8 rounded-xl bg-white dark:bg-zinc-800 shadow-sm flex items-center justify-center group-hover:scale-105 transition-all shrink-0">
             <ImagePlus className="w-4 h-4 text-primary-500" />
           </div>
-          <p className="text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">
-            Drag &amp; drop or{" "}
-            <span className="text-primary-600 dark:text-primary-400">upload</span>{" "}
-            an image
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground text-center">
+            <span className="text-primary-600 dark:text-primary-400">{t("upload")}</span>
           </p>
         </div>
 
@@ -236,7 +261,9 @@ export default function ChatInput({
           {/* Inline rich input */}
           <InlineMathInput
             ref={inputRef}
-            placeholder="Ask a math question or click Σ to insert a formula…"
+            initialDraft={draft.segments}
+            onDraftChange={(segments) => updateComposerDraft(inputId, (current) => ({ ...current, segments }))}
+            placeholder={t("followupPlaceholder")}
             onSubmit={() => {
               if (!disabled && inputRef.current && onSubmit) {
                 const val = inputRef.current.getValue();
@@ -244,7 +271,7 @@ export default function ChatInput({
                   onSubmit(val, uploadedImages.length > 0 ? uploadedImages : undefined);
                   inputRef.current.clear();
                   setKeyboardOpen(false);
-                  setUploadedImages([]);
+                  clearComposerDraft(inputId);
                 }
               }
             }}
@@ -261,7 +288,7 @@ export default function ChatInput({
                     ? "bg-primary-500/10 text-primary-600"
                     : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
-                title="Calculator"
+                title={t("calculator")}
               >
                 <Calculator className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
               </button>
@@ -270,12 +297,13 @@ export default function ChatInput({
                 onClick={() => setIsDrawingModalOpen(true)}
                 onMouseDown={(e) => e.preventDefault()}
                 className="flex items-center justify-center p-2 rounded-xl transition-colors group text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                title="Draw Problem"
+                title={t("drawProblem")}
               >
                 <Pen className="w-5 h-5 group-hover:text-primary-500 transition-colors" />
               </button>
 
               <button
+                aria-label={t("mathInput")}
                 onClick={handleMathButtonClick}
                 onMouseDown={(e) => e.preventDefault()}
                 className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-xl transition-colors group ${keyboardOpen
@@ -284,12 +312,12 @@ export default function ChatInput({
                   }`}
               >
                 <SigmaIcon className="w-4 h-4 group-hover:text-primary-500 transition-colors" />
-                <span className="hidden sm:inline">Math Input</span>
+                <span className="hidden sm:inline">{t("mathInput")}</span>
               </button>
             </div>
 
             <button
-              aria-label="Send follow-up"
+              aria-label={t("send")}
               onClick={() => {
                 if (!disabled && inputRef.current && onSubmit) {
                   const val = inputRef.current.getValue();
@@ -297,7 +325,7 @@ export default function ChatInput({
                     onSubmit(val, uploadedImages.length > 0 ? uploadedImages : undefined);
                     inputRef.current.clear();
                     setKeyboardOpen(false);
-                    setUploadedImages([]);
+                    clearComposerDraft(inputId);
                   }
                 }
               }}
@@ -322,7 +350,7 @@ export default function ChatInput({
 
       <div className="text-center mt-4">
         <p className="text-[11px] text-muted-foreground/60 w-full max-w-md font-medium">
-          MathSolver can make mistakes. Please verify important calculations.
+          {t("disclaimer")}
         </p>
       </div>
 

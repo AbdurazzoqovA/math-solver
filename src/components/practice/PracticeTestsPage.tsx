@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/context/LanguageContext";
+import { localeHome } from "@/lib/i18n/paths";
 import { useChatContext } from "@/context/ChatContext";
 import { useUI } from "@/context/UIContext";
 import { useRouter } from "next/navigation";
@@ -32,6 +34,7 @@ export default function PracticeTestsPage() {
     dueReviewItems,
   } = useChatContext();
   const { openPracticePanel, openReviewPanel } = useUI();
+  const { locale, direction, t } = useLanguage();
   const router = useRouter();
 
   // Scan all chats for messages with practice tests
@@ -61,7 +64,7 @@ export default function PracticeTestsPage() {
   const handleTestClick = (test: PracticeTestEntry) => {
     switchChat(test.chatId);
     openPracticePanel(test.title, test.questions, test.messageId);
-    router.push("/");
+    router.push(localeHome(locale));
   };
 
   const handleReviewClick = () => {
@@ -71,13 +74,13 @@ export default function PracticeTestsPage() {
       source: "practice_library",
     });
     openReviewPanel(reviewBatch);
-    router.push("/");
+    router.push(localeHome(locale));
   };
 
   const nextReviewAt = reviewItems[0]?.question.reviewState?.dueAt;
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div lang={locale} dir={direction} className="h-full w-full flex flex-col">
       {/* Header */}
       <div className="px-6 md:px-10 pt-10 md:pt-14 pb-6 shrink-0">
         <div className="max-w-4xl mx-auto">
@@ -86,11 +89,11 @@ export default function PracticeTestsPage() {
               <BookOpen className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-              Practice Tests
+              {t("practiceTests")}
             </h1>
           </div>
           <p className="text-muted-foreground text-[15px] md:text-base mt-2 ml-[52px]">
-            All your generated practice tests in one place. Click to practice again.
+            {t("practiceLibrary")}
           </p>
         </div>
       </div>
@@ -102,18 +105,17 @@ export default function PracticeTestsPage() {
             <button
               type="button"
               onClick={handleReviewClick}
-              className="group mb-6 flex w-full items-center gap-4 rounded-2xl border border-primary-200 bg-gradient-to-r from-primary-50 to-white p-5 text-left shadow-sm transition-all hover:border-primary-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-primary-800/70 dark:from-primary-950/45 dark:to-zinc-900"
+              className="group mb-6 flex w-full items-center gap-4 rounded-2xl border border-primary-200 bg-gradient-to-r from-primary-50 to-white p-5 text-start shadow-sm transition-all hover:border-primary-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-primary-800/70 dark:from-primary-950/45 dark:to-zinc-900"
             >
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-sm">
                 <Brain className="h-5 w-5" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold text-foreground">
-                  Review {Math.min(dueReviewItems.length, 5)} due{" "}
-                  {dueReviewItems.length === 1 ? "mistake" : "mistakes"}
+                  {t("dueReview", { count: Math.min(dueReviewItems.length, 5) })}
                 </span>
                 <span className="mt-1 block text-sm text-muted-foreground">
-                  A focused set from questions you missed before.
+                  {t("reviewHelp")}
                 </span>
               </span>
               <ArrowRight className="h-5 w-5 shrink-0 text-primary-500 transition-transform group-hover:translate-x-0.5" />
@@ -122,12 +124,7 @@ export default function PracticeTestsPage() {
             <div className="mb-6 flex items-center gap-3 rounded-2xl border border-black/8 bg-white px-4 py-3 text-sm text-muted-foreground dark:border-white/8 dark:bg-zinc-900">
               <Clock3 className="h-4 w-4 shrink-0 text-primary-500" />
               <span>
-                You&apos;re caught up. Next mistake review is due{" "}
-                {new Intl.DateTimeFormat(undefined, {
-                  month: "short",
-                  day: "numeric",
-                }).format(nextReviewAt)}
-                .
+                {t("nextReview", { date: new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(nextReviewAt) })}
               </span>
             </div>
           ) : null}
@@ -138,16 +135,16 @@ export default function PracticeTestsPage() {
               <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/30 dark:to-primary-800/20 flex items-center justify-center mb-6 shadow-sm">
                 <ClipboardList className="w-9 h-9 text-primary-500 dark:text-primary-400" />
               </div>
-              <h2 className="text-xl font-bold text-foreground mb-2">No practice tests yet</h2>
+              <h2 className="text-xl font-bold text-foreground mb-2">{t("noPractice")}</h2>
               <p className="text-muted-foreground text-[15px] max-w-sm leading-relaxed">
-                Start a chat, solve a math problem, then tap <strong>&quot;Take a Practice Test&quot;</strong> to generate questions. They&apos;ll show up here.
+                {t("noPracticeHelp")}
               </p>
               <button
-                onClick={() => router.push("/")}
+                onClick={() => router.push(localeHome(locale))}
                 className="mt-8 flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl text-sm transition-all shadow-sm active:scale-95"
               >
                 <Sparkles className="w-4 h-4" />
-                Start Solving
+                {t("startSolving")}
               </button>
             </div>
           ) : (
@@ -157,7 +154,7 @@ export default function PracticeTestsPage() {
                 <button
                   key={`${test.chatId}-${test.messageId}-${idx}`}
                   onClick={() => handleTestClick(test)}
-                  className="group text-left p-5 rounded-2xl border border-black/8 dark:border-white/8 bg-white dark:bg-zinc-900 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-[0_4px_20px_-4px_rgba(37,99,235,0.1)] dark:hover:shadow-none transition-all duration-200"
+                  className="group text-start p-5 rounded-2xl border border-black/8 dark:border-white/8 bg-white dark:bg-zinc-900 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-[0_4px_20px_-4px_rgba(37,99,235,0.1)] dark:hover:shadow-none transition-all duration-200"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -166,16 +163,16 @@ export default function PracticeTestsPage() {
                       </h3>
                       <div className="flex items-center gap-2 mt-2.5">
                         <span className="text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
-                          {test.questions.length} questions
+                          {t("questionCount", { count: test.questions.length })}
                         </span>
                         {test.attempts.length > 0 && (
                           <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
-                            Best {Math.max(...test.attempts.map((attempt) => attempt.correctCount))}/{test.questions.length}
+                            {t("bestScore", { score: `${Math.max(...test.attempts.map((attempt) => attempt.correctCount))}/${test.questions.length}` })}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-3 truncate">
-                        From: {test.chatTitle}
+                        {t("fromChat", { title: test.chatTitle })}
                       </p>
                     </div>
                     <div className="shrink-0 w-9 h-9 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] flex items-center justify-center text-muted-foreground group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30 group-hover:text-primary-500 transition-all">

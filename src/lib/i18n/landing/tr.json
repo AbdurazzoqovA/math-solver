@@ -1,0 +1,72 @@
+{
+  "metaTitle": "Ücretsiz Yapay Zekâ ile Adım Adım Matematik Çözümü | MathSolver",
+  "metaDescription": "Ücretsiz yapay zekâ matematik çözücüsü MathSolver ile sorularını çöz. Cebir, kalkülüs, geometri ve daha fazlası için adım adım çözümler al. Fotoğraf yükle veya denklemini yaz.",
+  "socialTitle": "Ücretsiz Yapay Zekâ Matematik Çözücüsü ve Adım Adım Çözümler",
+  "imageAlt": "MathSolver: adım adım çözümler sunan ücretsiz matematik çözücüsü",
+  "introTitle": "Her Matematik Sorusunu Saniyeler İçinde Çöz",
+  "introParagraphs": [
+    "Zor bir denklemde takıldın mı? MathSolver, karmaşık soruları anlaşılır ve adım adım açıklanan yanıtlara dönüştüren ücretsiz bir çevrimiçi matematik çözücüsüdür. Denklemini yaz, problem metnini yapıştır veya ödevinin fotoğrafını çek; gerisini yapay zekâmız halleder.",
+    "Temel cebir ve geometriden ileri düzey kalkülüs ve istatistiğe kadar MathSolver sana yalnızca sonucu vermez. Sonuca nasıl ulaşıldığını gösterir ve her adımı açıklar. Böylece yöntemi öğrenip bir sonraki soruda kendi başına uygulayabilirsin."
+  ],
+  "calculatorsTitle": "Popüler Matematik Hesaplayıcıları",
+  "calculatorsDescription": "Çalıştığın konuyla başla. Her hesaplayıcı, çözümün tamamını ücretsiz açıklar.",
+  "browseCalculators": "Tüm hesaplayıcıları incele",
+  "popularCalculators": [
+    { "name": "X'i Bulma", "detail": "Doğrusal denklemler ve çok adımlı çözümler" },
+    { "name": "Grafik Çizme", "detail": "Fonksiyonları çevrimiçi çiz ve karşılaştır" },
+    { "name": "İkinci Dereceden Denklemler", "detail": "Kökler, diskriminant ve kök bulma formülü" },
+    { "name": "Çarpanlara Ayırma", "detail": "EBOB, üç terimli ifadeler ve özel çarpımlar" },
+    { "name": "Kesirler", "detail": "Toplama, çıkarma, çarpma ve bölme" },
+    { "name": "Denklem Sistemleri", "detail": "Yerine koyma ve yok etme yöntemleri" },
+    { "name": "Eşitsizlikler", "detail": "Aralıklar ve işaret değişimleri" },
+    { "name": "Logaritmalar", "detail": "Logaritma hesaplama, açılım ve denklem çözümü" },
+    { "name": "Türevler", "detail": "Kuvvet, çarpım, bölüm ve zincir kuralları" },
+    { "name": "İntegraller", "detail": "İlkel fonksiyonlar ve integral alma yöntemleri" },
+    { "name": "Matrisler", "detail": "İşlemler, transpoz ve satır indirgeme" },
+    { "name": "Determinantlar", "detail": "2 × 2 ve daha büyük kare matrisler" },
+    { "name": "Trigonometrik Özdeşlikler", "detail": "Özdeşlikleri doğrula ve sadeleştir" },
+    { "name": "Standart Sapma", "detail": "Örneklem ve ana kütlenin dağılımı" }
+  ],
+  "mobileTag": "MathSolver Mobil Uygulamaları",
+  "mobileTitle": "Nerede Çalışırsan Çalış, Ücretsiz Matematik Öğretmenin Yanında",
+  "mobileDescription": "Kameranla bir soruyu tara, el yazısıyla yaptığın çözümü kontrol et ve alıştırmalarla özel video açıklamaları üzerinden öğrenmeye devam et. Temel soru çözümü için hesap gerekmez ve abonelik yoktur.",
+  "mobileFeatures": ["Her soruyu tara", "Çözümünü kontrol et", "Görsel dersleri izle"],
+  "mobilePreviewAlt": "MathSolver mobil uygulamasında kamera, fotoğraf, yazma ve çözüm kontrolü seçenekleri",
+  "featuresTitle": "Matematik Çözmek İçin İhtiyacın Olan Her Şey",
+  "featureCards": [
+    { "title": "Adım Adım Çözümler", "description": "Nerede hata yaptığını tahmin etmene gerek kalmaz. MathSolver her işlemi ayrı, numaralandırılmış bir adım olarak sade bir dille açıklar. İster ikinci dereceden bir ifadeyi çarpanlara ayırıyor, ister türev alıyor veya kesir sadeleştiriyor ol; hangi formülün neden uygulandığını açıkça görürsün." },
+    { "title": "Fotoğrafla Matematik Çözümü", "description": "El yazısı veya basılı bir sorunun fotoğrafını çekip MathSolver'a yükle. Görüntü tanıma sistemimiz denklemi okur, metne dönüştürür ve hemen çözer. Ders kitabındaki alıştırmalarda ilerlemek veya el yazısıyla yaptığın çözümü kontrol etmek için pratiktir." },
+    { "title": "Alıştırma Testleri", "description": "Çözümleri okumak faydalıdır, ancak bilgini sınamak öğrenmeyi pekiştirir. İstediğin konu ve zorluk düzeyinde sana özel bir test oluştur ve sınavdan önce konuyu gerçekten anlayıp anlamadığını kontrol et." },
+    { "title": "Grafik Hesaplayıcısı", "description": "Fonksiyonları çiz, kesişim noktalarını bul ve denklemlerin davranışını doğrudan tarayıcında gör. MathSolver'ın grafik aracı, birden fazla fonksiyonu aynı koordinat sisteminde göstererek karşılaştırmana, analiz etmene ve aralarındaki ilişkileri görsel olarak anlamana yardımcı olur." }
+  ],
+  "howTitle": "Matematik Çözücüsü Nasıl Çalışır?",
+  "howSteps": [
+    { "title": "1. Sorunu Gir", "description": "Bir denklem yaz, problemi kendi sözlerinle anlat veya fotoğraf yükle. Sana en kolay gelen yöntemi seç." },
+    { "title": "2. Adım Adım Çözüm Al", "description": "Yapay zekâmız soruyu analiz edip çözer ve her adımı açıkça anlatır. Böylece yalnızca sonucu değil, sonuca neden ve nasıl ulaşıldığını da anlarsın." },
+    { "title": "3. Ek Sorular Sor", "description": "Bir adımı anlamadın mı? Doğrudan sohbette sor. MathSolver önceki konuşmayı hatırlar ve yanında bir öğretmen varmış gibi daha ayrıntılı açıklar." }
+  ],
+  "subjectsTitle": "MathSolver'ın Yardımcı Olabileceği Konular",
+  "subjectsParagraphs": [
+    "MathSolver temel matematik konularının tümünü kapsar: aritmetik, cebire hazırlık, cebir I ve II, geometri, trigonometri, kalkülüse hazırlık, kalkülüs (AP AB/BC ve daha ileri düzeyler dâhil), diferansiyel denklemler, doğrusal cebir, olasılık ve istatistik. Ayrıca matematikle bağlantılı yaygın fizik ve kimya sorularını da ele alır.",
+    "Sorun ne kadar özel olursa olsun, ister üç denklemli bir sistem, ister kutupsal koordinatlardan Kartezyen koordinatlara dönüşüm veya bir hipotez testi olsun, MathSolver çözümü adımlara ayırıp sana yol gösterebilir."
+  ],
+  "faqTitle": "Sıkça Sorulan Sorular",
+  "faqs": [
+    { "question": "MathSolver nedir?", "answer": "MathSolver; cebir, kalkülüs, geometri, trigonometri, istatistik ve daha birçok konuda adım adım çözümler sunan ücretsiz bir yapay zekâ matematik çözücüsüdür. Bir denklem yazman veya sorunun fotoğrafını yüklemen yeterli; ayrıntılı açıklamayı anında alırsın.", "linkText": "", "afterLink": "" },
+    { "question": "MathSolver fotoğraftan matematik sorusu çözebilir mi?", "answer": "Evet. El yazısı veya basılı bir sorunun fotoğrafını yüklediğinde MathSolver soruyu okur, denklemi çıkarır ve adım adım tam çözümü otomatik olarak verir.", "linkText": "", "afterLink": "" },
+    { "question": "MathSolver'ı kendi dilimde kullanabilir miyim?", "answer": "Evet. Yan menüde veya mobil üst çubukta yer alan dünya simgeli seçiciden 16 dilden birini seç. Her dilin paylaşabileceğin ayrı bir sayfa adresi vardır. Arayüz, yeni adım adım çözümler ve alıştırma soruları o sayfanın dilini kullanır. Hesaplayıcı rehberleri, makaleler, hesap ekranları ve video dersler şu anda İngilizcedir.", "linkText": "", "afterLink": "" },
+    { "question": "MathSolver hangi konuları kapsar?", "answer": "Aritmetik, cebire hazırlık, cebir, geometri, trigonometri, kalkülüse hazırlık, kalkülüs, doğrusal cebir, diferansiyel denklemler, istatistik ve olasılığın yanı sıra fizik ve kimya sorularını da kapsar.", "linkText": "", "afterLink": "" },
+    { "question": "MathSolver tamamen ücretsiz mi?", "answer": "Evet. Sınırsız sayıda soru çözebilir, tüm adım adım açıklamaları görebilir ve alıştırma testleri oluşturabilirsin. Ücret veya hesap gerekmez.", "linkText": "", "afterLink": "" },
+    { "question": "Öğretmenler yapay zekâ matematik çözücüsü kullandığımı anlayabilir mi?", "answer": "Sayılar ve çözüm adımları yalnızca matematiktir; bu kısımlarda tespit edilecek bir şey yoktur. Öğretmenlerin ve yapay zekâ tespit araçlarının incelediği kısım yazılı açıklamadır. Yapay zekânın ürettiği metni bir rapora veya ödeve yapıştırırsan metin işaretlenebilir. Yöntemi öğrenmek için çözüm adımlarını kullan, ardından açıklamayı kendi sözlerinle yaz. Teslim etmeden önce metni kontrol etmek istersen bir", "linkText": "yapay zekâ tespit aracı", "afterLink": "ile inceleyebilirsin." },
+    { "question": "Yapay zekâ matematik çözücüsü ne kadar doğru sonuç verir?", "answer": "MathSolver, milyonlarca matematik sorusuyla eğitilmiş gelişmiş yapay zekâ modellerini kullanır. Çoğu soruyu yüksek doğrulukla çözse de önemli hesaplamaları, özellikle sınavlar veya mesleki işler için, tekrar kontrol etmeni öneririz.", "linkText": "", "afterLink": "" },
+    { "question": "MathSolver'ın iPhone ve Android uygulamaları var mı?", "answer": "Evet. MathSolver, App Store ve Google Play'de mevcuttur. Kamerayla soruları tarayabilir, el yazısıyla yaptığın çözümü kontrol edebilir, alıştırma yapabilir ve video dersleri çevrimdışı izlemek için kaydedebilirsin. Web sürümü de hiçbir şey yüklemeden telefon ve tabletlerde çalışmaya devam eder.", "linkText": "", "afterLink": "" }
+  ],
+  "copyright": "© 2026 MathSolver. Tüm hakları saklıdır.",
+  "englishGuidesNote": "Hesaplayıcı rehberleri, makaleler, yasal sayfalar, hesap ekranları ve video dersler şu anda İngilizcedir.",
+  "storeAppleEyebrow": "Şuradan indir:",
+  "storeGoogleEyebrow": "Şurada bul:",
+  "storeAriaLabel": "MathSolver'ı {store} üzerinden indir (yeni sekmede açılır)",
+  "signInLabel": "Eşitlemek için giriş yap",
+  "signInHelp": "Defterini eşitlemek için giriş yap",
+  "detectorLanguageNote": "Detecting AI ayrıca çeşitli dillerde sayfalar sunar."
+}

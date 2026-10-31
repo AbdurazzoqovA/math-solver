@@ -11,7 +11,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useBilling } from "@/context/BillingContext";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
 import {
   createVideoJob,
@@ -40,6 +42,11 @@ type VideoLessonDialogProps = {
 
 const TERMINAL_STATUSES = new Set(["ready", "failed", "unsupported"]);
 const POLL_INTERVAL_MS = 2_500;
+const VERIFICATION_WAIT_MS = 20_000;
+// A lesson that fails for a passing reason is retried once before the learner
+// is asked to do anything.
+const MAX_AUTOMATIC_RETRIES = 1;
+const VERIFICATION_ERROR_CODE = "request_validation_failed";
 
 function delay(milliseconds: number, signal: AbortSignal) {
   if (signal.aborted) return Promise.resolve(false);
@@ -71,8 +78,10 @@ export default function VideoLessonDialog({
     canSyncNotebook,
     getAuthToken,
   } = useAuth();
-  const { getToken } = useTurnstile();
+  const { tier: planTier } = useBilling();
+  const { waitForToken } = useTurnstile();
   const [job, setJob] = useState<PublicVideoJob | null>(null);
+  const [preparingLabel, setPreparingLabel] = useState<string | null>(null);
   const [error, setError] = useState<{
     message: string;
     code: string;
@@ -104,42 +113,89 @@ export default function VideoLessonDialog({
     const controller = new AbortController();
     let active = true;
 
+    const readSession = async () => {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new VideoClientError(
+          "Your session could not be verified. Sign in again.",
+          "invalid_session",
+          401,
+        );
+      }
+      return token;
+    };
+
+    const startLesson = async () => {
+      // Verification tokens are single-use. One spent by the solve request,
+      // or still loading on a slow network, must not fail the lesson.
+      for (let attempt = 0; ; attempt += 1) {
+        const token = await readSession();
+        const captchaToken = await waitForToken(VERIFICATION_WAIT_MS);
+        try {
+          return await createVideoJob(
+            request!,
+            token,
+            captchaToken,
+            controller.signal,
+          );
+        } catch (caught) {
+          if (
+            attempt === 0 &&
+            caught instanceof VideoClientError &&
+            caught.code === VERIFICATION_ERROR_CODE &&
+            caught.status !== 429
+          ) {
+            continue;
+          }
+          throw caught;
+        }
+      }
+    };
+
     const run = async () => {
       setError(null);
       setJob(null);
+      setPreparingLabel(null);
       try {
-        const token = await getAuthToken();
-        if (!token) {
-          throw new VideoClientError(
-            "Your session could not be verified. Sign in again.",
-            "invalid_session",
-            401,
-          );
-        }
-
         let nextJob: PublicVideoJob;
         if (jobId) {
-          nextJob = await getVideoJob(jobId, token);
+          nextJob = await getVideoJob(jobId, await readSession());
         } else {
           trackEvent("video_lesson_requested");
-          nextJob = await createVideoJob(request!, token, getToken());
+          setPreparingLabel("Opening the video studio");
+          nextJob = await startLesson();
         }
         if (!active) return;
         setJob(nextJob);
         onJobAttached?.(nextJob);
 
-        while (!TERMINAL_STATUSES.has(nextJob.status)) {
-          const shouldContinue = await delay(
-            POLL_INTERVAL_MS,
-            controller.signal,
-          );
-          if (!shouldContinue || !active) return;
-          nextJob = await getVideoJob(
-            nextJob.id,
-            token,
-          );
+        for (let automaticRetries = 0; ; ) {
+          while (!TERMINAL_STATUSES.has(nextJob.status)) {
+            const shouldContinue = await delay(
+              POLL_INTERVAL_MS,
+              controller.signal,
+            );
+            if (!shouldContinue || !active) return;
+            nextJob = await getVideoJob(nextJob.id, await readSession());
+            if (!active) return;
+            setJob(nextJob);
+          }
+
+          if (
+            jobId ||
+            nextJob.status !== "failed" ||
+            !nextJob.error?.retryable ||
+            automaticRetries >= MAX_AUTOMATIC_RETRIES
+          ) {
+            break;
+          }
+          automaticRetries += 1;
+          setJob(null);
+          setPreparingLabel("Taking another pass at your lesson");
+          nextJob = await startLesson();
           if (!active) return;
           setJob(nextJob);
+          onJobAttached?.(nextJob);
         }
 
         if (
@@ -178,7 +234,6 @@ export default function VideoLessonDialog({
   }, [
     canSyncNotebook,
     getAuthToken,
-    getToken,
     isAuthReady,
     isFirebaseEnabled,
     jobId,
@@ -186,6 +241,7 @@ export default function VideoLessonDialog({
     request,
     retryNonce,
     user,
+    waitForToken,
   ]);
 
   if ((!request && !jobId) || typeof document === "undefined") return null;
@@ -223,14 +279,14 @@ export default function VideoLessonDialog({
   ) : !user ? (
     <AuthRequired
       title="Sign in for your private video explanation"
-      body="Video generation uses a limited free allowance, so an account is required. Solving math remains free without an account."
+      body="Video lessons use a daily allowance, so an account is required. Solving math remains free without an account."
       actionLabel="Sign in or create an account"
       onAction={onRequestAuth}
     />
   ) : !canSyncNotebook ? (
     <AuthRequired
       title="Verify your email first"
-      body="Open your verification email, then return here. Your free lesson will not be used until generation starts."
+      body="Open your verification email, then return here. Your daily allowance is not used until generation starts."
       actionLabel="Open account verification"
       onAction={onRequestAuth}
     />
@@ -244,6 +300,11 @@ export default function VideoLessonDialog({
         error.code !== "lesson_not_supported"
       }
       onRetry={() => setRetryNonce((value) => value + 1)}
+      action={
+        error.code === "free_video_limit_reached" && planTier !== "unlimited"
+          ? { href: "/pricing", label: "See plans for more lessons" }
+          : undefined
+      }
     />
   ) : job?.status === "ready" && job.lesson ? (
     <VideoLessonPlayer lesson={job.lesson} />
@@ -252,14 +313,14 @@ export default function VideoLessonDialog({
       title={errorTitle(job.error?.code)}
       message={
         job.error?.message ??
-        "This problem could not be turned into a trustworthy video explanation."
+        "We could not finish this video. Your free lesson was not used. Please try again."
       }
       retryable={Boolean(request) && (job.error?.retryable ?? false)}
       onRetry={() => setRetryNonce((value) => value + 1)}
     />
   ) : (
     <LoadingState
-      label={job?.stageLabel ?? "Opening the video studio"}
+      label={job?.stageLabel ?? preparingLabel ?? "Opening the video studio"}
       progress={job?.progress ?? 2}
       remaining={job?.quota.remaining}
     />
@@ -290,7 +351,7 @@ export default function VideoLessonDialog({
               </p>
               {job && (
                 <p className="text-[11px] text-muted-foreground">
-                  {job.quota.remaining} of {job.quota.limit} free lessons left today
+                  {job.quota.remaining} of {job.quota.limit} lessons left today
                 </p>
               )}
             </div>
@@ -361,7 +422,7 @@ function LoadingState({
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {Math.round(progress)}%{remaining === undefined ? "" : ` · ${remaining} free lessons remaining today`}
+        {Math.round(progress)}%{remaining === undefined ? "" : ` · ${remaining} lessons left today`}
       </p>
     </div>
   );
@@ -419,11 +480,13 @@ function ErrorState({
   message,
   retryable,
   onRetry,
+  action,
 }: {
   title: string;
   message: string;
   retryable: boolean;
   onRetry: () => void;
+  action?: { href: string; label: string };
 }) {
   return (
     <div className="grid flex-1 place-content-center justify-items-center px-6 py-16 text-center">
@@ -436,6 +499,15 @@ function ErrorState({
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
         {message}
       </p>
+      {action && (
+        <Link
+          href={action.href}
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+        >
+          <Sparkles className="h-4 w-4" />
+          {action.label}
+        </Link>
+      )}
       {retryable && (
         <button
           type="button"
@@ -451,15 +523,14 @@ function ErrorState({
 }
 
 function errorTitle(code?: string) {
-  if (code === "planning_failed" || code === "lesson_not_supported") {
-    return "We stopped before showing an unreliable lesson";
+  if (code === "lesson_not_supported") {
+    return "This problem needs a closer look first";
   }
-  if (
-    code === "render_failed" ||
-    code === "queue_unavailable" ||
-    code === "video_request_failed"
-  ) {
-    return "The video studio hit a technical problem";
+  if (code === VERIFICATION_ERROR_CODE) {
+    return "One quick check is still needed";
   }
-  return "The video explanation could not be generated";
+  if (code === "free_video_limit_reached") {
+    return "You have used today's video lessons";
+  }
+  return "Your video needs one more try";
 }

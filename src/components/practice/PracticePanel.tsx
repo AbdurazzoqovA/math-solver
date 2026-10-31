@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useUI } from "@/context/UIContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { useCallback, type SetStateAction } from "react";
+import { useUI, type PracticeSessionState, type Question } from "@/context/UIContext";
 import { Loader2, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
@@ -18,6 +19,22 @@ import { trackEvent } from "@/lib/analytics";
 import { useTurnstile } from "@/components/providers/TurnstileProvider";
 import { preprocessPracticeMarkdown } from "@/lib/math-markdown";
 
+// Session state lives above the locale layout so navigation preserves answers.
+function usePracticeSessionField<Key extends keyof PracticeSessionState>(key: Key) {
+  const { practiceSession, setPracticeSession } = useUI();
+  const sessionId = practiceSession.id;
+  const setValue = useCallback((value: SetStateAction<PracticeSessionState[Key]>) => {
+    setPracticeSession((current) => {
+      if (current.id !== sessionId) return current;
+      const next = typeof value === "function"
+        ? (value as (previous: PracticeSessionState[Key]) => PracticeSessionState[Key])(current[key])
+        : value;
+      return { ...current, [key]: next };
+    });
+  }, [key, sessionId, setPracticeSession]);
+  return [practiceSession[key], setValue] as const;
+}
+
 export default function PracticePanel() {
   const {
     isPracticePanelOpen,
@@ -27,52 +44,40 @@ export default function PracticePanel() {
     practiceQuestions,
     practiceMode,
     practiceReviewItems,
-    setPracticeQuestions,
+    updatePracticeQuestions,
+    practiceSession,
   } = useUI();
   const {
     savePracticeToMessage,
     savePracticeAttempt,
     saveQuestionReviewState,
   } = useChatContext();
+  const { locale, direction, t } = useLanguage();
   const { recordLearningActivity } = useLearningProgress();
   const { getToken } = useTurnstile();
   
   const questions = practiceQuestions;
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const setPracticeQuestions = (update: SetStateAction<Question[]>) => updatePracticeQuestions(practiceSession.id, update);
+  const [currentIndex, setCurrentIndex] = usePracticeSessionField("currentIndex");
   
   // State per question index
-  const [selectedOptions, setSelectedOptions] = useState<Record<number, number | null>>({});
-  const [completedQuestions, setCompletedQuestions] = useState<Set<number>>(new Set());
-  const [allWrongGuesses, setAllWrongGuesses] = useState<Record<number, Set<number>>>({});
-  const [shownSteps, setShownSteps] = useState<Set<number>>(new Set());
-  const [isGeneratingSteps, setIsGeneratingSteps] = useState<Record<number, boolean>>({});
+  const [selectedOptions, setSelectedOptions] = usePracticeSessionField("selectedOptions");
+  const [completedQuestions, setCompletedQuestions] = usePracticeSessionField("completedQuestions");
+  const [allWrongGuesses, setAllWrongGuesses] = usePracticeSessionField("allWrongGuesses");
+  const [shownSteps, setShownSteps] = usePracticeSessionField("shownSteps");
+  const [stepsError, setStepsError] = usePracticeSessionField("stepsError");
+  const [isGeneratingSteps, setIsGeneratingSteps] = usePracticeSessionField("isGeneratingSteps");
   
   // Track specifically which accordion indices are open per question
-  const [expandedAccordions, setExpandedAccordions] = useState<Record<number, Set<number>>>({});
+  const [expandedAccordions, setExpandedAccordions] = usePracticeSessionField("expandedAccordions");
   
   // Overall scores
-  const [correctCount, setCorrectCount] = useState(0);
-  const [wrongCount, setWrongCount] = useState(0);
+  const [correctCount, setCorrectCount] = usePracticeSessionField("correctCount");
+  const [wrongCount, setWrongCount] = usePracticeSessionField("wrongCount");
   // Track which questions we've already answered so we don't double count
-  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
+  const [answeredQuestions, setAnsweredQuestions] = usePracticeSessionField("answeredQuestions");
 
-  const shortTitle = practiceTopic || "Math Topic";
-
-  useEffect(() => {
-    if (isPracticePanelOpen && practiceTopic) {
-      // Reset state for new practice session
-      setCurrentIndex(0);
-      setSelectedOptions({});
-      setCompletedQuestions(new Set());
-      setAllWrongGuesses({});
-      setShownSteps(new Set());
-      setIsGeneratingSteps({});
-      setExpandedAccordions({});
-      setCorrectCount(0);
-      setWrongCount(0);
-      setAnsweredQuestions(new Set());
-    }
-  }, [isPracticePanelOpen, practiceTopic]);
+  const shortTitle = practiceTopic || t("practiceTest");
 
   const currentSelectedOption = selectedOptions[currentIndex] ?? null;
   const isQuestionComplete = completedQuestions.has(currentIndex);
@@ -231,13 +236,14 @@ export default function PracticePanel() {
 
     const currentQ = questions[currentIndex];
 
-    // If steps already exist on this question, just open it
-    if (currentQ.steps) {
+    // Reuse steps only when they match the current explanation language.
+    if (currentQ.steps && (currentQ.stepsLanguage ?? currentQ.language ?? "en") === locale) {
       setShownSteps(prev => new Set(prev).add(currentIndex));
       return;
     }
 
     // Otherwise, let's fetch them
+    setStepsError(null);
     setIsGeneratingSteps(prev => ({ ...prev, [currentIndex]: true }));
     
     try {
@@ -249,7 +255,8 @@ export default function PracticePanel() {
           question: currentQ.question,
           options: currentQ.options,
           correctAnswerIndex: currentQ.correctAnswerIndex,
-          captchaToken
+          captchaToken,
+          language: locale,
         })
       });
 
@@ -258,7 +265,7 @@ export default function PracticePanel() {
 
       // Update the practice questions mapped array dynamically
       const newQuestions = [...questions];
-      newQuestions[currentIndex] = { ...newQuestions[currentIndex], steps: stepsData };
+      newQuestions[currentIndex] = { ...newQuestions[currentIndex], steps: stepsData, stepsLanguage: locale };
       setPracticeQuestions(newQuestions);
       
       // Auto-persist back to localStorage if this session is bound to an actual chat message
@@ -274,7 +281,7 @@ export default function PracticePanel() {
 
     } catch (error) {
       console.error("Error generating steps:", error);
-      // Optional: Handle error UI here if required
+      setStepsError(t("stepsError"));
     } finally {
       setIsGeneratingSteps(prev => ({ ...prev, [currentIndex]: false }));
     }
@@ -297,20 +304,21 @@ export default function PracticePanel() {
   const currentQ = questions[currentIndex];
 
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-zinc-950 relative">
+    <div lang={locale} dir={direction} className="h-full w-full flex flex-col bg-white dark:bg-zinc-950 relative">
       {/* Header */}
       <div className="flex items-center justify-between p-4 sm:p-5 border-b border-black/5 dark:border-white/5 shrink-0 bg-zinc-50 dark:bg-zinc-900/50">
         <div>
           <h2 className="text-lg font-bold text-foreground leading-tight">
-            {practiceMode === "review" ? "Mistake Review" : "Practice Test"}
+            {practiceMode === "review" ? t("mistakeReview") : t("practiceTest")}
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
             {practiceMode === "review"
-              ? "Strengthen questions you missed before"
+              ? t("reviewHelp")
               : shortTitle}
           </p>
         </div>
         <button 
+          aria-label={t("close")}
           onClick={closePracticePanel}
           className="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors shrink-0 ml-4"
         >
@@ -327,7 +335,7 @@ export default function PracticePanel() {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
                    <div className="text-sm font-medium text-muted-foreground">
-                     Progress
+                     {t("progress")}
                    </div>
                    <div className="text-[13px] text-muted-foreground font-medium">
                     <span className="text-emerald-500">{correctCount}</span> ✓ • <span className="text-rose-500">{wrongCount}</span> ✕
@@ -350,7 +358,7 @@ export default function PracticePanel() {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <div className="text-[13px] font-semibold text-foreground bg-black/5 dark:bg-white/5 px-3 py-1 rounded-full">
-                  Question {currentIndex + 1} of {questions.length}
+                  {t("questionPosition", { number: currentIndex + 1, total: questions.length })}
                 </div>
                 <button 
                   onClick={goToNext}
@@ -362,7 +370,7 @@ export default function PracticePanel() {
               </div>
 
               {/* Question */}
-              <div className="prose dark:prose-invert max-w-none text-[1.1rem] text-foreground prose-p:my-0 prose-p:leading-relaxed prose-math:text-primary-600 dark:prose-math:text-primary-400 font-medium mb-6">
+              <div lang={currentQ.language ?? locale} dir="auto" className="prose dark:prose-invert max-w-none text-[1.1rem] text-foreground prose-p:my-0 prose-p:leading-relaxed prose-math:text-primary-600 dark:prose-math:text-primary-400 font-medium mb-6">
                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                   {preprocessPracticeMarkdown(currentQ.question)}
                 </ReactMarkdown>
@@ -398,7 +406,7 @@ export default function PracticePanel() {
                       key={idx}
                       onClick={() => !isQuestionComplete && !isWrongGuess && setSelectedOptions(prev => ({ ...prev, [currentIndex]: idx }))}
                       disabled={isQuestionComplete || isWrongGuess}
-                      className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 flex items-start gap-4 group ${borderClass} ${bgClass}`}
+                      className={`w-full text-start p-3.5 rounded-xl border transition-all duration-200 flex items-start gap-4 group ${borderClass} ${bgClass}`}
                     >
                        <div className={`mt-1 w-4 h-4 shrink-0 rounded-full border flex items-center justify-center transition-colors
                          ${isSelected && !isQuestionComplete && !isWrongGuess ? 'border-primary-500' : 'border-black/20 dark:border-white/20'}
@@ -409,7 +417,7 @@ export default function PracticePanel() {
                           {isQuestionComplete && isCorrectAnswer && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           {isWrongGuess && <X className="w-2.5 h-2.5 stroke-[3]" />}
                        </div>
-                       <div className={`prose md:prose-sm dark:prose-invert max-w-none m-0 prose-p:m-0 flex-1 leading-relaxed ${isQuestionComplete && !isCorrectAnswer ? 'prose-math:text-muted-foreground opacity-70 text-[0.95rem]' : 'text-[0.95rem] text-inherit prose-math:text-inherit dark:prose-math:text-inherit'}`}>
+                       <div lang={currentQ.language ?? locale} dir="auto" className={`prose md:prose-sm dark:prose-invert max-w-none m-0 prose-p:m-0 flex-1 leading-relaxed ${isQuestionComplete && !isCorrectAnswer ? 'prose-math:text-muted-foreground opacity-70 text-[0.95rem]' : 'text-[0.95rem] text-inherit prose-math:text-inherit dark:prose-math:text-inherit'}`}>
                          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                            {preprocessPracticeMarkdown(opt)}
                          </ReactMarkdown>
@@ -427,7 +435,7 @@ export default function PracticePanel() {
                     disabled={currentSelectedOption === null || currentWrongGuesses.has(currentSelectedOption)}
                     className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:hover:bg-primary-600 text-white font-semibold rounded-xl text-sm transition-all shadow-sm active:scale-95"
                   >
-                    Check Answer
+                    {t("checkAnswer")}
                   </button>
                 ) : (
                   <button
@@ -436,9 +444,9 @@ export default function PracticePanel() {
                   >
                     {currentIndex === questions.length - 1
                       ? practiceMode === "review"
-                        ? "Finish Review"
-                        : "Finish Practice"
-                      : "Next Question"}
+                        ? t("finishReview")
+                        : t("finishPractice")
+                      : t("nextQuestion")}
                     {currentIndex !== questions.length - 1 && <ChevronRight className="w-4 h-4" />}
                   </button>
                 )}
@@ -450,7 +458,7 @@ export default function PracticePanel() {
                     className="px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-semibold text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
                   >
                     {isGeneratingSteps[currentIndex] && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
-                    {!isGeneratingSteps[currentIndex] && isStepsShown ? 'Hide Steps' : 'Show Steps'}
+                    {!isGeneratingSteps[currentIndex] && isStepsShown ? t("hideSteps") : t("showSteps")}
                   </button>
                 )}
               </div>
@@ -462,13 +470,14 @@ export default function PracticePanel() {
                   className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  Remove from review
+                  {t("removeReview")}
                 </button>
               )}
 
+              {stepsError && <p role="alert" className="mt-3 text-sm text-amber-700 dark:text-amber-400">{stepsError}</p>}
               {/* Steps Area */}
               {canShowSteps && isStepsShown && currentQ.steps && (
-                <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div lang={currentQ.stepsLanguage ?? currentQ.language ?? "en"} dir="auto" className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
                   {typeof currentQ.steps === 'string' ? (
                      // Legacy Support for older practice tests
                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-headings:font-semibold prose-math:text-primary-600 dark:prose-math:text-primary-400">
@@ -487,7 +496,7 @@ export default function PracticePanel() {
                                onClick={() => toggleAccordion(currentIndex, idx)}
                                className="w-full flex items-center justify-between p-4 bg-white dark:bg-zinc-900 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
                              >
-                               <span className="font-semibold text-[15px] text-foreground group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-start sm:items-center gap-2.5 text-left">
+                               <span className="font-semibold text-[15px] text-foreground group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-start sm:items-center gap-2.5 text-start">
                                  <span className="flex items-center justify-center bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 w-6 h-6 rounded-full text-[13px] font-bold shrink-0 mt-0.5 sm:mt-0">
                                    {idx + 1}
                                  </span>
@@ -517,7 +526,7 @@ export default function PracticePanel() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <p>Could not load questions. Please try again.</p>
+              <p>{t("quizError")}</p>
             </div>
           )}
         </div>

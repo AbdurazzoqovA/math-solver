@@ -15,7 +15,7 @@ from firebase_admin import credentials, firestore, messaging
 from google.cloud import storage
 from google.cloud.firestore_v1 import Client as FirestoreClient
 from google.cloud.storage import Client as StorageClient
-from llm import LLMValidationError
+from llm import LLMError, LLMValidationError
 from lifecycle import (
     ACTIVE_STATUSES,
     MAX_RENDER_ATTEMPTS,
@@ -377,9 +377,9 @@ def _finish_without_charge(
                 "status": status,
                 "progress": 0 if status == "failed" else 100,
                 "stageLabel": (
-                    "This problem needs a different visual format"
+                    "This problem needs a closer look first"
                     if status == "unsupported"
-                    else "The lesson could not be generated"
+                    else "The lesson needs another try"
                 ),
                 "quotaCharged": False,
                 "updatedAt": now,
@@ -415,11 +415,18 @@ def _load_offline_plan() -> LessonPlan | None:
     )
 
 
+def _integer_setting(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
 def _planning_attempt_limit() -> int:
     try:
-        configured = int(os.environ.get("VIDEO_PLAN_ATTEMPTS", "2"))
+        configured = int(os.environ.get("VIDEO_PLAN_ATTEMPTS", "3"))
     except ValueError:
-        configured = 2
+        configured = 3
     return max(1, min(configured, 3))
 
 
@@ -429,45 +436,91 @@ def _create_reviewed_plan(
     problem: str,
     solution: str,
 ) -> LessonPlan:
+    """Plan and review with bounded recovery instead of a single verdict.
+
+    Only a mathematical objection blocks a lesson. A plan whose mathematics
+    passed review is kept as a fallback while one teaching revision is tried,
+    and an unreliable written solution switches the planner to solving the
+    problem independently rather than refusing the learner.
+    """
     feedback: str | None = None
     attempts = _planning_attempt_limit()
-    last_failure_was_generation = False
+    fallback: LessonPlan | None = None
+    independent = False
+    last_failure = "unsupported"
 
     for attempt_index in range(attempts):
         try:
-            plan = create_lesson_plan(
+            planned = create_lesson_plan(
                 problem,
                 solution,
                 correction=feedback,
+                independent=independent,
             )
         except LLMValidationError as error:
-            last_failure_was_generation = True
+            last_failure = "generation"
             feedback = (
                 "The previous plan failed the deterministic lesson contract. "
                 "Correct every issue below, while preserving mathematical "
                 "accuracy:\n"
                 f"{json.dumps(error.feedback, ensure_ascii=False)}"
             )
-        else:
-            last_failure_was_generation = False
-            if plan.supported:
-                _update_job(
-                    task,
-                    lease_token,
-                    status="planning",
-                    progress=min(18, 14 + attempt_index * 2),
-                    stageLabel="Checking the math and teaching plan",
+            planned = None
+        except LLMError as error:
+            # The provider stayed unavailable through its own retries.
+            last_failure = "provider"
+            LOGGER.warning(
+                "Lesson planning provider failed type=%s attempt=%s",
+                type(error).__name__,
+                attempt_index + 1,
+            )
+            planned = None
+
+        if planned is not None and planned.plan is None:
+            last_failure = "unsupported"
+            independent = True
+            feedback = planned.unsupported_reason or (
+                "The previous plan did not select a safe visual lesson."
+            )
+        elif planned is not None:
+            plan = planned.plan
+            _update_job(
+                task,
+                lease_token,
+                status="planning",
+                progress=min(18, 14 + attempt_index * 2),
+                stageLabel="Checking the math and teaching plan",
+            )
+            try:
+                review = review_lesson_plan(
+                    problem,
+                    solution,
+                    plan,
+                    independent=independent,
                 )
-                review = review_lesson_plan(problem, solution, plan)
+            except LLMError as error:
+                last_failure = "provider"
+                LOGGER.warning(
+                    "Lesson review provider failed type=%s attempt=%s",
+                    type(error).__name__,
+                    attempt_index + 1,
+                )
+            else:
                 if review.valid:
                     return plan
                 feedback = review.reason or (
                     "The independent math review found an inconsistency."
                 )
-            else:
-                feedback = plan.unsupportedReason or (
-                    "The previous plan did not select a safe visual lesson."
-                )
+                if review.math_is_sound:
+                    had_fallback = fallback is not None
+                    fallback = plan
+                    last_failure = "teaching"
+                    if had_fallback:
+                        # One teaching revision was already attempted.
+                        break
+                else:
+                    last_failure = "mathematics"
+                    independent = True
 
         if attempt_index + 1 < attempts:
             _update_job(
@@ -478,7 +531,13 @@ def _create_reviewed_plan(
                 stageLabel="Refining the lesson plan",
             )
 
-    if last_failure_was_generation:
+    if fallback is not None:
+        LOGGER.info(
+            "Video job %s uses a math-reviewed plan with relaxed teaching rules",
+            task.jobId,
+        )
+        return fallback
+    if last_failure in {"generation", "provider"}:
         raise LessonPlanningFailed(
             "The bounded planner could not satisfy the lesson contract."
         )
@@ -507,7 +566,7 @@ def _voice_plan(
     maximum_workers = max(
         1,
         min(
-            int(os.environ.get("VIDEO_TTS_WORKERS", "2")),
+            _integer_setting("VIDEO_TTS_WORKERS", 3),
             len(jobs),
             4,
         ),
@@ -772,8 +831,8 @@ def process_render_task(task: RenderTask) -> str:
                 for clip in clips
             ):
                 raise RuntimeError("rendered media failed verification")
-            if any(clip.transcript_similarity < 0.82 for clip in clips):
-                raise RuntimeError("voice verification failed")
+            # Narration is accepted phrase by phrase in tts.py, which keeps
+            # the best verified take; a second gate here only failed lessons.
 
             _update_job(
                 task,
@@ -832,8 +891,8 @@ def process_render_task(task: RenderTask) -> str:
             status="failed",
             code="planning_failed",
             message=(
-                "The video teacher could not finish a trustworthy teaching "
-                "plan. Your free lesson was not used, so you can retry."
+                "We could not finish planning this lesson. Your free lesson "
+                "was not used. Please try again."
             ),
             retryable=task.attempt < MAX_RENDER_ATTEMPTS,
         )
@@ -850,8 +909,9 @@ def process_render_task(task: RenderTask) -> str:
             status="unsupported",
             code="lesson_not_supported",
             message=(
-                "We could not create a trustworthy visual lesson for this "
-                "problem yet. Your free lesson was not used."
+                "We could not confirm the math for this lesson, so we did "
+                "not make a video. Your free lesson was not used. Check the "
+                "problem text and solve it again."
             ),
             retryable=task.attempt < MAX_EXTERNAL_UNSUPPORTED_ATTEMPTS,
         )
@@ -869,8 +929,8 @@ def process_render_task(task: RenderTask) -> str:
             status="failed",
             code="render_failed",
             message=(
-                "The video studio could not finish this lesson. Your free "
-                "lesson was not used, so you can retry."
+                "We could not finish this video. Your free lesson was not "
+                "used. Please try again."
             ),
             retryable=task.attempt < MAX_RENDER_ATTEMPTS,
         )

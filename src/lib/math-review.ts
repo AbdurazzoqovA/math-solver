@@ -1,6 +1,7 @@
 import "server-only";
 
 import { generateText } from "./llm.ts";
+import { WORK_CHECK_SCHEMA, SOLUTION_VERIFICATION_SCHEMA } from "./llm-schemas.ts";
 
 export const REVIEW_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -53,10 +54,12 @@ async function generateReviewJson({
   systemInstruction,
   parts,
   maxOutputTokens,
+  jsonSchema,
 }: {
   systemInstruction: string;
   parts: ReviewPart[];
   maxOutputTokens: number;
+  jsonSchema: Record<string, unknown>;
 }): Promise<unknown> {
   const text = await generateText({
     systemInstruction,
@@ -68,6 +71,7 @@ async function generateReviewJson({
     temperature: 0,
     maxOutputTokens,
     responseMimeType: "application/json",
+    jsonSchema,
     geminiModel: process.env.GEMINI_REVIEW_MODEL,
   });
   return cleanJson(text);
@@ -207,6 +211,7 @@ Use zero-based line indexes. Mark all lines after the first invalid line as uncl
       { inlineData: { mimeType, data: base64 } },
     ],
     maxOutputTokens: 5_000,
+    jsonSchema: WORK_CHECK_SCHEMA,
   });
   return parseWorkCheckResult(value);
 }
@@ -234,6 +239,7 @@ Use "checked" only when every material step and the final answer agree. Use "war
       },
     ],
     maxOutputTokens: 2_000,
+    jsonSchema: SOLUTION_VERIFICATION_SCHEMA,
   });
   return parseSolutionVerification(value);
 }

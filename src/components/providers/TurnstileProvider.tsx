@@ -7,17 +7,26 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 
 // ── Types ──────────────────────────────────────────────────────────
 
 interface TurnstileContextType {
   /** Returns the current Turnstile token, or null if unavailable (ad blocker, script error, etc.) */
   getToken: () => string | null;
+  /**
+   * Waits for the next token. Each token is single-use, so a request made
+   * right after another one (or on a slow network) would otherwise be sent
+   * without verification and rejected by endpoints that require it.
+   */
+  waitForToken: (timeoutMs?: number) => Promise<string | null>;
 }
 
 const TurnstileContext = createContext<TurnstileContextType>({
   getToken: () => null,
+  waitForToken: async () => null,
 });
 
 export function useTurnstile() {
@@ -57,6 +66,9 @@ const SCRIPT_URL =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__turnstileOnLoad";
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "0x4AAAAAACq7hrgBzgdgW1Z7";
 const SCRIPT_LOAD_TIMEOUT_MS = 10_000;
+const TOKEN_POLL_INTERVAL_MS = 200;
+const DEFAULT_TOKEN_WAIT_MS = 15_000;
+const subscribeToDocument = () => () => {};
 
 export default function TurnstileProvider({
   children,
@@ -68,6 +80,7 @@ export default function TurnstileProvider({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
   const scriptFailedRef = useRef(false);
+  const hasDocument = useSyncExternalStore(subscribeToDocument, () => true, () => false);
 
   // ── Load script ──────────────────────────────────────────────────
   useEffect(() => {
@@ -164,7 +177,7 @@ export default function TurnstileProvider({
       // Widget render failed — graceful fallback
       scriptFailedRef.current = true;
     }
-  }, [scriptReady]);
+  }, [scriptReady, hasDocument]);
 
   // ── getToken: returns current token and auto-resets for next call ─
   const getToken = useCallback((): string | null => {
@@ -190,6 +203,23 @@ export default function TurnstileProvider({
     return token;
   }, []);
 
+  const waitForToken = useCallback(
+    async (timeoutMs = DEFAULT_TOKEN_WAIT_MS): Promise<string | null> => {
+      const deadline = Date.now() + timeoutMs;
+      for (;;) {
+        const token = getToken();
+        if (token) return token;
+        if (scriptFailedRef.current || !SITE_KEY || Date.now() >= deadline) {
+          return null;
+        }
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, TOKEN_POLL_INTERVAL_MS),
+        );
+      }
+    },
+    [getToken],
+  );
+
   // ── Cleanup on unmount ───────────────────────────────────────────
   useEffect(() => {
     return () => {
@@ -205,10 +235,10 @@ export default function TurnstileProvider({
   }, []);
 
   return (
-    <TurnstileContext.Provider value={{ getToken }}>
+    <TurnstileContext.Provider value={{ getToken, waitForToken }}>
       {children}
       {/* Container for the Turnstile widget */}
-      <div
+      {hasDocument && createPortal(<div
         ref={containerRef}
         style={{
           position: "fixed",
@@ -217,7 +247,7 @@ export default function TurnstileProvider({
           zIndex: 9999,
         }}
         aria-hidden="true"
-      />
+      />, document.body)}
     </TurnstileContext.Provider>
   );
 }

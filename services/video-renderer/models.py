@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -39,12 +40,28 @@ TeachingPurpose = Literal[
     "verify",
     "generalize",
 ]
+# A TeX control word ends at the first non-letter, so \write18 is \write.
 UNSAFE_LATEX = re.compile(
-    r"\\(?:input|include|write|openout|read|catcode|csname|def|edef|gdef|"
-    r"xdef|newcommand|renewcommand|usepackage|documentclass|special|immediate|"
-    r"loop|repeat|filecontents|includegraphics)\b",
+    r"\\(?:input|include|write|openout|openin|closeout|closein|newwrite|"
+    r"newread|read|catcode|csname|def|edef|gdef|xdef|newcommand|"
+    r"renewcommand|usepackage|documentclass|special|immediate|loop|repeat|"
+    r"filecontents|includegraphics)(?![A-Za-z])",
     re.IGNORECASE,
 )
+
+
+RELAXED_PEDAGOGY = {"pedagogy": "relaxed"}
+MIN_RELAXED_CLIPS = 2
+
+
+def pedagogy_is_relaxed(info: ValidationInfo) -> bool:
+    """Teaching-richness rules are preferences; safety and structure are not.
+
+    A plan that is safe, renderable, and mathematically reviewed must still
+    reach the learner when the model could not satisfy every teaching rule.
+    """
+    context = info.context
+    return isinstance(context, dict) and context.get("pedagogy") == "relaxed"
 
 
 class StrictModel(BaseModel):
@@ -91,9 +108,12 @@ class LessonInteraction(StrictModel):
         return self
 
 
+COORDINATE_LIMIT = 1_000_000
+
+
 class GraphPoint(StrictModel):
-    x: float = Field(ge=-1000, le=1000)
-    y: float = Field(ge=-1000, le=1000)
+    x: float = Field(ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT)
+    y: float = Field(ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT)
     label: str = Field(default="", max_length=80)
     color: str | None = Field(default=None, max_length=16)
 
@@ -138,10 +158,18 @@ class GraphVisual(StrictModel):
     latex: str = Field(default="", max_length=600)
     expression: str | None = Field(default=None, max_length=300)
     functions: list[GraphFunction] = Field(default_factory=list, max_length=4)
-    xMin: float | None = Field(default=None, ge=-100, le=100)
-    xMax: float | None = Field(default=None, ge=-100, le=100)
-    yMin: float | None = Field(default=None, ge=-1000, le=1000)
-    yMax: float | None = Field(default=None, ge=-1000, le=1000)
+    xMin: float | None = Field(
+        default=None, ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT
+    )
+    xMax: float | None = Field(
+        default=None, ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT
+    )
+    yMin: float | None = Field(
+        default=None, ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT
+    )
+    yMax: float | None = Field(
+        default=None, ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT
+    )
     xDomain: tuple[float, float] | None = None
     yDomain: tuple[float, float] | None = None
     points: list[GraphPoint] = Field(default_factory=list, max_length=6)
@@ -160,7 +188,7 @@ class GraphVisual(StrictModel):
         assert self.xMax is not None
         assert self.yMin is not None
         assert self.yMax is not None
-        if self.xMax - self.xMin < 1 or self.yMax - self.yMin < 1:
+        if self.xMax - self.xMin <= 0 or self.yMax - self.yMin <= 0:
             raise ValueError("graph ranges must have positive width")
         if not self.expression and not self.functions:
             raise ValueError("graph needs an expression or functions")
@@ -176,7 +204,7 @@ class GraphVisual(StrictModel):
 
 
 class NumberLinePoint(StrictModel):
-    value: float = Field(ge=-1000, le=1000)
+    value: float = Field(ge=-COORDINATE_LIMIT, le=COORDINATE_LIMIT)
     label: str = Field(default="", max_length=80)
     color: Literal["blue", "teal", "yellow", "pink", "green"] = "teal"
 
@@ -186,16 +214,16 @@ class NumberLineVisual(StrictModel):
     action: VisualAction
     latex: str = Field(min_length=1, max_length=600)
     minimum: float = Field(
-        ge=-1000,
-        le=1000,
+        ge=-COORDINATE_LIMIT,
+        le=COORDINATE_LIMIT,
         validation_alias=AliasChoices("minimum", "min"),
     )
     maximum: float = Field(
-        ge=-1000,
-        le=1000,
+        ge=-COORDINATE_LIMIT,
+        le=COORDINATE_LIMIT,
         validation_alias=AliasChoices("maximum", "max"),
     )
-    step: float | None = Field(default=None, gt=0, le=100)
+    step: float | None = Field(default=None, gt=0, le=COORDINATE_LIMIT)
     points: list[NumberLinePoint] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
@@ -347,7 +375,7 @@ class LessonPlan(StrictModel):
         return value
 
     @model_validator(mode="after")
-    def validate_references(self) -> "LessonPlan":
+    def validate_references(self, info: ValidationInfo) -> "LessonPlan":
         clip_ids = [clip.id for clip in self.clips]
         if len(set(clip_ids)) != len(clip_ids):
             raise ValueError("clip ids must be unique")
@@ -359,14 +387,20 @@ class LessonPlan(StrictModel):
         for interaction in [*self.interactions, self.transferCheck]:
             if interaction.afterClip not in known:
                 raise ValueError("interaction references an unknown clip")
-        if self.supported and len(self.clips) < 5:
-            raise ValueError(
-                "supported videos need at least five teaching chapters"
-            )
         if not self.supported and not self.unsupportedReason:
             raise ValueError("unsupported lessons need a reason")
         if not self.supported:
             return self
+        if pedagogy_is_relaxed(info):
+            if len(self.clips) < MIN_RELAXED_CLIPS:
+                raise ValueError(
+                    "supported videos need at least two teaching chapters"
+                )
+            return self
+        if len(self.clips) < 5:
+            raise ValueError(
+                "supported videos need at least five teaching chapters"
+            )
 
         roles = [clip.teachingRole for clip in self.clips]
         if roles[0] != "orient":
@@ -436,13 +470,27 @@ class LessonPlan(StrictModel):
 
 class PlanReview(StrictModel):
     valid: bool
+    # Separates a mathematical defect, which must block a lesson, from a
+    # teaching-quality preference, which may only request one revision.
+    mathValid: bool | None = None
     reason: str = Field(default="", max_length=600)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def bound_reason(cls, value: object) -> object:
+        return value[:600] if isinstance(value, str) else value
 
     @model_validator(mode="after")
     def require_rejection_reason(self) -> "PlanReview":
         if not self.valid and not self.reason:
             raise ValueError("an invalid plan needs a rejection reason")
         return self
+
+    @property
+    def math_is_sound(self) -> bool:
+        if self.valid:
+            return True
+        return bool(self.mathValid)
 
 
 class RenderTask(StrictModel):

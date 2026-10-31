@@ -1,0 +1,179 @@
+{
+  "metaTitle": "免费 AI 数学解题器，提供分步解答 | MathSolver",
+  "metaDescription": "使用 MathSolver 免费在线解数学题，查看代数、微积分、几何等题目的详细步骤。输入方程或上传照片，AI 帮你理解每一步解题过程。",
+  "socialTitle": "免费 AI 数学解题器，提供详细分步解答",
+  "imageAlt": "MathSolver：免费数学解题器，提供详细分步解答",
+  "introTitle": "几秒内解答数学题",
+  "introParagraphs": [
+    "遇到难解的方程？MathSolver 是免费的在线数学解题工具，能把复杂题目转化为清晰的分步解答。输入方程、粘贴应用题，或拍下作业照片，剩下的交给我们的 AI。",
+    "从基础代数、几何到进阶微积分和统计，MathSolver 不只给出最终答案，还会展示完整解题过程，解释每一步。你可以掌握方法，下次遇到类似题目时自己解决。"
+  ],
+  "calculatorsTitle": "热门数学计算器",
+  "calculatorsDescription": "从你正在学习的具体知识点开始。每个计算器都免费提供完整解释。",
+  "browseCalculators": "查看所有计算器",
+  "popularCalculators": [
+    {
+      "name": "解方程求 X",
+      "detail": "一次方程与多步骤方程求解"
+    },
+    {
+      "name": "函数绘图",
+      "detail": "在线绘制并比较函数图像"
+    },
+    {
+      "name": "二次方程",
+      "detail": "根、判别式与求根公式"
+    },
+    {
+      "name": "因式分解",
+      "detail": "最大公因数、三项式与乘法公式"
+    },
+    {
+      "name": "分数计算",
+      "detail": "加、减、乘、除运算"
+    },
+    {
+      "name": "方程组",
+      "detail": "代入法与消元法"
+    },
+    {
+      "name": "不等式",
+      "detail": "区间与符号变化"
+    },
+    {
+      "name": "对数",
+      "detail": "求值、展开与对数方程求解"
+    },
+    {
+      "name": "导数",
+      "detail": "幂函数、乘积、商与链式求导法则"
+    },
+    {
+      "name": "积分",
+      "detail": "原函数与积分方法"
+    },
+    {
+      "name": "矩阵",
+      "detail": "矩阵运算、转置与行化简"
+    },
+    {
+      "name": "行列式",
+      "detail": "二阶及更高阶方阵"
+    },
+    {
+      "name": "三角恒等式",
+      "detail": "验证并化简恒等式"
+    },
+    {
+      "name": "标准差",
+      "detail": "样本与总体的离散程度"
+    }
+  ],
+  "mobileTag": "MathSolver 手机应用",
+  "mobileTitle": "随时随地，免费数学辅导陪你做作业",
+  "mobileDescription": "用相机扫描题目，检查手写解题过程，再通过练习和私人视频讲解继续学习。基本解题功能无需账户，也无需订阅。",
+  "mobileFeatures": [
+    "扫描数学题",
+    "检查解题过程",
+    "观看可视化课程"
+  ],
+  "mobilePreviewAlt": "MathSolver 手机应用，展示相机、照片、文字输入和解题检查选项",
+  "featuresTitle": "数学解题所需工具，一应俱全",
+  "featureCards": [
+    {
+      "title": "分步解答",
+      "description": "不用再猜自己错在哪里。MathSolver 将每次计算列为单独的编号步骤，并用易懂的语言解释。不论是对二次多项式进行因式分解、计算导数，还是约分，你都能清楚看到使用了哪条公式，以及为什么这样做。"
+    },
+    {
+      "title": "拍照解数学题",
+      "description": "拍下手写或印刷的题目，上传到 MathSolver。图像识别功能会读出方程，将其转换为文字并立即求解。用来快速处理课本习题或检查自己的手写解题过程都很方便。"
+    },
+    {
+      "title": "练习测验",
+      "description": "阅读解答有助于学习，但自我测试能帮助你检验理解程度。按任意主题和难度生成专属测验，在考试前确认自己是否真正掌握了知识。"
+    },
+    {
+      "title": "图形计算器",
+      "description": "直接在浏览器中绘制函数图像、寻找交点，并观察方程的变化。MathSolver 的绘图工具可以将多个函数叠加在同一坐标系中，让你直观地比较、分析并理解它们之间的关系。"
+    }
+  ],
+  "howTitle": "数学解题器如何使用？",
+  "howSteps": [
+    {
+      "title": "1. 输入题目",
+      "description": "输入方程，用自己的话描述应用题，或上传照片。选择最方便的方式即可。"
+    },
+    {
+      "title": "2. 获取分步解答",
+      "description": "我们的 AI 会分析并解答题目，清晰解释每一步，让你理解为什么这样解，而不只是知道答案。"
+    },
+    {
+      "title": "3. 继续提问",
+      "description": "没看懂某一步？直接在聊天中追问。MathSolver 会记住上下文并进一步解释，就像有一位随时可请教的老师。"
+    }
+  ],
+  "subjectsTitle": "MathSolver 可以帮助你学习哪些数学主题？",
+  "subjectsParagraphs": [
+    "MathSolver 涵盖主要数学主题：算术、基础代数、代数 I 与 II、几何、三角函数、微积分预备课程、微积分（包括 AP AB/BC 及更高层次内容）、微分方程、线性代数、概率与统计。它也能处理物理和化学中常见的跨学科理工类问题。",
+    "无论题目多么具体，例如三个方程组成的方程组、极坐标转换为直角坐标，或统计假设检验，MathSolver 都能将题目拆解，带你一步步完成解答。"
+  ],
+  "faqTitle": "常见问题",
+  "faqs": [
+    {
+      "question": "MathSolver 是什么？",
+      "answer": "MathSolver 是免费的 AI 数学解题工具，提供代数、微积分、几何、三角函数、统计等题目的分步解答。输入方程或上传数学题照片，即可获得即时、详细的解题说明。",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver 可以通过照片解数学题吗？",
+      "answer": "可以。上传手写或印刷题目的照片，MathSolver 会自动读取题目、提取方程，并给出完整的分步解答。",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "我可以用自己的语言使用 MathSolver 吗？",
+      "answer": "可以。通过侧边栏或手机页面顶部的地球图标，可从 16 种语言中选择。每种语言都有独立的页面地址，可以直接分享。解题界面、新生成的分步解答和练习题会使用该页面的语言。计算器指南、文章、账户页面和视频课程目前仍为英文。",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver 涵盖哪些学科内容？",
+      "answer": "包括算术、基础代数、代数、几何、三角函数、微积分预备课程、微积分、线性代数、微分方程、统计和概率，也包括物理与化学问题。",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver 完全免费吗？",
+      "answer": "是的。你可以免费解答不限数量的题目，查看所有分步解释，并生成练习测验，无需账户。",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "老师能看出我使用了 AI 数学解题工具吗？",
+      "answer": "数字和解题步骤本身只是数学，没有可识别的 AI 特征。老师和 AI 检测工具主要关注书面解释。如果把 AI 生成的文字直接粘贴到报告或作业说明中，就可能被标记。建议通过步骤学会方法，再用自己的话写出解释。提交前如需再次确认，可先使用",
+      "linkText": "AI 检测工具",
+      "afterLink": "检查文字。"
+    },
+    {
+      "question": "AI 数学解题器的准确度如何？",
+      "answer": "MathSolver 使用经过数百万道数学题训练的先进 AI 模型。虽然多数题目能够得到高准确度的解答，我们仍建议复核重要计算，尤其是用于考试或专业工作时。",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver 有 iPhone 和 Android 应用吗？",
+      "answer": "有。MathSolver 可在 App Store 和 Google Play 下载。你可以直接用相机扫描题目，检查手写解题过程，进行练习，并保存视频课程供离线观看。浏览器版本也可在手机和平板上继续使用，无需安装应用。",
+      "linkText": "",
+      "afterLink": ""
+    }
+  ],
+  "copyright": "© 2026 MathSolver。保留所有权利。",
+  "englishGuidesNote": "计算器指南、文章、法律页面、账户页面和视频课程目前仍为英文。",
+  "storeAppleEyebrow": "下载于",
+  "storeGoogleEyebrow": "立即获取于",
+  "storeAriaLabel": "从 {store} 下载 MathSolver（在新标签页中打开）",
+  "signInLabel": "登录以同步",
+  "signInHelp": "登录以同步笔记本",
+  "detectorLanguageNote": "Detecting AI 也提供多种语言的网页。"
+}

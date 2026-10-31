@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const failure = await mobileAppCheckFailure(request);
   return failure ??
-    handlePractice(request, undefined, { captchaAlreadyVerified: true });
+    handlePractice(request, undefined, { captchaAlreadyVerified: true }, { guestCookies: false });
 }

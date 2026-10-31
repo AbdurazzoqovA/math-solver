@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { generateText, getLLMProvider } from '@/lib/llm';
 import { prepareLLMImage } from '@/lib/llm-image';
 import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
+import {
+  checkUsage,
+  recordUsage,
+  usageLimitBody,
+  type UsageOptions,
+} from '@/lib/billing/usage';
 
 const ACCEPTED_TYPES = [
   'image/jpeg',
@@ -20,6 +26,7 @@ export async function POST(
   req: Request,
   _context?: { params: Promise<unknown> },
   validationOptions: RequestValidationOptions = {},
+  usageOptions: UsageOptions = {},
 ) {
   try {
     // ── Captcha / rate-limit gate ──
@@ -29,6 +36,15 @@ export async function POST(
         { error: validation.error },
         { status: validation.status }
       );
+    }
+
+    // ── Daily scan allowance (checked before any model call) ──
+    const usage = await checkUsage(req, 'scans', usageOptions);
+    if (!usage.allowed) {
+      return NextResponse.json(usageLimitBody(usage), {
+        status: 429,
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
     }
 
     const { base64, mimeType, source } = validation.body as { base64?: string; mimeType?: string; source?: string };
@@ -58,7 +74,10 @@ export async function POST(
 
     const text = await recognizeMathExpression(base64, mimeType, source);
     if (text && text.trim()) {
-      return NextResponse.json({ text: text.trim() });
+      const { setCookie } = await recordUsage(usage);
+      const response = NextResponse.json({ text: text.trim() });
+      if (setCookie) response.headers.append('Set-Cookie', setCookie);
+      return response;
     }
     
     return NextResponse.json(

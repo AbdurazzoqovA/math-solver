@@ -1,4 +1,8 @@
-export const DEFAULT_DAILY_VIDEO_LIMIT = 10;
+import { PLAN_LIMITS } from "../billing/plans.ts";
+
+// Fallback when a caller passes an invalid limit; plan tiers decide the real
+// allowance (see src/lib/billing/plans.ts).
+export const DEFAULT_DAILY_VIDEO_LIMIT = PLAN_LIMITS.free.dailyVideos;
 
 export type DailyVideoQuota = {
   used: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import { X, Eraser, Undo } from "lucide-react";
 
 const COLORS = [
@@ -18,6 +19,7 @@ interface DrawingCanvasProps {
 }
 
 export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProps) {
+  const { locale, direction, t } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -196,12 +198,13 @@ export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProp
 
   // ---------- Render ----------
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div lang={locale} dir={direction} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-4xl bg-white dark:bg-zinc-950 rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between border-b border-black/5 dark:border-white/5">
-          <h2 className="text-xl font-bold text-foreground">Draw Your Math Problem</h2>
+          <h2 className="text-xl font-bold text-foreground">{t("drawProblem")}</h2>
           <button
+            aria-label={t("close")}
             onClick={onCancel}
             className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-muted-foreground"
           >
@@ -234,10 +237,11 @@ export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProp
               className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <Eraser className="w-4 h-4" />
-              Clear
+              {t("clear")}
             </button>
 
             <button
+              aria-label={t("undo")}
               onClick={undo}
               disabled={historyLen === 0}
               className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
@@ -253,7 +257,7 @@ export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProp
 
             {/* Colors */}
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground mr-0.5 hidden sm:inline">Color:</span>
+              <span className="text-xs font-medium text-muted-foreground mr-0.5 hidden sm:inline">{t("color")}:</span>
               {COLORS.map((c) => (
                 <button
                   key={c}
@@ -273,9 +277,10 @@ export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProp
             {/* Line Width */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap hidden sm:inline">
-                Width:
+                {t("width")}:
               </span>
               <input
+                aria-label={t("width")}
                 type="range"
                 min="1"
                 max="8"
@@ -289,16 +294,17 @@ export default function DrawingCanvas({ onConfirm, onCancel }: DrawingCanvasProp
 
           <div className="flex items-center gap-3 justify-end">
             <button
+              aria-label={t("close")}
               onClick={onCancel}
               className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors"
             >
-              Cancel
+              {t("close")}
             </button>
             <button
               onClick={handleConfirm}
               className="px-6 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-sm transition-colors"
             >
-              Confirm
+              {t("confirm")}
             </button>
           </div>
         </div>

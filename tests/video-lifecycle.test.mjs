@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   canRestartFailedVideoJob,
   isVideoJobExpired,
+  isVideoJobStalled,
   isLegacyVideoJobObjectName,
   MAX_VIDEO_JOB_ATTEMPTS,
   needsLegacyVideoJobObjectFiltering,
@@ -12,7 +13,38 @@ import {
   videoLegacyObjectPrefix,
   videoOwnerObjectPrefixes,
   VIDEO_JOB_RETENTION_MS,
+  VIDEO_JOB_STALL_MS,
 } from "../src/lib/video/lifecycle.ts";
+
+test("a silent active job is treated as stalled, a finished one never is", () => {
+  const updatedAt = Date.UTC(2026, 8, 28, 9);
+  for (const status of [
+    "queued",
+    "planning",
+    "voicing",
+    "rendering",
+    "verifying",
+    "uploading",
+  ]) {
+    assert.equal(
+      isVideoJobStalled({ status, updatedAt }, updatedAt + VIDEO_JOB_STALL_MS - 1),
+      false,
+      status,
+    );
+    assert.equal(
+      isVideoJobStalled({ status, updatedAt }, updatedAt + VIDEO_JOB_STALL_MS),
+      true,
+      status,
+    );
+  }
+  for (const status of ["ready", "failed", "unsupported"]) {
+    assert.equal(
+      isVideoJobStalled({ status, updatedAt }, updatedAt + 10 * VIDEO_JOB_STALL_MS),
+      false,
+      status,
+    );
+  }
+});
 
 test("video jobs expire exactly at the retention boundary", () => {
   const createdAt = Date.UTC(2026, 7, 25, 12);

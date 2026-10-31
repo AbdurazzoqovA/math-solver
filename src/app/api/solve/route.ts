@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { validateRequest, type RequestValidationOptions } from '@/lib/captcha';
 import { getCalculator } from '@/lib/calculators';
 import { streamText, type LLMMessage } from '@/lib/llm';
+import { buildLanguageInstruction } from '@/lib/i18n/locales';
 
 // System prompt defining the AI's persona and formatting rules
 const MATH_TUTOR_PROMPT = `You are MathSolver, an expert AI math tutor. Your goal is to provide clear, visually distinct, and step-by-step solutions to mathematical problems. Start directly with the steps.
@@ -33,9 +34,10 @@ export async function POST(
       );
     }
 
-    const { messages, source } = validation.body as {
+    const { messages, source, language } = validation.body as {
       messages?: unknown;
       source?: unknown;
+      language?: unknown;
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -81,7 +83,7 @@ ${calculator.solverInstruction}`
     // Calculator instructions are looked up from the server registry, never
     // trusted from client text.
     const stream = await streamText({
-      systemInstruction: systemPrompt,
+      systemInstruction: systemPrompt + buildLanguageInstruction(language, 'solution'),
       messages: llmMessages,
       temperature: 0.2,
       maxOutputTokens: 2000,

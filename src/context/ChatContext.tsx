@@ -18,6 +18,7 @@ import { Question, type ReviewItem } from "@/context/UIContext";
 import { useAuth } from "@/context/AuthContext";
 import { useLearningProgress } from "@/context/LearningProgressContext";
 import type { ReviewState } from "@/lib/learning-progress";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   deleteCloudChat,
   loadCloudNotebook,
@@ -153,6 +154,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [cloudSyncState, setCloudSyncState] =
     useState<CloudSyncState>("unavailable");
+  const { locale, t } = useLanguage();
   const { getToken } = useTurnstile();
   const { user, isAuthReady, isFirebaseEnabled, canSyncNotebook } = useAuth();
   const { recordLearningActivity } = useLearningProgress();
@@ -579,6 +581,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             messages: apiMessages,
             captchaToken,
             source: chatSource,
+            language: locale,
           }),
         });
 
@@ -594,6 +597,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           id: assistantMessageId,
           role: "assistant",
           content: "",
+          language: locale,
         };
 
         // Add empty assistant message
@@ -644,7 +648,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     {
                       id: (Date.now() + 1).toString(),
                       role: "assistant" as const,
-                      content: "Sorry, I encountered an error while solving that problem. Please try again.",
+                      content: t("solveError"),
+                      language: locale,
                     },
                   ],
                   updatedAt: Date.now(),
@@ -656,7 +661,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     },
-    [activeChatId, getToken, isLoading, recordLearningActivity]
+    [activeChatId, getToken, isLoading, recordLearningActivity, locale, t]
   );
 
   return (

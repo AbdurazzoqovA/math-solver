@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 tests/*
 !tests/test_render_state.py
+!tests/test_render_resilience.py

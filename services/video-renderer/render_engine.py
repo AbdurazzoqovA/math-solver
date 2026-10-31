@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 import errno
 import logging
 import math
@@ -12,7 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-import sympy
+from graph_math import compile_function
+from latex_clean import clean_latex, has_non_ascii, latex_to_plain_text
 from manim import (
     DOWN,
     LEFT,
@@ -37,6 +37,7 @@ from manim import (
     Text,
     TransformMatchingTex,
     VGroup,
+    VMobject,
     config,
     tempconfig,
 )
@@ -68,6 +69,10 @@ COLORS = {
 LOGGER = logging.getLogger(__name__)
 MEDIA_ASSEMBLY_ATTEMPTS = 2
 _MANIM_RENDER_LOCK = threading.RLock()
+# A scene that cannot be drawn as planned is redrawn more simply instead of
+# failing the lesson: first without morphing animations, then as plain cards.
+SCENE_MODES = ("full", "safe", "minimal")
+GRAPH_SAMPLES = 240
 
 
 @dataclass(frozen=True)
@@ -308,68 +313,34 @@ def _assemble_full_lesson(
     )
 
 
-ALLOWED_FUNCTIONS: dict[str, Any] = {
-    "sin": sympy.sin,
-    "cos": sympy.cos,
-    "tan": sympy.tan,
-    "sqrt": sympy.sqrt,
-    "exp": sympy.exp,
-    "log": sympy.log,
-    "abs": sympy.Abs,
-}
-ALLOWED_BINARY = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow)
-ALLOWED_UNARY = (ast.UAdd, ast.USub)
-
-
-def _validate_expression_node(node: ast.AST) -> None:
-    if isinstance(node, ast.Expression):
-        _validate_expression_node(node.body)
-        return
-    if isinstance(node, ast.Constant):
-        if not isinstance(node.value, (int, float)):
-            raise ValueError("graph constants must be numeric")
-        return
-    if isinstance(node, ast.Name):
-        if node.id != "x" and node.id not in ALLOWED_FUNCTIONS:
-            raise ValueError("graph expression contains an unknown name")
-        return
-    if isinstance(node, ast.BinOp) and isinstance(node.op, ALLOWED_BINARY):
-        _validate_expression_node(node.left)
-        _validate_expression_node(node.right)
-        return
-    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ALLOWED_UNARY):
-        _validate_expression_node(node.operand)
-        return
-    if isinstance(node, ast.Call):
-        if (
-            not isinstance(node.func, ast.Name)
-            or node.func.id not in ALLOWED_FUNCTIONS
-            or len(node.args) != 1
-            or node.keywords
-        ):
-            raise ValueError("graph function call is not allowed")
-        _validate_expression_node(node.args[0])
-        return
-    raise ValueError("graph expression contains an unsupported operation")
-
-
 def _safe_graph_function(expression: str) -> Callable[[float], float]:
-    tree = ast.parse(expression.replace("^", "**"), mode="eval")
-    _validate_expression_node(tree)
-    symbol = sympy.Symbol("x", real=True)
-    local_values = {"x": symbol, **ALLOWED_FUNCTIONS}
-    compiled = compile(tree, "<safe-graph>", "eval")
-    symbolic = eval(compiled, {"__builtins__": {}}, local_values)
-    function = sympy.lambdify(symbol, symbolic, modules=["numpy"])
+    return compile_function(expression)
 
-    def evaluate(value: float) -> float:
-        try:
-            result = float(function(value))
-        except (TypeError, ValueError, ZeroDivisionError, OverflowError):
-            return math.nan
-        return result if math.isfinite(result) else math.nan
 
-    return evaluate
+_ARGUMENT_COMMAND = re.compile(
+    r"\\(?:[dt]?frac|sqrt|text\w*|math\w+|operatorname|overline|underline|"
+    r"vec|hat|bar|tilde|d?dot|binom|left|right|[bB]igg?[lrm]?|boxed|color|"
+    r"textcolor|overset|underset|stackrel|x(?:right|left)arrow)$"
+)
+
+
+def _brace_depths(latex: str) -> list[int]:
+    depths = []
+    depth = 0
+    index = 0
+    while index < len(latex):
+        character = latex[index]
+        if character == "\\" and index + 1 < len(latex):
+            depths.extend([depth, depth])
+            index += 2
+            continue
+        if character == "}":
+            depth = max(0, depth - 1)
+        depths.append(depth)
+        if character == "{":
+            depth += 1
+        index += 1
+    return depths
 
 
 def _isolatable_focus(
@@ -389,6 +360,24 @@ def _isolatable_focus(
         for token in (r"\begin", r"\end", r"\\", "&")
     ):
         return None
+    # Isolation cuts the formula at every occurrence. A cut inside a braced
+    # argument, or right after a script or command that expects one, leaves
+    # fragments TeX cannot compile (for example inside a fraction).
+    depths = _brace_depths(latex)
+    position = latex.find(focus_latex)
+    while position != -1:
+        if depths[position] != 0:
+            return None
+        before = latex[:position].rstrip()
+        if before.endswith(("^", "_")) or _ARGUMENT_COMMAND.search(before):
+            return None
+        if focus_latex.startswith("{") and re.search(r"\\[A-Za-z]+$", before):
+            return None
+        after = latex[position + len(focus_latex) :].lstrip()
+        if after.startswith(("^", "_")) and not focus_latex.rstrip().endswith("}"):
+            if not re.search(r"[A-Za-z0-9)\]]$", focus_latex.rstrip()):
+                return None
+        position = latex.find(focus_latex, position + 1)
 
     unescaped = re.sub(r"\\([{}])", "", focus_latex)
     depth = 0
@@ -402,26 +391,133 @@ def _isolatable_focus(
     return focus_latex if depth == 0 else None
 
 
+def _safe_text(value: str, **options: Any) -> Text:
+    """Pango text that cannot fail on an unusual or empty string."""
+    cleaned = re.sub(r"[\x00-\x1f\x7f]", " ", value or "").strip() or "…"
+    options.setdefault("color", COLORS["text"])
+    for candidate in (
+        cleaned,
+        cleaned.encode("ascii", "ignore").decode("ascii").strip() or "…",
+        "…",
+    ):
+        try:
+            return Text(candidate, **options)
+        except Exception as error:  # noqa: BLE001 - always show something.
+            LOGGER.warning("Text layout failed type=%s", type(error).__name__)
+    raise RuntimeError("text layout failed")
+
+
+_TEXT_COMMAND = re.compile(r"\\(?:text|textbf|textit|textrm|mathrm)\s*\{")
+_SPACING_ONLY = re.compile(r"^(?:\s|\\(?:quad|qquad|,|;|:|!| )|~)*$")
+
+
+def _text_runs(latex: str) -> list[tuple[str, str]] | None:
+    """Split a formula into math and prose at top-level text commands."""
+    runs: list[tuple[str, str]] = []
+    cursor = 0
+    depths = _brace_depths(latex)
+    for match in _TEXT_COMMAND.finditer(latex):
+        if match.start() < cursor or depths[match.start()] != 0:
+            continue
+        depth = 1
+        index = match.end()
+        while index < len(latex) and depth:
+            if latex[index] == "\\":
+                index += 2
+                continue
+            depth += {"{": 1, "}": -1}.get(latex[index], 0)
+            index += 1
+        if depth:
+            return None
+        runs.append(("math", latex[cursor : match.start()]))
+        runs.append(("text", latex[match.end() : index - 1]))
+        cursor = index
+    runs.append(("math", latex[cursor:]))
+    return [
+        (kind, value)
+        for kind, value in runs
+        if value.strip() and not (kind == "math" and _SPACING_ONLY.match(value))
+    ]
+
+
+def _mixed_tex(latex: str) -> VGroup | None:
+    """Typeset prose in any script beside TeX math, which is ASCII-only."""
+    runs = _text_runs(latex)
+    if not runs or all(kind == "math" for kind, _ in runs):
+        return None
+    parts = VGroup()
+    for kind, value in runs:
+        if kind == "text":
+            parts.add(_safe_text(value.strip(), font_size=34))
+            continue
+        if has_non_ascii(value):
+            return None
+        try:
+            parts.add(MathTex(value.strip(), color=COLORS["text"]))
+        except Exception:  # noqa: BLE001 - the caller falls back to text.
+            return None
+    return parts.arrange(RIGHT, buff=0.28)
+
+
+def _typeset(latex: str, focus_latex: str | None) -> Any:
+    source = clean_latex(latex)
+    if not source:
+        return _safe_text("…", font_size=34)
+    if has_non_ascii(source):
+        return _mixed_tex(source) or _safe_text(
+            latex_to_plain_text(source),
+            font_size=34,
+        )
+    safe_focus = _isolatable_focus(
+        source,
+        clean_latex(focus_latex) if focus_latex else None,
+    )
+    if safe_focus:
+        try:
+            value = MathTex(
+                source,
+                color=COLORS["text"],
+                substrings_to_isolate=[safe_focus],
+            )
+            value.set_color_by_tex(safe_focus, COLORS["yellow"])
+            return value
+        except Exception as error:  # noqa: BLE001 - retry without the focus.
+            LOGGER.warning(
+                "Focused formula failed type=%s; typesetting it whole",
+                type(error).__name__,
+            )
+    try:
+        return MathTex(source, color=COLORS["text"])
+    except Exception as error:  # noqa: BLE001 - never fail a lesson on TeX.
+        LOGGER.warning(
+            "Formula failed type=%s; showing readable text",
+            type(error).__name__,
+        )
+    return _mixed_tex(source) or _safe_text(
+        latex_to_plain_text(source),
+        font_size=34,
+    )
+
+
 def _math_tex(
     latex: str,
     *,
     focus_latex: str | None = None,
     max_width: float = 10.8,
-) -> MathTex:
-    safe_focus = _isolatable_focus(latex, focus_latex)
-    isolated = [safe_focus] if safe_focus else []
-    value = MathTex(
-        latex,
-        color=COLORS["text"],
-        substrings_to_isolate=isolated,
-    )
-    if safe_focus:
-        value.set_color_by_tex(safe_focus, COLORS["yellow"])
+) -> Any:
+    value = _typeset(latex, focus_latex)
     if value.width > max_width:
         value.scale_to_fit_width(max_width)
     if value.height > 2.0:
         value.scale_to_fit_height(2.0)
     return value
+
+
+def _label_tex(label: str) -> Any:
+    """Typeset a short label; prose stays upright with its word spacing."""
+    if re.fullmatch(r"[^\W\d_][\w ,.'’-]*", label) and " " in label.strip():
+        return _safe_text(label.strip(), font_size=34)
+    return _math_tex(label)
 
 
 def _comparison_label_color(label: str | None, fallback: str) -> str:
@@ -457,12 +553,14 @@ def _equation_panel(
     equation.move_to(card.get_center() + DOWN * 0.15)
     group = VGroup(card, equation)
     if label:
-        heading = Text(
+        heading = _safe_text(
             label,
             font_size=21,
             weight="BOLD",
             color=accent,
         )
+        if heading.width > 4.9:
+            heading.scale_to_fit_width(4.9)
         heading.next_to(card.get_top(), DOWN, buff=0.28)
         group.add(heading)
     return group
@@ -498,7 +596,7 @@ def _equation_visual(visual: EquationVisual) -> VGroup:
     )
     group = VGroup(equation)
     if visual.primaryLabel:
-        heading = Text(
+        heading = _safe_text(
             visual.primaryLabel,
             font_size=22,
             weight="BOLD",
@@ -514,13 +612,52 @@ def _equation_visual(visual: EquationVisual) -> VGroup:
     return group
 
 
+def _axis_step(span: float, divisions: int) -> float:
+    step = span / divisions
+    return float(round(step)) if step >= 1 else step
+
+
+def _plot_curve(
+    axes: Axes,
+    function: Callable[[float], float],
+    x_range: tuple[float, float],
+    y_range: tuple[float, float],
+    color: str,
+) -> VGroup:
+    """Draw only the finite, visible parts of a function."""
+    padding = (y_range[1] - y_range[0]) * 0.04
+    runs: list[list[Any]] = []
+    current: list[Any] = []
+    for index in range(GRAPH_SAMPLES + 1):
+        x = x_range[0] + (x_range[1] - x_range[0]) * index / GRAPH_SAMPLES
+        y = function(x)
+        if (
+            math.isnan(y)
+            or y < y_range[0] - padding
+            or y > y_range[1] + padding
+        ):
+            if len(current) >= 2:
+                runs.append(current)
+            current = []
+            continue
+        current.append(axes.c2p(x, y))
+    if len(current) >= 2:
+        runs.append(current)
+    curves = VGroup()
+    for run in runs:
+        curve = VMobject(color=color, stroke_width=4)
+        curve.set_points_smoothly(run)
+        curves.add(curve)
+    return curves
+
+
 def _graph_visual(visual: GraphVisual) -> VGroup:
     assert visual.xMin is not None
     assert visual.xMax is not None
     assert visual.yMin is not None
     assert visual.yMax is not None
-    x_step = max(1.0, round((visual.xMax - visual.xMin) / 8))
-    y_step = max(1.0, round((visual.yMax - visual.yMin) / 6))
+    x_step = _axis_step(visual.xMax - visual.xMin, 8)
+    y_step = _axis_step(visual.yMax - visual.yMin, 6)
     axes = Axes(
         x_range=[visual.xMin, visual.xMax, x_step],
         y_range=[visual.yMin, visual.yMax, y_step],
@@ -540,18 +677,23 @@ def _graph_visual(visual: GraphVisual) -> VGroup:
     palette = ["blue", "teal", "yellow", "pink"]
     graphs = VGroup()
     for index, item in enumerate(functions):
-        function = _safe_graph_function(item.expression)
         color = item.color or palette[index % len(palette)]
-        graphs.add(
-            axes.plot(
-                function,
-                x_range=[visual.xMin, visual.xMax],
-                color=COLORS.get(color, color),
-                stroke_width=4,
-                use_smoothing=True,
-                discontinuities=[],
+        try:
+            curve = _plot_curve(
+                axes,
+                _safe_graph_function(item.expression),
+                (visual.xMin, visual.xMax),
+                (visual.yMin, visual.yMax),
+                COLORS.get(color, color),
             )
-        )
+        except Exception as error:  # noqa: BLE001 - keep the other curves.
+            LOGGER.warning(
+                "Graph function was skipped type=%s",
+                type(error).__name__,
+            )
+            continue
+        if len(curve):
+            graphs.add(curve)
     equation = _math_tex(visual.latex).scale(0.62)
     equation.to_edge(UP, buff=1.35)
     points = VGroup()
@@ -564,10 +706,15 @@ def _graph_visual(visual: GraphVisual) -> VGroup:
         )
         points.add(dot)
         if point.label:
-            label = Text(point.label, font_size=22, color=COLORS["text"])
+            label = _safe_text(point.label, font_size=22)
             label.next_to(dot, UP, buff=0.12)
             points.add(label)
-    return VGroup(axes, graphs, points, equation)
+    group = VGroup(axes)
+    for part in (graphs, points):
+        if len(part):
+            group.add(part)
+    group.add(equation)
+    return group
 
 
 def _number_line_visual(visual: NumberLineVisual) -> VGroup:
@@ -589,10 +736,13 @@ def _number_line_visual(visual: NumberLineVisual) -> VGroup:
         )
         points.add(dot)
         if point.label:
-            label = Text(point.label, font_size=22, color=COLORS["text"])
+            label = _safe_text(point.label, font_size=22)
             label.next_to(dot, DOWN, buff=0.2)
             points.add(label)
-    return VGroup(line, equation, points)
+    group = VGroup(line, equation)
+    if len(points):
+        group.add(points)
+    return group
 
 
 def _balance_visual(visual: BalanceVisual) -> VGroup:
@@ -610,12 +760,12 @@ def _balance_visual(visual: BalanceVisual) -> VGroup:
     left_pan = VGroup(
         Line([-3.2, 0, 0], [-3.2, -0.75, 0], color=COLORS["muted"]),
         Line([-4.25, -0.75, 0], [-2.15, -0.75, 0], color=COLORS["teal"]),
-        _math_tex(visual.leftLabel).scale(0.58).move_to([-3.2, -1.15, 0]),
+        _label_tex(visual.leftLabel).scale(0.58).move_to([-3.2, -1.15, 0]),
     )
     right_pan = VGroup(
         Line([3.2, 0, 0], [3.2, -0.75, 0], color=COLORS["muted"]),
         Line([2.15, -0.75, 0], [4.25, -0.75, 0], color=COLORS["teal"]),
-        _math_tex(visual.rightLabel).scale(0.58).move_to([3.2, -1.15, 0]),
+        _label_tex(visual.rightLabel).scale(0.58).move_to([3.2, -1.15, 0]),
     )
     equation = _math_tex(visual.latex).scale(0.68)
     equation.to_edge(UP, buff=1.5)
@@ -666,14 +816,18 @@ def _geometry_visual(visual: GeometryVisual) -> VGroup:
                 radius=shape.radius or 0.08,
             )
         else:
-            raise ValueError(f"geometry shape is missing coordinates: {shape.type}")
+            # An incomplete shape is decoration; the scene continues without it.
+            LOGGER.warning("Geometry shape was skipped type=%s", shape.type)
+            continue
         shapes.add(item)
         if shape.label:
-            label = Text(shape.label, font_size=22, color=COLORS["text"])
+            label = _safe_text(shape.label, font_size=22)
             label.next_to(item, UP, buff=0.12)
             shapes.add(label)
     equation = _math_tex(visual.latex).scale(0.62)
     equation.to_edge(UP, buff=1.35)
+    if not len(shapes):
+        return VGroup(_math_tex(visual.latex))
     return VGroup(shapes, equation)
 
 
@@ -691,8 +845,29 @@ def _build_visual(visual: Any) -> VGroup:
     raise ValueError("unknown visual type")
 
 
+def _plain_visual(visual: Any) -> VGroup:
+    """The formula alone: the simplest faithful form of any visual."""
+    return VGroup(_math_tex(getattr(visual, "latex", "") or "…"))
+
+
+def _resilient_visual(visual: Any, mode: str) -> VGroup:
+    if mode == "minimal":
+        return _plain_visual(visual)
+    try:
+        built = _build_visual(visual)
+        if len(built.family_members_with_points()):
+            return built
+    except Exception as error:  # noqa: BLE001 - degrade this visual only.
+        LOGGER.warning(
+            "Visual kind=%s failed type=%s; showing its formula",
+            getattr(visual, "kind", "unknown"),
+            type(error).__name__,
+        )
+    return _plain_visual(visual)
+
+
 def _annotation(text: str) -> VGroup:
-    label = Text(text, font_size=26, color=COLORS["text"])
+    label = _safe_text(text, font_size=26)
     if label.width > 10.4:
         label.scale_to_fit_width(10.4)
     card = RoundedRectangle(
@@ -712,7 +887,7 @@ def _annotation(text: str) -> VGroup:
 
 
 def _final_answer_card(latex: str) -> VGroup:
-    eyebrow = Text(
+    eyebrow = _safe_text(
         "FINAL ANSWER",
         font_size=24,
         weight="BOLD",
@@ -738,36 +913,88 @@ def _final_answer_card(latex: str) -> VGroup:
     return VGroup(card, content).shift(DOWN * 0.12)
 
 
+def _transition(
+    mode: str,
+    previous_visual: Any | None,
+    visual: Any,
+    current: VGroup | None,
+    upcoming: VGroup,
+) -> list[Any]:
+    """Choose the animation that introduces the next visual."""
+    if current is None:
+        if mode == "full" and visual.action in {"construct", "trace"}:
+            return [Create(upcoming)]
+        return [FadeIn(upcoming)]
+    if mode != "full":
+        # Morphing assumes matching structure; plain fades always work.
+        return [FadeOut(current), FadeIn(upcoming)]
+    if (
+        isinstance(previous_visual, EquationVisual)
+        and isinstance(visual, EquationVisual)
+        and visual.action == "transform"
+        and not previous_visual.secondaryLatex
+        and not visual.secondaryLatex
+        and previous_visual.latex != visual.latex
+        and isinstance(current[0], MathTex)
+        and isinstance(upcoming[0], MathTex)
+    ):
+        animations: list[Any] = [
+            TransformMatchingTex(
+                current[0],
+                upcoming[0],
+                transform_mismatches=True,
+            )
+        ]
+        if len(current) > 1:
+            animations.append(FadeOut(current[1:]))
+        if len(upcoming) > 1:
+            animations.append(FadeIn(upcoming[1:]))
+        return animations
+    if (
+        isinstance(visual, EquationVisual)
+        and visual.action == "compare"
+        and visual.secondaryLatex
+        and len(upcoming) >= 2
+    ):
+        return [
+            FadeOut(current),
+            FadeIn(upcoming[0], shift=RIGHT * 0.12),
+            FadeIn(upcoming[1], shift=LEFT * 0.12),
+        ]
+    if visual.action in {"construct", "trace"}:
+        return [FadeOut(current), Create(upcoming)]
+    return [ReplacementTransform(current, upcoming)]
+
+
 def _make_scene(
     plan: LessonPlan,
     clip: LessonClip,
     clip_index: int,
     audio: list[SegmentAudio],
+    mode: str = "full",
 ) -> type[Scene]:
     class LessonClipScene(Scene):
         def construct(self) -> None:
-            brand = Text(
+            brand = _safe_text(
                 "MathSolver",
                 font_size=26,
                 weight="BOLD",
-                color=COLORS["text"],
             ).to_corner(UP + LEFT, buff=0.35)
-            mode = Text(
+            label = _safe_text(
                 "VIDEO EXPLANATION",
                 font_size=15,
                 weight="BOLD",
                 color=COLORS["teal"],
             ).next_to(brand, RIGHT, buff=0.35)
-            step = Text(
+            step = _safe_text(
                 "GUIDED EXPLANATION",
                 font_size=17,
                 color=COLORS["muted"],
             ).to_corner(UP + RIGHT, buff=0.42)
-            title = Text(
+            title = _safe_text(
                 plan.title,
                 font_size=34,
                 weight="BOLD",
-                color=COLORS["text"],
             )
             if title.width > 11:
                 title.scale_to_fit_width(11)
@@ -778,7 +1005,7 @@ def _make_scene(
                 color=COLORS["line"],
                 stroke_width=1.5,
             ).next_to(title, DOWN, buff=0.22)
-            self.add(brand, mode, step, title, divider)
+            self.add(brand, label, step, title, divider)
 
             current_visual: VGroup | None = None
             current_annotation: VGroup | None = None
@@ -786,70 +1013,34 @@ def _make_scene(
 
             for segment, voice in zip(clip.segments, audio):
                 self.add_sound(str(voice.path))
-                next_visual = _build_visual(segment.visual).shift(DOWN * 0.05)
+                next_visual = _resilient_visual(segment.visual, mode).shift(
+                    DOWN * 0.05
+                )
                 next_annotation = _annotation(segment.annotation)
                 run_time = min(
                     segment.motionSeconds,
                     max(0.3, voice.duration_seconds - 0.15),
                 )
 
-                animations = []
-                if current_visual is None:
-                    if segment.visual.action in {"construct", "trace"}:
-                        animations.append(Create(next_visual))
-                    else:
-                        animations.append(FadeIn(next_visual))
-                elif (
-                    isinstance(previous_visual, EquationVisual)
-                    and isinstance(segment.visual, EquationVisual)
-                    and segment.visual.action == "transform"
-                    and not previous_visual.secondaryLatex
-                    and not segment.visual.secondaryLatex
-                    and previous_visual.latex != segment.visual.latex
-                ):
-                    animations.append(
-                        TransformMatchingTex(
-                            current_visual[0],
-                            next_visual[0],
-                            transform_mismatches=True,
-                        )
-                    )
-                    if len(current_visual) > 1:
-                        animations.append(FadeOut(current_visual[1:]))
-                    if len(next_visual) > 1:
-                        animations.append(FadeIn(next_visual[1:]))
-                elif (
-                    isinstance(segment.visual, EquationVisual)
-                    and segment.visual.action == "compare"
-                    and segment.visual.secondaryLatex
-                ):
-                    animations.extend(
-                        [
-                            FadeOut(current_visual),
-                            FadeIn(next_visual[0], shift=RIGHT * 0.12),
-                            FadeIn(next_visual[1], shift=LEFT * 0.12),
-                        ]
-                    )
-                elif segment.visual.action in {"construct", "trace"}:
-                    animations.extend(
-                        [
-                            FadeOut(current_visual),
-                            Create(next_visual),
-                        ]
-                    )
-                else:
-                    animations.append(
-                        ReplacementTransform(current_visual, next_visual)
-                    )
-
+                animations = _transition(
+                    mode,
+                    previous_visual,
+                    segment.visual,
+                    current_visual,
+                    next_visual,
+                )
                 if current_annotation is None:
                     animations.append(FadeIn(next_annotation, shift=UP * 0.08))
-                else:
+                elif mode == "full":
                     animations.append(
                         ReplacementTransform(current_annotation, next_annotation)
                     )
+                else:
+                    animations.extend(
+                        [FadeOut(current_annotation), FadeIn(next_annotation)]
+                    )
 
-                should_signal = segment.visual.action in {
+                should_signal = mode == "full" and segment.visual.action in {
                     "highlight",
                     "trace",
                 }
@@ -868,7 +1059,11 @@ def _make_scene(
                 current_visual = next_visual
                 current_annotation = next_annotation
                 previous_visual = segment.visual
-                remaining = voice.duration_seconds - run_time
+                # Keep picture and narration aligned even when the animation
+                # ran longer than the planned motion time.
+                remaining = voice.duration_seconds - (
+                    transition_time + signal_time
+                )
                 if remaining > 0:
                     self.wait(remaining)
             if clip_index == len(plan.clips) - 1:
@@ -888,6 +1083,32 @@ def _make_scene(
                 self.wait(0.4)
 
     return LessonClipScene
+
+
+def _render_resilient_scene(
+    plan: LessonPlan,
+    clip: LessonClip,
+    clip_index: int,
+    audio: list[SegmentAudio],
+    media_root: Path,
+) -> Path:
+    """Render a scene as planned, or in the simplest form that still works."""
+    for mode in SCENE_MODES:
+        try:
+            return _render_scene_movie(
+                _make_scene(plan, clip, clip_index, audio, mode),
+                media_root / mode,
+            )
+        except Exception as error:  # noqa: BLE001 - simplify, then retry.
+            if mode == SCENE_MODES[-1]:
+                raise
+            LOGGER.warning(
+                "Scene %s failed in %s mode type=%s; retrying more simply",
+                clip_index + 1,
+                mode,
+                type(error).__name__,
+            )
+    raise RuntimeError("scene rendering exhausted every mode")
 
 
 def render_lesson_clips(
@@ -918,9 +1139,11 @@ def render_lesson_clips(
             )
             for result in voice_results
         ]
-        scene_type = _make_scene(plan, clip, index, audio)
-        source_path = _render_scene_movie(
-            scene_type,
+        source_path = _render_resilient_scene(
+            plan,
+            clip,
+            index,
+            audio,
             media_dir / f"{index + 1:02d}-{clip.id}",
         )
 

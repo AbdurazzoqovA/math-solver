@@ -1,0 +1,179 @@
+{
+  "metaTitle": "Pemecah Soal Matematika Gratis dengan Langkah Lengkap | MathSolver",
+  "metaDescription": "Selesaikan soal matematika gratis dengan MathSolver. Dapatkan penjelasan setiap langkah untuk aljabar, kalkulus, dan geometri. Ketik persamaan atau unggah foto.",
+  "socialTitle": "Pemecah Soal Matematika AI Gratis dengan Penjelasan Setiap Langkah",
+  "imageAlt": "MathSolver — pemecah soal matematika gratis dengan penjelasan setiap langkah",
+  "introTitle": "Selesaikan Soal Matematika dalam Hitungan Detik",
+  "introParagraphs": [
+    "Kesulitan mengerjakan persamaan yang rumit? MathSolver adalah pemecah soal matematika online gratis yang mengubah soal sulit menjadi jawaban jelas, langkah demi langkah. Ketik persamaan, tempel soal cerita, atau foto pekerjaan rumahmu, lalu AI kami akan membantu menyelesaikannya.",
+    "Dari aljabar dan geometri dasar hingga kalkulus lanjutan dan statistika, MathSolver tidak hanya memberikan jawaban akhir. Kamu bisa melihat cara mendapatkan jawabannya beserta penjelasan setiap langkah, sehingga memahami metodenya dan dapat menerapkannya sendiri di kesempatan berikutnya."
+  ],
+  "calculatorsTitle": "Kalkulator matematika populer",
+  "calculatorsDescription": "Mulai dari materi yang sedang kamu pelajari. Setiap kalkulator menyediakan penjelasan lengkap secara gratis.",
+  "browseCalculators": "Lihat semua kalkulator",
+  "popularCalculators": [
+    {
+      "name": "Mencari X",
+      "detail": "Persamaan linear dan penyelesaian beberapa langkah"
+    },
+    {
+      "name": "Grafik fungsi",
+      "detail": "Gambar dan bandingkan fungsi secara online"
+    },
+    {
+      "name": "Persamaan kuadrat",
+      "detail": "Akar, diskriminan, dan rumus kuadrat"
+    },
+    {
+      "name": "Pemfaktoran",
+      "detail": "FPB, trinomial, dan bentuk perkalian khusus"
+    },
+    {
+      "name": "Pecahan",
+      "detail": "Penjumlahan, pengurangan, perkalian, dan pembagian"
+    },
+    {
+      "name": "Sistem persamaan",
+      "detail": "Metode substitusi dan eliminasi"
+    },
+    {
+      "name": "Pertidaksamaan",
+      "detail": "Interval dan perubahan tanda"
+    },
+    {
+      "name": "Logaritma",
+      "detail": "Hitung, uraikan, dan selesaikan persamaan logaritma"
+    },
+    {
+      "name": "Turunan",
+      "detail": "Aturan pangkat, perkalian, pembagian, dan rantai"
+    },
+    {
+      "name": "Integral",
+      "detail": "Antiturunan dan metode integrasi"
+    },
+    {
+      "name": "Matriks",
+      "detail": "Operasi, transpos, dan reduksi baris"
+    },
+    {
+      "name": "Determinan",
+      "detail": "Matriks persegi 2 × 2 dan yang lebih besar"
+    },
+    {
+      "name": "Identitas trigonometri",
+      "detail": "Buktikan dan sederhanakan identitas"
+    },
+    {
+      "name": "Simpangan baku",
+      "detail": "Sebaran sampel dan populasi"
+    }
+  ],
+  "mobileTag": "Aplikasi seluler MathSolver",
+  "mobileTitle": "Tutor matematika gratis, di mana pun kamu mengerjakan tugas",
+  "mobileDescription": "Pindai soal dengan kamera, periksa pekerjaan tulis tangan, dan terus belajar lewat latihan serta penjelasan video pribadi. Fitur utama pemecahan soal dapat digunakan tanpa akun dan tanpa langganan.",
+  "mobileFeatures": [
+    "Pindai soal",
+    "Periksa pekerjaanmu",
+    "Tonton pelajaran visual"
+  ],
+  "mobilePreviewAlt": "Aplikasi MathSolver yang menampilkan pilihan kamera, foto, input teks, dan pemeriksaan pekerjaan",
+  "featuresTitle": "Semua yang Kamu Butuhkan untuk Mengerjakan Matematika",
+  "featureCards": [
+    {
+      "title": "Penyelesaian Langkah demi Langkah",
+      "description": "Tak perlu lagi menebak letak kesalahanmu. MathSolver menampilkan setiap perhitungan sebagai langkah terpisah yang diberi nomor dan penjelasan dengan bahasa sederhana. Kamu akan melihat rumus yang digunakan dan alasannya, baik saat memfaktorkan bentuk kuadrat, menghitung turunan, maupun menyederhanakan pecahan."
+    },
+    {
+      "title": "Pemecah Soal Matematika dari Foto",
+      "description": "Foto soal tulis tangan atau cetak, lalu unggah ke MathSolver. Pengenalan gambar kami membaca persamaan, mengubahnya menjadi teks, dan langsung menyelesaikannya. Cocok untuk mengerjakan latihan buku pelajaran dengan cepat atau memeriksa pekerjaan tulis tanganmu."
+    },
+    {
+      "title": "Kuis Latihan",
+      "description": "Membaca penyelesaian memang membantu, tetapi menguji diri sendiri membuat pemahamanmu lebih jelas. Buat kuis khusus dengan topik dan tingkat kesulitan pilihanmu untuk memastikan kamu memahami materi sebelum hari ujian."
+    },
+    {
+      "title": "Kalkulator Grafik",
+      "description": "Gambar fungsi, cari titik potong, dan amati perilaku persamaan langsung di browser. Alat grafik MathSolver memungkinkan beberapa fungsi ditampilkan pada sumbu yang sama, sehingga kamu dapat membandingkan, menganalisis, dan memahami hubungan antarfungsi secara visual."
+    }
+  ],
+  "howTitle": "Cara Kerja Pemecah Soal Matematika",
+  "howSteps": [
+    {
+      "title": "1. Masukkan Soalmu",
+      "description": "Ketik persamaan, jelaskan soal cerita dengan kata-katamu sendiri, atau unggah foto. Pilih cara yang paling mudah bagimu."
+    },
+    {
+      "title": "2. Dapatkan Penyelesaian Lengkap",
+      "description": "AI kami menganalisis dan menyelesaikan soal, lalu memberikan penjelasan jelas untuk setiap langkah. Kamu akan memahami alasan di balik prosesnya, bukan hanya hasilnya."
+    },
+    {
+      "title": "3. Ajukan Pertanyaan Lanjutan",
+      "description": "Belum memahami salah satu langkah? Ajukan pertanyaan lanjutan langsung di chat. MathSolver mengingat konteksnya dan menjelaskan lebih lanjut, seperti tutor yang siap membantu."
+    }
+  ],
+  "subjectsTitle": "Materi yang Bisa Dibantu MathSolver",
+  "subjectsParagraphs": [
+    "MathSolver mencakup materi utama matematika: aritmetika, pra-aljabar, aljabar I dan II, geometri, trigonometri, prakalkulus, kalkulus (AP AB/BC dan tingkat yang lebih lanjut), persamaan diferensial, aljabar linear, probabilitas, dan statistika. MathSolver juga menangani soal lintas bidang sains dan matematika yang umum dalam fisika serta kimia.",
+    "Seberapa spesifik pun soalnya, baik sistem tiga persamaan, konversi koordinat polar ke Kartesius, maupun uji hipotesis, MathSolver dapat menguraikannya dan membimbingmu melalui penyelesaiannya."
+  ],
+  "faqTitle": "Pertanyaan yang Sering Diajukan",
+  "faqs": [
+    {
+      "question": "Apa itu MathSolver?",
+      "answer": "MathSolver adalah pemecah soal matematika berbasis AI yang gratis dan memberikan penyelesaian langkah demi langkah untuk aljabar, kalkulus, geometri, trigonometri, statistika, dan lainnya. Ketik persamaan atau unggah foto soal matematika untuk langsung mendapatkan penjelasan terperinci.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Bisakah MathSolver menyelesaikan soal dari foto?",
+      "answer": "Bisa. Unggah foto soal tulis tangan atau cetak, lalu MathSolver akan membacanya, mengambil persamaannya, dan memberikan penyelesaian lengkap langkah demi langkah secara otomatis.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Bisakah saya menggunakan MathSolver dalam bahasa saya?",
+      "answer": "Bisa. Pilih salah satu dari 16 bahasa melalui ikon globe di bilah samping atau bagian atas halaman seluler. Setiap bahasa memiliki alamat halaman tersendiri yang bisa dibagikan. Antarmuka, penyelesaian baru, dan soal latihan menggunakan bahasa halaman tersebut. Panduan kalkulator, artikel, halaman akun, dan pelajaran video saat ini masih dalam bahasa Inggris.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Materi apa saja yang dicakup MathSolver?",
+      "answer": "Aritmetika, pra-aljabar, aljabar, geometri, trigonometri, prakalkulus, kalkulus, aljabar linear, persamaan diferensial, statistika, probabilitas, serta soal fisika dan kimia.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Apakah MathSolver sepenuhnya gratis?",
+      "answer": "Ya. Kamu bisa menyelesaikan soal tanpa batas, melihat semua penjelasan langkah demi langkah, dan membuat kuis latihan secara gratis tanpa perlu akun.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Bisakah guru mengetahui bahwa saya menggunakan pemecah soal matematika AI?",
+      "answer": "Angka dan langkah penyelesaian hanyalah matematika, jadi tidak ada yang bisa dideteksi dari keduanya. Guru dan alat pemeriksa AI biasanya melihat penjelasan tertulis. Jika kamu menempelkan teks buatan AI ke laporan atau uraian tugas, teks itu bisa ditandai. Gunakan langkah-langkahnya untuk mempelajari metode, lalu tulis penjelasan dengan kata-katamu sendiri. Untuk lebih yakin sebelum mengumpulkan tugas, periksa teks dengan",
+      "linkText": "detektor AI",
+      "afterLink": "terlebih dahulu."
+    },
+    {
+      "question": "Seberapa akurat pemecah soal matematika AI ini?",
+      "answer": "MathSolver menggunakan model AI canggih yang dilatih dengan jutaan soal matematika. Meskipun sebagian besar soal dapat dikerjakan dengan akurasi tinggi, kami selalu menyarankan untuk memeriksa kembali perhitungan penting, terutama untuk ujian atau pekerjaan profesional.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "Apakah MathSolver memiliki aplikasi iPhone dan Android?",
+      "answer": "Ya. MathSolver tersedia di App Store dan Google Play. Kamu bisa memindai soal langsung dengan kamera, memeriksa pekerjaan tulis tangan, berlatih, dan menyimpan pelajaran video untuk ditonton secara offline. Versi browser juga tetap dapat digunakan di ponsel dan tablet tanpa memasang aplikasi.",
+      "linkText": "",
+      "afterLink": ""
+    }
+  ],
+  "copyright": "© 2026 MathSolver. Hak cipta dilindungi.",
+  "englishGuidesNote": "Panduan kalkulator, artikel, halaman hukum, halaman akun, dan pelajaran video saat ini masih dalam bahasa Inggris.",
+  "storeAppleEyebrow": "Unduh di",
+  "storeGoogleEyebrow": "Dapatkan di",
+  "storeAriaLabel": "Unduh MathSolver dari {store} (terbuka di tab baru)",
+  "signInLabel": "Masuk untuk sinkronisasi",
+  "signInHelp": "Masuk untuk menyinkronkan buku catatanmu",
+  "detectorLanguageNote": "Detecting AI juga menyediakan halaman dalam beberapa bahasa."
+}

@@ -78,7 +78,7 @@ Indexed pages of solved problems grouped by topic, seeded from anonymized real u
 Free Digital SAT / ACT / AP Calc / GCSE practice pages. Khan owns head terms, but long-tail ("AP Calc AB unit 3 practice problems") is open. Feeds the retention loop.
 
 ### Play 6 (later): Localization
-Microsoft Math Solver's superpower was heavy localization; that multilingual demand is now unserved. Revisit once the English network ranks.
+Microsoft Math Solver’s localization left substantial multilingual demand. The October 7 web SEO upgrade adds 16 translated static solver homepages with language URLs, metadata, reciprocal alternates, and sitemap discovery; see [[web-languages]]. English calculator guides and Pressroom content retain their existing URLs; separate localized editorial/calculator expansion remains future work.
 
 ---
 
@@ -117,6 +117,10 @@ Homework traffic is transactional — converting it needs a **forward-looking go
 - **Visual lesson learning** — generation success/latency, lesson start→completion, concept-check correctness, and transfer correctness. Compare with text-only and passive-video cohorts; watch time alone is not a learning metric.
 - **Accuracy complaints** per 1,000 solves — one wrong answer at homework crunch is a permanent churn event.
 - **Seasonality** — edtech peaks Sept/Jan/March, troughs in summer. The May→July 2026 growth happened in the trough, so September should amplify it. Plan exam-season pushes (May AP/finals, SAT dates) as re-activation moments.
+
+## Product feedback to evaluate
+
+- **Print a worked solution (2026-09-24, one contact request; live):** A visitor asked why they cannot print the steps to solve an equation. The print action offers the associated problem and rendered solution through the browser's paper/PDF dialog, using a lazy-loaded renderer. This addresses the likely request, though the visitor might also have encountered a separate failure with browser Print. One request is a usability signal, not evidence of broad demand. See [[product-overview]].
 
 ### Retention dashboard after release
 

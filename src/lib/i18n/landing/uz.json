@@ -1,0 +1,179 @@
+{
+  "metaTitle": "Matematik masalalarni bepul, bosqichma-bosqich yechish | MathSolver",
+  "metaDescription": "MathSolver bilan matematik masalalarni bepul yeching. Algebra, geometriya va matematik analiz bo‘yicha har bir qadamni tushuning. Tenglama yozing yoki rasmini yuklang.",
+  "socialTitle": "Matematik masalalarni bepul va bosqichma-bosqich yechish",
+  "imageAlt": "MathSolver — matematik masalalarni har bir qadamni tushuntirib, bepul yechish vositasi",
+  "introTitle": "Matematik masalalarni soniyalar ichida yeching",
+  "introParagraphs": [
+    "Murakkab tenglamani yechishda qiynalyapsizmi? MathSolver — murakkab matematik masalalarni tushunarli, bosqichma-bosqich yechimlarga aylantiradigan bepul onlayn vosita. Tenglamani yozing, matnli masalani joylashtiring yoki uy vazifangizni suratga oling — qolganini sun’iy intellektimiz bajaradi.",
+    "Oddiy algebra va geometriyadan tortib oliy matematika va statistikagacha — MathSolver faqat yakuniy javobni bermaydi. U yechimga qanday kelishni ko‘rsatadi va har bir qadamni tushuntiradi. Shunda usulni o‘rganib, keyingi safar uni mustaqil qo‘llay olasiz."
+  ],
+  "calculatorsTitle": "Ommabop matematik kalkulyatorlar",
+  "calculatorsDescription": "Hozir o‘rganayotgan mavzuingizdan boshlang. Har bir kalkulyatorda to‘liq tushuntirish bepul.",
+  "browseCalculators": "Barcha kalkulyatorlarni ko‘rish",
+  "popularCalculators": [
+    {
+      "name": "X ni topish",
+      "detail": "Chiziqli va bir necha qadamda yechiladigan tenglamalar"
+    },
+    {
+      "name": "Grafik chizish",
+      "detail": "Funksiyalarni onlayn chizing va taqqoslang"
+    },
+    {
+      "name": "Kvadrat tenglamalar",
+      "detail": "Ildizlar, diskriminant va yechish formulasi"
+    },
+    {
+      "name": "Ko‘paytuvchilarga ajratish",
+      "detail": "EKUB, uchhadlar va qisqa ko‘paytirish formulalari"
+    },
+    {
+      "name": "Kasrlar",
+      "detail": "Qo‘shish, ayirish, ko‘paytirish va bo‘lish"
+    },
+    {
+      "name": "Tenglamalar sistemasi",
+      "detail": "O‘rniga qo‘yish va yo‘qotish usullari"
+    },
+    {
+      "name": "Tengsizliklar",
+      "detail": "Oraliqlar va ishora o‘zgarishi"
+    },
+    {
+      "name": "Logarifmlar",
+      "detail": "Hisoblash, yoyish va logarifmik tenglamalarni yechish"
+    },
+    {
+      "name": "Hosilalar",
+      "detail": "Daraja, ko‘paytma, bo‘linma va murakkab funksiya qoidalari"
+    },
+    {
+      "name": "Integrallar",
+      "detail": "Boshlang‘ich funksiyalar va integrallash usullari"
+    },
+    {
+      "name": "Matritsalar",
+      "detail": "Amallar, transponirlash va satrlarni elementar almashtirish"
+    },
+    {
+      "name": "Determinantlar",
+      "detail": "2 × 2 va kattaroq kvadrat matritsalar"
+    },
+    {
+      "name": "Trigonometrik ayniyatlar",
+      "detail": "Ayniyatlarni tekshirish va soddalashtirish"
+    },
+    {
+      "name": "Standart og‘ish",
+      "detail": "Tanlanma va bosh to‘plamdagi tarqoqlik"
+    }
+  ],
+  "mobileTag": "MathSolver mobil ilovalari",
+  "mobileTitle": "Uy vazifangiz qayerda bo‘lsa, bepul matematika o‘qituvchingiz ham shu yerda",
+  "mobileDescription": "Kamera orqali masalani skanerlang, qo‘lda yozilgan yechimingizni tekshiring va mashqlar hamda shaxsiy videotushuntirishlar bilan o‘rganishda davom eting. Masala yechish uchun hisob shart emas va obuna yo‘q.",
+  "mobileFeatures": [
+    "Masalalarni skanerlang",
+    "Yechimingizni tekshiring",
+    "Ko‘rgazmali darslarni tomosha qiling"
+  ],
+  "mobilePreviewAlt": "Kamera, rasm, matn kiritish va yechimni tekshirish imkoniyatlari ko‘rsatilgan MathSolver mobil ilovasi",
+  "featuresTitle": "Matematik masalalarni yechish uchun barcha vositalar",
+  "featureCards": [
+    {
+      "title": "Bosqichma-bosqich yechimlar",
+      "description": "Endi qayerda xato qilganingizni taxmin qilish shart emas. MathSolver har bir hisoblashni alohida, raqamlangan qadam sifatida ko‘rsatib, oddiy tilda tushuntiradi. Kvadrat uchhadni ko‘paytuvchilarga ajratish, hosila hisoblash yoki kasrni qisqartirishda qaysi formula va nima uchun qo‘llanganini aniq ko‘rasiz."
+    },
+    {
+      "title": "Rasmdan masala yechish",
+      "description": "Qo‘lda yozilgan yoki bosma masalani suratga olib, MathSolver’ga yuklang. Tasvirni aniqlash vositamiz tenglamani o‘qib, matnga aylantiradi va shu zahoti yechadi. Bu darslikdagi mashqlarni tez bajarish yoki qo‘lda yozgan yechimingizni tekshirish uchun qulay."
+    },
+    {
+      "title": "Mashq testlari",
+      "description": "Yechimlarni o‘qish foydali, ammo o‘zingizni sinash orqali yaxshiroq o‘rganasiz. Imtihondan oldin mavzuni qanchalik tushunganingizni tekshirish uchun istalgan mavzu va qiyinlik darajasida maxsus test yarating."
+    },
+    {
+      "title": "Grafik kalkulyator",
+      "description": "Brauzeringizda funksiyalar grafiklarini chizing, kesishish nuqtalarini toping va tenglamalarning qanday o‘zgarishini kuzating. MathSolver grafik vositasi bir nechta funksiyani bitta koordinata tizimida ko‘rsatadi. Shunda ularni taqqoslash, tahlil qilish va o‘zaro bog‘liqligini ko‘rgazmali tushunish mumkin."
+    }
+  ],
+  "howTitle": "Masala yechish vositasi qanday ishlaydi?",
+  "howSteps": [
+    {
+      "title": "1. Masalangizni kiriting",
+      "description": "Tenglama yozing, matnli masalani o‘z so‘zlaringiz bilan ifodalang yoki rasmini yuklang. O‘zingizga qulay usulni tanlang."
+    },
+    {
+      "title": "2. Bosqichma-bosqich yechim oling",
+      "description": "Sun’iy intellektimiz masalani tahlil qiladi, yechadi va har bir qadamni aniq tushuntiradi. Shunda faqat natijani emas, uning sababini ham tushunasiz."
+    },
+    {
+      "title": "3. Qo‘shimcha savollar bering",
+      "description": "Biror qadamni tushunmadingizmi? Chatning o‘zida qo‘shimcha savol bering. MathSolver suhbat mazmunini eslab qoladi va batafsil tushuntiradi — xuddi doim yordamga tayyor o‘qituvchidek."
+    }
+  ],
+  "subjectsTitle": "MathSolver yordam beradigan mavzular",
+  "subjectsParagraphs": [
+    "MathSolver matematikaning asosiy mavzularini qamrab oladi: arifmetika, algebraga tayyorgarlik, algebra I va II, geometriya, trigonometriya, matematik analizga tayyorgarlik, matematik analiz (AP AB/BC va undan yuqori darajalar), differensial tenglamalar, chiziqli algebra, ehtimollar nazariyasi va statistika. Shuningdek, fizika va kimyodagi keng tarqalgan fanlararo masalalarni ham yechadi.",
+    "Masala qanchalik o‘ziga xos bo‘lmasin — uchta tenglamadan iborat sistema, qutb koordinatalaridan Dekart koordinatalariga o‘tish yoki statistik gipotezani tekshirish — MathSolver uni qismlarga ajratib, yechimni qadamma-qadam tushuntira oladi."
+  ],
+  "faqTitle": "Ko‘p beriladigan savollar",
+  "faqs": [
+    {
+      "question": "MathSolver nima?",
+      "answer": "MathSolver — algebra, matematik analiz, geometriya, trigonometriya, statistika va boshqa mavzulardagi masalalarni bosqichma-bosqich yechadigan bepul sun’iy intellekt vositasi. Tenglama yozing yoki masalangiz rasmini yuklang va darhol batafsil tushuntirish oling.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver rasmdagi masalani yecha oladimi?",
+      "answer": "Ha. Qo‘lda yozilgan yoki bosma masalaning rasmini yuklang. MathSolver uni o‘qiydi, tenglamani ajratib oladi va avtomatik ravishda to‘liq bosqichma-bosqich yechim beradi.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver’dan o‘z tilimda foydalana olamanmi?",
+      "answer": "Ha. Yon panel yoki mobil sahifaning yuqori qismidagi globus belgisi orqali 16 tildan birini tanlang. Har bir tilning boshqalarga ulashish mumkin bo‘lgan alohida sahifa manzili bor. Interfeys, yangi bosqichma-bosqich yechimlar va mashq savollari shu sahifaning tilida bo‘ladi. Kalkulyator qo‘llanmalari, maqolalar, hisob sahifalari va videodarslar hozircha ingliz tilida.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver qaysi mavzularni qamrab oladi?",
+      "answer": "Arifmetika, algebraga tayyorgarlik, algebra, geometriya, trigonometriya, matematik analizga tayyorgarlik, matematik analiz, chiziqli algebra, differensial tenglamalar, statistika, ehtimollar nazariyasi, shuningdek, fizika va kimyo masalalarini.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver butunlay bepulmi?",
+      "answer": "Ha. Cheklanmagan miqdordagi masalalarni yechishingiz, barcha bosqichma-bosqich tushuntirishlarni ko‘rishingiz va mashq testlarini yaratishingiz mumkin. Bularning barchasi bepul va hisob ochish shart emas.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "O‘qituvchi masalani yechishda sun’iy intellektdan foydalanganimni bila oladimi?",
+      "answer": "Sonlar va yechim qadamlari oddiy matematika bo‘lgani uchun ularning o‘zidan buni aniqlab bo‘lmaydi. O‘qituvchilar va sun’iy intellektni aniqlash vositalari yozma tushuntirishga qaraydi. Agar sun’iy intellekt yaratgan matnni hisobot yoki uy vazifasiga ko‘chirsangiz, uni aniqlashlari mumkin. Qadamlar orqali usulni o‘rganing, keyin tushuntirishni o‘z so‘zlaringiz bilan yozing. Topshirishdan oldin ishonch hosil qilish uchun matnni avval",
+      "linkText": "AI detektori",
+      "afterLink": "orqali tekshirib ko‘ring."
+    },
+    {
+      "question": "Sun’iy intellekt masalalarni qanchalik aniq yechadi?",
+      "answer": "MathSolver millionlab matematik masalalarda o‘qitilgan ilg‘or sun’iy intellekt modellaridan foydalanadi. U ko‘pchilik masalalarni yuqori aniqlikda yechsa ham, muhim hisob-kitoblarni, ayniqsa imtihon yoki kasbiy ish uchun, qayta tekshirishni tavsiya qilamiz.",
+      "linkText": "",
+      "afterLink": ""
+    },
+    {
+      "question": "MathSolver’ning iPhone va Android ilovalari bormi?",
+      "answer": "Ha. MathSolver App Store va Google Play’da mavjud. Kamera bilan masalalarni skanerlash, qo‘lda yozilgan yechimlarni tekshirish, mashq qilish va videodarslarni internetsiz ko‘rish uchun saqlash mumkin. Brauzer versiyasi ham hech narsa o‘rnatmasdan telefon va planshetlarda ishlaydi.",
+      "linkText": "",
+      "afterLink": ""
+    }
+  ],
+  "copyright": "© 2026 MathSolver. Barcha huquqlar himoyalangan.",
+  "englishGuidesNote": "Kalkulyator qo‘llanmalari, maqolalar, huquqiy sahifalar, hisob sahifalari va videodarslar hozircha ingliz tilida.",
+  "storeAppleEyebrow": "Yuklab oling:",
+  "storeGoogleEyebrow": "Yuklab oling:",
+  "storeAriaLabel": "MathSolver’ni {store} orqali yuklab olish (yangi varaqda ochiladi)",
+  "signInLabel": "Sinxronlash uchun kiring",
+  "signInHelp": "Daftaringizni sinxronlash uchun hisobga kiring",
+  "detectorLanguageNote": "Detecting AI saytida ham bir necha tildagi sahifalar mavjud."
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import math
 import os
 import re
@@ -16,8 +17,9 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
-from gemini import transcribe_audio
+from gemini import GeminiError, transcribe_audio
 
+LOGGER = logging.getLogger("video-renderer.tts")
 TTS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions"
 DEFAULT_TTS_MODEL = "gemini-3.1-flash-tts-preview"
 DEFAULT_TTS_STYLE = (
@@ -25,7 +27,14 @@ DEFAULT_TTS_STYLE = (
     "teaching pace. Pronounce variables, signs and numbers crisply. "
     "Do not sound theatrical."
 )
-WORD_PATTERN = re.compile(r"[a-z]+|\d+(?:\.\d+)?")
+WORD_PATTERN = re.compile(r"[^\W\d_]+|\d+(?:\.\d+)?")
+# A take at or above QA_PASS is accepted immediately. After several takes the
+# closest one is accepted when it still clears QA_FLOOR: transcription models
+# spell mathematics inconsistently, and a lesson must not fail on spelling.
+QA_PASS = 0.82
+QA_FLOOR = 0.6
+QA_FLOOR_NON_LATIN = 0.45
+TAKES_BEFORE_BEST = 3
 SMALL_NUMBERS = (
     "zero",
     "one",
@@ -67,6 +76,7 @@ class VoiceResult:
     path: Path
     duration_seconds: float
     transcript_similarity: float
+    verified: bool = True
 
 
 def _run(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -285,7 +295,9 @@ def _number_token_words(token: str) -> list[str]:
 
 def _normalize_text(value: str) -> str:
     normalized = value.casefold()
-    normalized = re.sub(r"(?<=[a-z])-(?=[a-z])", " ", normalized)
+    # Transcribers sometimes draw pauses as dash or underscore rules.
+    normalized = re.sub(r"[-‐-―_.]{2,}", " ", normalized)
+    normalized = re.sub(r"(?<=[^\W\d_])-(?=[^\W\d_])", " ", normalized)
     for symbol, spoken in (
         ("=", " equals "),
         ("+", " plus "),
@@ -300,7 +312,7 @@ def _normalize_text(value: str) -> str:
     ):
         normalized = normalized.replace(symbol, spoken)
     normalized = re.sub(
-        r"(?<=\d)(?=[a-z])|(?<=[a-z])(?=\d)",
+        r"(?<=\d)(?=[^\W\d_])|(?<=[^\W\d_])(?=\d)",
         " ",
         normalized,
     )
@@ -313,8 +325,11 @@ def _normalize_text(value: str) -> str:
             canonical.append("minus")
         elif token == "over":
             canonical.extend(["divided", "by"])
-        elif token[0].isdigit():
-            canonical.extend(_number_token_words(token))
+        elif token[0] in "0123456789":
+            try:
+                canonical.extend(_number_token_words(token))
+            except ValueError:
+                canonical.append(token)
         else:
             canonical.append(token)
     return " ".join(canonical)
@@ -326,6 +341,63 @@ def _similarity(expected: str, transcript: str) -> float:
         _normalize_text(expected),
         _normalize_text(transcript),
     ).ratio()
+
+
+def _provider_is_configured(provider: str) -> bool:
+    if provider == "azure":
+        return bool(
+            os.environ.get("AZURE_TTS_API_KEY", "").strip()
+            and os.environ.get("AZURE_TTS_ENDPOINT", "").strip()
+        )
+    if provider == "gemini":
+        return bool(os.environ.get("GOOGLE_CLOUD_API_KEY", "").strip())
+    return provider == "mock"
+
+
+def _provider_order(primary: str) -> list[str]:
+    """The selected voice first, then the other configured voice as backup."""
+    order = [primary]
+    if primary == "mock":
+        return order
+    if os.environ.get("VIDEO_TTS_FALLBACK", "auto").strip().lower() == "none":
+        return order
+    backup = "gemini" if primary == "azure" else "azure"
+    if _provider_is_configured(backup):
+        order.append(backup)
+    return order
+
+
+def _speak(provider: str, narration: str, destination: Path) -> None:
+    if provider == "mock":
+        _mock_wave(destination, narration)
+    elif provider == "gemini":
+        _gemini_tts(narration, destination)
+    else:
+        _azure_tts(narration, destination)
+
+
+def _transcript_similarity(narration: str, audio: bytes) -> float | None:
+    """Return None when the checker itself is unavailable.
+
+    A failed check says nothing about the audio, so it must not be counted as
+    a failed narration take.
+    """
+    for attempt in range(2):
+        try:
+            transcript = transcribe_audio(audio)
+        except (GeminiError, OSError, ValueError, RuntimeError):
+            if attempt == 0:
+                time.sleep(1)
+            continue
+        if transcript.strip():
+            return _similarity(narration, transcript)
+    return None
+
+
+def _uses_non_latin_script(value: str) -> bool:
+    letters = [character for character in value if character.isalpha()]
+    foreign = sum(1 for character in letters if ord(character) > 0x024F)
+    return bool(letters) and foreign / len(letters) > 0.3
 
 
 def synthesize_verified_phrase(
@@ -345,62 +417,106 @@ def synthesize_verified_phrase(
         raise RuntimeError("VIDEO_TTS_PROVIDER must be azure, gemini, or mock")
     qa_enabled = os.environ.get("VIDEO_VOICE_QA", "true").lower() != "false"
     maximum_duration = max(5.0, len(narration.split()) / 1.65 + 2.5)
+    non_latin = _uses_non_latin_script(narration)
+    passing = QA_FLOOR if non_latin else QA_PASS
+    floor = QA_FLOOR_NON_LATIN if non_latin else QA_FLOOR
     last_error: Exception | None = None
+    best: tuple[float, Path, float] | None = None
+    unverified: tuple[Path, float] | None = None
+    take = 0
 
-    for attempt in range(attempts):
-        candidate = destination.with_name(
-            f"{destination.stem}-attempt-{attempt + 1}.wav"
-        )
-        try:
-            if provider == "mock":
-                _mock_wave(candidate, narration)
-            elif provider == "gemini":
-                _gemini_tts(narration, candidate)
-            elif provider == "azure":
-                _azure_tts(narration, candidate)
+    def accept(
+        source: Path,
+        duration: float,
+        similarity: float,
+        verified: bool,
+    ) -> VoiceResult:
+        source.replace(destination)
+        return VoiceResult(destination, duration, similarity, verified)
 
-            normalized = destination.with_suffix(".normalized.wav")
-            _run(
-                [
-                    "ffmpeg",
-                    "-y",
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-i",
-                    str(candidate),
-                    "-ar",
-                    "24000",
-                    "-ac",
-                    "1",
-                    "-c:a",
-                    "pcm_s16le",
-                    str(normalized),
-                ]
+    for provider_index, active in enumerate(_provider_order(provider)):
+        # The backup voice gets a shorter budget; it only has to rescue a take.
+        budget = attempts if provider_index == 0 else min(attempts, 3)
+        evaluated = 0
+        for attempt in range(budget):
+            take += 1
+            candidate = destination.with_name(
+                f"{destination.stem}-attempt-{take}.wav"
             )
-            duration = probe_duration(normalized)
-            if duration > maximum_duration:
-                raise RuntimeError("voice duration guard rejected the phrase")
-
-            if provider == "mock" or not qa_enabled:
-                similarity = 1.0
-            else:
-                transcript = transcribe_audio(normalized.read_bytes())
-                similarity = _similarity(narration, transcript)
-                if similarity < 0.82:
-                    raise RuntimeError("voice transcription did not match the script")
-
-            normalized.replace(destination)
-            return VoiceResult(destination, duration, similarity)
-        except (
-            OSError,
-            RuntimeError,
-            subprocess.CalledProcessError,
-            TimeoutError,
-            urllib.error.URLError,
-        ) as error:
-            last_error = error
-            if attempt + 1 < attempts:
-                time.sleep(2**attempt)
+            normalized = destination.with_name(
+                f"{destination.stem}-take-{take}.normalized.wav"
+            )
+            try:
+                _speak(active, narration, candidate)
+                _run(
+                    [
+                        "ffmpeg",
+                        "-y",
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-i",
+                        str(candidate),
+                        "-ar",
+                        "24000",
+                        "-ac",
+                        "1",
+                        "-c:a",
+                        "pcm_s16le",
+                        str(normalized),
+                    ]
+                )
+                duration = probe_duration(normalized)
+                if duration > maximum_duration:
+                    raise RuntimeError("voice duration guard rejected the phrase")
+            except (
+                OSError,
+                RuntimeError,
+                subprocess.CalledProcessError,
+                TimeoutError,
+                urllib.error.URLError,
+            ) as error:
+                last_error = error
+                if attempt + 1 < budget:
+                    time.sleep(min(2**attempt, 8))
                 continue
+
+            if active == "mock" or not qa_enabled:
+                return accept(normalized, duration, 1.0, True)
+            similarity = _transcript_similarity(
+                narration,
+                normalized.read_bytes(),
+            )
+            if similarity is None:
+                # Valid audio, unavailable checker: regenerating cannot help.
+                unverified = unverified or (normalized, duration)
+                last_error = RuntimeError("voice transcription was unavailable")
+                break
+            if similarity >= passing:
+                return accept(normalized, duration, similarity, True)
+            evaluated += 1
+            if best is None or similarity > best[0]:
+                best = (similarity, normalized, duration)
+            last_error = RuntimeError(
+                "voice transcription did not match the script"
+            )
+            if evaluated >= TAKES_BEFORE_BEST and best[0] >= floor:
+                break
+            if attempt + 1 < budget:
+                time.sleep(min(2**attempt, 4))
+
+        if best is not None and best[0] >= floor:
+            LOGGER.warning(
+                "Accepted the closest narration take similarity=%.2f provider=%s",
+                best[0],
+                active,
+            )
+            return accept(best[1], best[2], best[0], True)
+        if unverified is not None:
+            LOGGER.warning(
+                "Accepted narration without transcription check provider=%s",
+                active,
+            )
+            return accept(unverified[0], unverified[1], 0.0, False)
+
     raise RuntimeError(f"Voice generation failed after retries: {last_error}")

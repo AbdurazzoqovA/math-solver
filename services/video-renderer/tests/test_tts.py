@@ -11,7 +11,8 @@ from email.message import Message
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from tts import _azure_tts, _mock_wave, synthesize_verified_phrase
+from gemini import GeminiError
+from tts import _azure_tts, _mock_wave, _similarity, synthesize_verified_phrase
 
 ENDPOINT = (
     "https://example.openai.azure.com/openai/deployments/gpt-4o-mini-tts"
@@ -112,6 +113,102 @@ class AzureVoiceTests(unittest.TestCase):
         self.assertEqual(azure.call_count, 2)
         gemini.assert_not_called()
         self.assertFalse(self.destination.exists())
+
+    @patch.dict(os.environ, AZURE_ENV, clear=True)
+    def test_unavailable_checker_does_not_fail_valid_audio(self) -> None:
+        with (
+            patch(
+                "tts._azure_tts", side_effect=lambda text, path: _mock_wave(path, text)
+            ) as azure,
+            patch("tts.transcribe_audio", side_effect=GeminiError("down")),
+            patch("tts.time.sleep"),
+        ):
+            result = synthesize_verified_phrase(SCRIPT, self.destination, attempts=5)
+        azure.assert_called_once()
+        self.assertFalse(result.verified)
+        self.assertTrue(self.destination.exists())
+        self.assertGreater(result.duration_seconds, 0)
+
+    @patch.dict(os.environ, AZURE_ENV, clear=True)
+    def test_closest_take_is_kept_when_spelling_differs(self) -> None:
+        transcripts = iter(
+            [
+                "Subtract five from both sides then split by tree",
+                "Subtract five from both sides, then divide it by tree.",
+                "Subtract five from sides then divide",
+            ]
+        )
+        with (
+            patch(
+                "tts._azure_tts", side_effect=lambda text, path: _mock_wave(path, text)
+            ) as azure,
+            patch("tts.transcribe_audio", side_effect=lambda audio: next(transcripts)),
+            patch("tts.time.sleep"),
+            patch("tts.QA_PASS", 0.99),
+        ):
+            result = synthesize_verified_phrase(SCRIPT, self.destination, attempts=5)
+        self.assertEqual(azure.call_count, 3)
+        self.assertTrue(result.verified)
+        self.assertGreater(result.transcript_similarity, 0.85)
+        self.assertTrue(self.destination.exists())
+
+    @patch.dict(
+        os.environ, {**AZURE_ENV, "GOOGLE_CLOUD_API_KEY": "test-gemini-key"}, clear=True
+    )
+    def test_backup_voice_rescues_a_failed_primary_voice(self) -> None:
+        with (
+            patch(
+                "tts._azure_tts", side_effect=RuntimeError("Azure TTS failed (400)")
+            ) as azure,
+            patch(
+                "tts._gemini_tts", side_effect=lambda text, path: _mock_wave(path, text)
+            ) as gemini,
+            patch("tts.transcribe_audio", return_value=SCRIPT),
+            patch("tts.time.sleep"),
+        ):
+            result = synthesize_verified_phrase(SCRIPT, self.destination, attempts=2)
+        self.assertEqual(azure.call_count, 2)
+        gemini.assert_called_once()
+        self.assertEqual(result.transcript_similarity, 1.0)
+
+    @patch.dict(
+        os.environ,
+        {
+            **AZURE_ENV,
+            "GOOGLE_CLOUD_API_KEY": "test-gemini-key",
+            "VIDEO_TTS_FALLBACK": "none",
+        },
+        clear=True,
+    )
+    def test_backup_voice_can_be_disabled(self) -> None:
+        with (
+            patch("tts._azure_tts", side_effect=RuntimeError("Azure TTS failed (500)")),
+            patch("tts._gemini_tts") as gemini,
+            patch("tts.time.sleep"),
+            self.assertRaisesRegex(RuntimeError, "Voice generation failed"),
+        ):
+            synthesize_verified_phrase(SCRIPT, self.destination, attempts=2)
+        gemini.assert_not_called()
+
+    def test_transcriber_pause_rules_and_other_scripts_compare_fairly(self) -> None:
+        self.assertEqual(
+            _similarity(
+                "Isolate the trig term first, then collect every angle.",
+                "Isolate the trig ------------ term first, then collect every angle.",
+            ),
+            1.0,
+        )
+        self.assertGreater(
+            _similarity(
+                "Производная от икс в кубе равна трем икс в квадрате",
+                "Производная от икс в кубе равна трём икс в квадрате",
+            ),
+            0.9,
+        )
+        self.assertLess(
+            _similarity("Производная равна нулю", "Совсем другой текст здесь"),
+            0.6,
+        )
 
     @patch.dict(os.environ, {**AZURE_ENV, "VIDEO_TTS_PROVIDER": "gemini"}, clear=True)
     def test_switching_back_uses_gemini_with_azure_configuration_present(self) -> None:

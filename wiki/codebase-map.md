@@ -7,40 +7,47 @@ Where everything lives. Use this to jump straight to the right file instead of e
 ```
 src/
   app/                     # Next.js App Router
-    page.tsx               # "/" — solver + landing in one (renders ChatArea)
-    layout.tsx             # root layout: metadata, OpenGraph, GA4, providers, fonts
-    sitemap.ts             # core/contact/calculator routes + live Pressroom article URLs
-    robots.ts              # robots.txt — allows all, disallows /api/, base math-solver.io
-    calculator/
-      page.tsx             # "/calculator" — crawlable eight-category calculator hub
-      opengraph-image.tsx  # generated 1200×630 hub social card
-      [slug]/
-        page.tsx           # 43 statically generated calculator pages + metadata/JSON-LD
-        opengraph-image.tsx# topic-specific social card generated from the registry
-    practice-tests/page.tsx# "/practice-tests" — library of saved tests (noindex)
-    video-library/page.tsx # "/video-library" — private generated-video history (noindex)
-    blog/
-      page.tsx             # "/blog" — paginated live Pressroom article index
-      error.tsx            # retryable blog API/configuration failure state
-      [slug]/page.tsx      # rich article, metadata, author, JSON-LD, solver CTA
-    auth/action/page.tsx   # "/auth/action" — noindex Firebase email action handler
-    contact/page.tsx       # "/contact" — support/feedback form with Telegram delivery
-    privacy/page.tsx       # web/mobile data disclosures, choices, retention, deletion
-    terms/page.tsx         # web/mobile terms, free-product and update-policy contract
-    account-deletion/page.tsx # public Apple/Play account and data deletion instructions
+    layout.tsx             # context-only persistent app state above language navigation
+    not-found.tsx          # full-document fallback when locale layout never renders
+    [locale]/
+      layout.tsx           # actual html/body lang+dir, shared UI shell, fonts/GA4/metadata
+      page.tsx             # 16 SSR/static solver homepages; public English is / via rewrite
+      not-found.tsx        # fragment fallback within an existing locale document
+      practice-tests/page.tsx # localized saved-test library; noindex, no sitemap entry
+      calculator/          # generated calculator OG assets, outside the route group to preserve their public paths
+      (english-only)/      # rejects locale != en; public URLs remain unprefixed
+        calculator/        # hub and 43 static calculator guides
+        blog/              # Pressroom index, articles, retryable error state
+        billing/
+      PricingPage.tsx      # yearly/monthly toggle, three plan cards, FAQ, checkout/portal actions
+      UsageLimitToast.tsx  # translated daily-limit toast with "See plans" link, mounted in the locale layout
+    auth/action/       # noindex Firebase email action handler
+        contact/           # Telegram support form
+        pricing/           # indexable conversion page → components/billing/PricingPage
+        privacy/ terms/ account-deletion/ # public English policies/deletion instructions (billing, renewal, refund terms)
+        video-library/     # private video history, noindex
+    sitemap.ts             # all16 language homepages/alternates + existing English/Pressroom URLs
+    robots.ts              # allows all pages, disallows /api/, canonical sitemap URL
     api/
-      solve/route.ts       # POST — selected Azure/Gemini LLM streamed steps + trusted calculator-mode lookup
-      ocr/route.ts         # POST — selected Azure/Gemini LLM, image/PDF/drawing → expression text
+      solve/route.ts       # POST — selected Anthropic/Azure/Gemini LLM streamed steps + trusted calculator-mode lookup
+      ocr/route.ts         # POST — selected Anthropic/Azure/Gemini LLM, image/PDF/drawing → expression text
       practice/route.ts    # POST — selected LLM, generates MCQ quiz JSON from a solution
       practice/steps/route.ts # POST — per-question step-by-step explanation
       contact/route.ts     # POST — validate/rate-limit and deliver contact form to Telegram
       video/jobs/route.ts  # GET private library; POST verified auth/quota/queue dispatch
       video/jobs/[jobId]/route.ts # GET status/private signed playback; DELETE lesson
+      billing/checkout/route.ts # POST verified user → Stripe Checkout Session URL (no trial period)
+      billing/portal/route.ts   # POST → Stripe Customer Portal URL for the stored customer
+      billing/status/route.ts   # GET → public plan status (tier, status, dates, limits)
+      billing/sync/route.ts     # POST success-page fallback: confirm a checkout session before the webhook lands
+      billing/webhook/route.ts  # POST raw-body Stripe signature check → events.processStripeEvent
+      (ocr, practice, mobile/v1/ocr, mobile/v1/practice also run billing/usage daily-limit checks)
   components/
     chat/                  # the solver UI (the heart of the app)
       ChatArea.tsx         # top-level solver plus shared full-height ChatConversation transcript
-      EmptyState.tsx       # homepage hero, mobile-store CTA + footer
-      SeoSections.tsx      # homepage SEO blocks, mobile-app promo + priority calculator internal links; FAQ renders from the `faqItems` array (no FAQPage schema)
+      EmptyState.tsx       # localized homepage hero; receives server-rendered SEO/footer slots
+      SeoSections.tsx      # translated server SEO blocks, app promo, calculator cards, JSON-catalog FAQs (no FAQPage schema)
+      SolverLanding.tsx    # server homepage composition, localized schema/content/footer
       HeroInput.tsx        # first-message input (landing)
       ChatInput.tsx        # in-conversation input; file/paste/drag upload → /api/ocr
       MessageList.tsx      # messages: markdown+KaTeX, step dividers, quick actions + practice
@@ -72,6 +79,8 @@ src/
       VideoLibraryPage.tsx # account-owned ready/active/failed video cards + playback
     layout/
       Header.tsx           # mobile header; logo links to home
+      LanguageSelector.tsx # native-name selector navigates to language URLs
+      LanguageLinks.tsx    # crawlable native-name alternate homepage anchors
       Sidebar.tsx          # home-linked brand, navigation (incl. the dofollow, UTM/ref-tagged external AI Tutor link to eduzen.ai), local-first recent chats, account control
       SplitLayoutWrapper.tsx # resizable split view (solver | practice panel) via react-resizable-panels
     providers/
@@ -79,10 +88,18 @@ src/
       TurnstileProvider.tsx# Cloudflare Turnstile bot check
   context/
     AuthContext.tsx        # Firebase session, Google + verified Email/Password/reset journey
+    BillingContext.tsx    # plan status for the signed-in user; startCheckout/openBillingPortal/confirmCheckout
     ChatContext.tsx        # chats, review queue, scoped local cache, verified-only Firestore sync
     LearningProgressContext.tsx # guest/account local activity record and return measurement
-    UIContext.tsx          # panel/calculator/practice/review UI state; calculator injection registry
+    UIContext.tsx          # persistent composer drafts and active quiz progress; panel/calculator/review state and injection registry
+    LanguageContext.tsx    # URL-owned locale shared by SSR/hydration; no browser auto-redirect
   lib/
+    i18n/paths.ts           # canonical public URLs, language alternates, English config rewrites
+    i18n/seo.ts             # per-language title/social metadata + WebPage/WebApplication schema
+    i18n/external-links.ts  # verified localized Detecting AI destinations, destination language and root fallback
+    i18n/landing.ts         # typed server homepage catalogs in i18n/landing/*.json
+    i18n/locales.ts         # 16-language allowlist, reading direction, step labels, trusted LLM instructions
+    i18n/messages.ts        # complete typed solver/practice translation catalogs
     captcha.ts             # configurable Turnstile validation; video creation requires action/hostname and fails closed
     contact.ts             # bounded contact-form parser + plain-text Telegram formatter
     calculators.ts         # typed registry facade, Algebra/precalc definitions, categories, validation
@@ -92,9 +109,11 @@ src/
     statistics-calculators.ts # 5 Statistics definitions and safeguards
     general-precalculus-calculators.ts # 4 General Math + 3 Precalculus definitions
     graphing-calculator.ts # Graphing definition and client-tool configuration
-    llm.ts                 # server-only Azure Responses / Gemini switch; text, JSON, images/PDFs, safe SSE
-    llm-image.ts           # bounded BMP/TIFF → PNG conversion for Azure OCR
-    gemini.ts              # retained Gemini generation / SSE implementation behind llm.ts
+    llm.ts                 # server-only Anthropic / Azure Responses / Gemini switch; text, JSON, images/PDFs, safe SSE
+    llm-image.ts           # bounded BMP/TIFF → PNG conversion for Azure/Anthropic vision
+    gemini.ts              # shared generation types + retained Gemini generation / SSE
+    anthropic.ts           # Claude Messages API, Haiku low effort, vision/PDF, safe SSE
+    llm-schemas.ts         # native JSON schemas for practice and mobile math review
     math-review.ts         # selected-provider handwritten-work and completed-solution review
     math-expression.ts     # safe recursive-descent expression parser used by graphing
     math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
@@ -111,8 +130,18 @@ src/
     video/
       client.ts            # authenticated browser job API
       create-job-handler.ts# shared verified-user creation; strict web Turnstile or preverified mobile App Check
-      jobs.ts              # idempotent Firestore jobs, 10-per-UTC-day quota, refund/delete
-      quota.ts             # pure daily-bucket normalization/reset math
+      jobs.ts              # idempotent Firestore jobs, plan-tier daily quota (reads entitlements/plan), refund/delete
+      quota.ts             # pure daily-bucket normalization/reset math; default limit = free tier
+    billing/
+      plans.ts             # pure catalog: tiers, prices (cents) + Stripe lookup keys, limits, features, formatting
+      subscription-state.ts# pure: Stripe subscription → entitlement doc, effective tier, event ordering, public status
+      stripe.ts            # server-only Stripe client, price lookup by key, webhook secret, return origin
+      entitlements.ts      # server-only Firestore: users/{uid}/entitlements/plan + /billing
+      events.ts            # server-only webhook/sync handlers; cancel subscription on account deletion
+      route-helpers.ts     # no-store JSON + Stripe/auth error mapping for the billing routes
+      client.ts            # browser fetchers for status/checkout/portal/sync
+      limits.ts            # client-safe limit contract: 429 code, event name, parser, error class
+      usage.ts             # server-only daily scan/quiz metering: Firestore bucket for users, signed cookie for guests
       queue.ts             # Cloud Tasks OIDC dispatch; secret-gated local direct mode
       storage.ts           # private manifest validation + short-lived signed playback URLs
       types.ts             # shared job/playback contract
@@ -163,10 +192,13 @@ package.json               # deps & scripts
 firebase.json              # Firestore rules/emulator configuration
 firestore.rules            # verified-owner-only notebook rules + document validation
 .firebaserc                # Firebase default math-solver-e3a55 + non-default Cloud Run alias
-.env.example               # public Firebase names + server-only Azure/Gemini/Pressroom configuration
+.env.example               # public Firebase names + server-only Anthropic/Azure/Gemini/Pressroom/Stripe configuration
+scripts/stripe-setup.mjs   # idempotent Stripe products/prices (lookup keys) + Customer Portal configuration
 tests/firestore.rules.test.mjs # verified-owner/isolation/validation emulator tests
 tests/firebase-auth-actions.test.mjs # email action mode/redirect safety tests
 tests/post-solution-actions.test.mjs # short/long step extraction + prompt contract tests
+tests/web-languages.test.mjs # locale matching, catalog integrity, localized step detection and KaTeX
+tests/web-language-routes.test.mjs # validated language/JSON/stream contracts through real API handlers
 tests/math-markdown.test.mjs # KaTeX regressions for number-leading math and currency
 tests/pressroom-math.test.mjs # Pressroom HTML math rendering, safety, fallback, and idempotence
 tests/learning-progress.test.mjs # spaced-review and local activity-state tests
@@ -175,6 +207,11 @@ tests/video-problem-context.test.mjs # problem/solution selection including OCR 
 tests/video-validation.test.mjs # request, manifest, and object-key safety contract
 services/video-renderer/   # private FastAPI + independent VIDEO_LLM_PROVIDER planning/review + Azure/Gemini TTS + Gemini transcription QA + meaning-first Manim/FFmpeg worker
 services/video-renderer/tests/test_render_state.py # real reused-process audio/video regression; required Docker build gate
+services/video-renderer/plan_repair.py # deterministic repair of generated lesson JSON before validation
+services/video-renderer/latex_clean.py # Unicode/delimiter/escape normalization and plain-text fallback for formulas
+services/video-renderer/graph_math.py  # shared safe graph-expression grammar for planning and rendering
+services/video-renderer/tests/test_render_resilience.py # real TeX/Pango/Manim degradation regression; second Docker build gate
+services/video-renderer/tests/test_plan_repair.py # repair, relaxed contract, and planning-ladder tests
 infra/video/               # idempotent GCS/Cloud Tasks/IAM/TTL/CORS/lifecycle setup
 ```
 
@@ -198,3 +235,5 @@ For “Generate video explanation,” `MessageList` selects the completed proble
 The Flutter client is a separate loop-first product: Home scan/photo/paste/type → crop/worksheet selection → editable OCR readback → streamed `/api/mobile/v1/solve` response → native step/LaTeX rendering with hint-first reveal and independent verification → private continuous video playback with optional practice pauses/offline/share → optional practice and scheduled mistake review. Check My Work uses its own multimodal route to diagnose the learner's first incorrect handwritten line. It deliberately imports no web UI code. Native Firebase Authentication provides verified Email/Password, Google, and Apple sessions with SDK-managed persistence; `AccountController` hydrates cold starts from the initial `authStateChanges()` event, tracks later sign-in/sign-out changes, and does not discard a restored session when a transient stream error occurs. Verified owners use UID-scoped notebook/offline stores; dirty retries, deletion tombstones, and post-save convergence prevent account switching or a stale in-flight upload from resurrecting another owner's data. The native store review API has two quiet milestones: at least three saved solutions plus 75% or better on a four-or-more-question practice/review set, or the fifth saved solve after its independent review is checked and the complete answer is visible for two seconds. Both share one local 120-day cooldown, with no custom sentiment gate or five-star copy. Video rendering is server-side: app inactivity stops only polling, then resume reauthorizes and continues the same deterministic job without a duplicate POST. App Check protects the mobile gateway without applying the web fallback quota. FCM registration follows an explicit per-account `Notify me when ready` choice and is removed on sign-out/account deletion; optional app updates are dismissible while hard gates require an explicit server-declared security or incompatible-protocol minimum. Store credentials and later native-only surfaces are the remaining boundaries. See [[mobile-app-concept]].
 
 Calculator pages use the same data flow and the same `ChatConversation` interface as the homepage. On the first submission, `forceNewChat` creates a fresh chat with a `calculator:<slug>` source tag so an old active conversation cannot absorb the calculator problem. `/api/solve` validates that slug against the server registry and adds its trusted `solverInstruction`, so ambiguous input receives the operation intended by the page. The graphing route first evaluates explicit functions locally with the safe parser, then can send its visible functions into the shared tutor chat for explanation. See [[calculator-pages]].
+
+Language SEO verification: `tests/web-language-seo.test.mjs` and `scripts/check-web-language-seo.mjs`. The native rewrite/redirect configuration is in `next.config.ts`; APIs and public assets keep their existing paths. Persistent context composition is `src/components/providers/AppStateProviders.tsx`; see [[web-languages]].

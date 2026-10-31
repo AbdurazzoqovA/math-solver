@@ -245,3 +245,10 @@ math-field::part(menu-toggle) {
 .post-body .post-math-display > .katex-display {
   min-width: max-content;
 }
+
+/* Equations keep their mathematical reading order inside RTL explanations. */
+.katex,
+math-field {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

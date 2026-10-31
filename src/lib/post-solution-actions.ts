@@ -1,5 +1,11 @@
-const STEP_HEADER_PATTERN =
-  /^(?:#{1,6}\s*)?(?:\*\*)?Step\s+(\d+)\s*(?::|\.)?(?:\*\*)?/gim;
+import { LANGUAGES } from "./i18n/locales.ts";
+import { messages } from "./i18n/messages.ts";
+
+const stepLabels = LANGUAGES.map(({ step }) => step.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+const STEP_HEADER_PATTERN = new RegExp(
+  `^(?:#{1,6}\\s*)?(?:\\*\\*)?(?:${stepLabels.join("|")})\\s*(\\d+)\\s*(?::|\\.)?(?:\\*\\*)?`,
+  "gim",
+);
 
 export function getSolutionStepNumbers(content: string): number[] {
   const stepNumbers: number[] = [];
@@ -37,6 +43,7 @@ export function isActionableSolution(content: string): boolean {
   const normalized = content.trim().toLowerCase();
   return (
     normalized.length > 0 &&
+    !Object.values(messages).some(({ solveError }) => solveError.toLowerCase() === normalized) &&
     !normalized.startsWith("sorry, i encountered an error")
   );
 }

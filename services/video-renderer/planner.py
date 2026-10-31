@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 
-from llm import dump_for_prompt, generate_json
-from models import LessonPlan, PlanReview
+from llm import LLMValidationError, dump_for_prompt, generate_json
+from models import RELAXED_PEDAGOGY, LessonPlan, PlanReview
+from plan_repair import repair_lesson_data
+from pydantic import ValidationError
 
 PLANNER_SYSTEM = r"""
 You are MathSolver's video teacher. Design a clear, continuous visual lesson
@@ -178,7 +182,38 @@ steps, or if replacing the video with a numbered step list would lose nothing.
 If the raw input is damaged but the candidate explicitly resolves it, require
 the first clip to disclose and display that interpretation. Reject any plan
 that silently cleans up or guesses what the learner meant.
-When uncertain, return valid=false with a concise internal reason.
+
+Return three fields:
+- mathValid: true only when criteria 1, 2, 3, 4 and 10 hold. This is the
+  mathematical and honesty gate. When uncertain about the mathematics, return
+  mathValid=false.
+- valid: true only when mathValid is true and the teaching criteria 5 to 9
+  also hold.
+- reason: a concise internal reason whenever valid is false, naming the exact
+  criterion and the item to fix. Use an empty string when valid is true.
+A lesson with correct mathematics but weaker teaching must return
+mathValid=true and valid=false, never mathValid=false.
+""".strip()
+
+INDEPENDENT_PLANNER_NOTE = """
+<independent_solution_mode>
+An earlier check could not rely on the written solution above: it may be
+incomplete or contain an error. Solve the problem yourself carefully, verify
+your result, and base every equation, visual and the finalAnswerLatex on your
+own verified mathematics. Set supported=true unless the input is not a
+mathematical problem or is too ambiguous to answer at all. If your verified
+answer differs from the written solution, the first clip's narration must say
+that this lesson works the problem again from the start.
+</independent_solution_mode>
+""".strip()
+
+INDEPENDENT_REVIEW_NOTE = """
+<independent_solution_mode>
+The candidate solution was judged unreliable, so the lesson re-solves the
+problem. For criteria 1 and 2, judge the lesson's own mathematics and final
+answer directly against the stated problem instead of against the candidate
+solution. Solve the problem yourself before deciding.
+</independent_solution_mode>
 """.strip()
 LESSON_EXAMPLE = Path(__file__).with_name("lesson-example.json").read_text(
     encoding="utf-8"
@@ -437,12 +472,60 @@ def lesson_generation_schema() -> dict:
     )
 
 
+@dataclass(frozen=True)
+class PlannedLesson:
+    """A generated plan, or the planner's reason for declining the input."""
+
+    plan: LessonPlan | None
+    relaxed: bool = False
+    unsupported_reason: str | None = None
+
+
+class _LessonParser:
+    """Repair, then validate; remember a renderable plan as a safety net."""
+
+    def __init__(self) -> None:
+        self.relaxed_plan: LessonPlan | None = None
+
+    def __call__(self, text: str) -> PlannedLesson:
+        try:
+            data = json.loads(text)
+        except ValueError:
+            # Re-raise as the typed validation error the provider loop expects.
+            return PlannedLesson(plan=LessonPlan.model_validate_json(text))
+        if isinstance(data, list) and len(data) == 1:
+            data = data[0]
+        if isinstance(data, dict) and data.get("supported") is False:
+            reason = data.get("unsupportedReason")
+            return PlannedLesson(
+                plan=None,
+                unsupported_reason=(
+                    reason.strip()[:500]
+                    if isinstance(reason, str) and reason.strip()
+                    else "The planner did not select a safe visual lesson."
+                ),
+            )
+        data = repair_lesson_data(data)
+        try:
+            return PlannedLesson(plan=LessonPlan.model_validate(data))
+        except ValidationError as strict_error:
+            try:
+                self.relaxed_plan = LessonPlan.model_validate(
+                    data,
+                    context=RELAXED_PEDAGOGY,
+                )
+            except ValidationError:
+                pass
+            raise strict_error
+
+
 def create_lesson_plan(
     problem: str,
     solution: str,
     *,
     correction: str | None = None,
-) -> LessonPlan:
+    independent: bool = False,
+) -> PlannedLesson:
     prompt = (
         "<problem>\n"
         f"{problem}\n"
@@ -458,6 +541,8 @@ def create_lesson_plan(
         "shape—is the minimum bar. Each clip's segments field is an array of "
         "one to four segment objects, never strings. "
     )
+    if independent:
+        prompt += f"\n\n{INDEPENDENT_PLANNER_NOTE}\n"
     if correction:
         prompt += (
             "\n\n<previous_attempt_feedback>\n"
@@ -469,23 +554,35 @@ def create_lesson_plan(
     prompt += (
         "Return one JSON object that satisfies the renderer contract exactly."
     )
-    return generate_json(
-        system_instruction=PLANNER_SYSTEM,
-        prompt=prompt,
-        model_type=LessonPlan,
-        # The full nested renderer contract exceeds Gemini's schema decoder.
-        # JSON mode plus the example guides shape; Pydantic and independent
-        # mathematical review remain authoritative on both providers.
-        response_schema=False,
-        temperature=0.12,
-        max_output_tokens=10_000,
-    )
+    parser = _LessonParser()
+    try:
+        return generate_json(
+            system_instruction=PLANNER_SYSTEM,
+            prompt=prompt,
+            model_type=LessonPlan,
+            # The full nested renderer contract exceeds Gemini's schema decoder.
+            # JSON mode plus the example guides shape; Pydantic and independent
+            # mathematical review remain authoritative on both providers.
+            response_schema=False,
+            temperature=0.12,
+            max_output_tokens=16_000,
+            # One guided correction; after that a safe, renderable plan is
+            # better for the learner than another regeneration.
+            retries=2,
+            parser=parser,
+        )
+    except LLMValidationError:
+        if parser.relaxed_plan is None:
+            raise
+        return PlannedLesson(plan=parser.relaxed_plan, relaxed=True)
 
 
 def review_lesson_plan(
     problem: str,
     solution: str,
     plan: LessonPlan,
+    *,
+    independent: bool = False,
 ) -> PlanReview:
     prompt = (
         "<problem>\n"
@@ -498,6 +595,8 @@ def review_lesson_plan(
         f"{dump_for_prompt(plan.model_dump(mode='json'))}\n"
         "</lesson_plan_json>"
     )
+    if independent:
+        prompt += f"\n\n{INDEPENDENT_REVIEW_NOTE}"
     return generate_json(
         system_instruction=REVIEW_SYSTEM,
         prompt=prompt,

@@ -2,6 +2,17 @@ import type { VideoJobDocument } from "./types.ts";
 
 export const VIDEO_JOB_RETENTION_MS = 14 * 24 * 60 * 60 * 1_000;
 export const MAX_VIDEO_JOB_ATTEMPTS = 20;
+// The renderer request is capped at 15 minutes and reports progress
+// throughout, so a longer silence means its worker is gone.
+export const VIDEO_JOB_STALL_MS = 16 * 60 * 1_000;
+const ACTIVE_VIDEO_JOB_STATUSES: ReadonlySet<string> = new Set([
+  "queued",
+  "planning",
+  "voicing",
+  "rendering",
+  "verifying",
+  "uploading",
+]);
 const VIDEO_GENERATION_ROOT_PREFIX = "video-lessons/v2/";
 
 type VideoJobObjectIdentity = Pick<
@@ -19,6 +30,16 @@ export function isVideoJobExpired(
   now = Date.now(),
 ): boolean {
   return job.expiresAt <= now;
+}
+
+export function isVideoJobStalled(
+  job: Pick<VideoJobDocument, "status" | "updatedAt">,
+  now = Date.now(),
+): boolean {
+  return (
+    ACTIVE_VIDEO_JOB_STATUSES.has(job.status) &&
+    now - job.updatedAt >= VIDEO_JOB_STALL_MS
+  );
 }
 
 export function videoCleanupTaskId(
