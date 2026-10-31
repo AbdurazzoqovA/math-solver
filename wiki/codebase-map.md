@@ -109,7 +109,9 @@ src/
     statistics-calculators.ts # 5 Statistics definitions and safeguards
     general-precalculus-calculators.ts # 4 General Math + 3 Precalculus definitions
     graphing-calculator.ts # Graphing definition and client-tool configuration
-    llm.ts                 # server-only Anthropic / Azure Responses / Gemini switch; text, JSON, images/PDFs, safe SSE
+    llm.ts                 # server-only Anthropic / Azure Responses / Gemini switch; text, JSON, images/PDFs, safe SSE (non-OK provider responses are reported through llm-alerts)
+    llm-alerts.ts        # owner alerts for AI-provider refusals (credits/quota, rejected key, rate limit, outage), throttled per provider and category
+    owner-alerts.ts      # shared server-only Telegram transport + throttle for all owner alerts (BILLING_TELEGRAM_*)
     llm-image.ts           # bounded BMP/TIFF → PNG conversion for Azure/Anthropic vision
     gemini.ts              # shared generation types + retained Gemini generation / SSE
     anthropic.ts           # Claude Messages API, Haiku low effort, vision/PDF, safe SSE
@@ -139,7 +141,7 @@ src/
       entitlements.ts      # server-only Firestore: users/{uid}/entitlements/plan + /billing
       events.ts            # server-only webhook/sync handlers; cancel subscription on account deletion
       route-helpers.ts     # no-store JSON + Stripe/auth error mapping for the billing routes; 5xx outcomes raise an owner alert
-      alerts.ts            # server-only Telegram owner alerts: failed checkout/portal/sync/webhook, unmatched paid subscription, failed renewal, payments, ended subscriptions
+      alerts.ts            # billing owner alerts (failed checkout/portal/sync/webhook, Stripe-shaped signature failures, unmatched paid subscription, failed renewal, payments, ended subscriptions) via ../owner-alerts
       client.ts            # browser fetchers for status/checkout/portal/sync
       limits.ts            # client-safe limit contract: 429 code, event name, parser, error class
       usage.ts             # server-only daily scan/quiz metering: Firestore bucket for users, signed cookie for guests
