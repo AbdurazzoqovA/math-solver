@@ -31,7 +31,7 @@ export default function Header() {
     <header lang={locale} dir="ltr" className="h-16 w-full flex items-center justify-between px-4 sm:px-8 z-10 shrink-0 absolute top-0 left-0 right-0 pointer-events-none">
       
       {/* Mobile hamburger + logo */}
-      <div className="flex-1 pointer-events-auto flex items-center gap-3 md:hidden">
+      <div className="pointer-events-auto flex shrink-0 items-center gap-2 md:hidden">
         <button
           onClick={() => setMobileSidebarOpen(true)}
           className="p-3 -ml-1 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors"
@@ -51,18 +51,26 @@ export default function Header() {
       {/* Desktop spacer */}
       <div className="flex-1 hidden md:flex" />
       
-      <div className="flex items-center gap-2 ml-auto pointer-events-auto">
+      <div className="ml-auto flex min-w-0 items-center gap-2 pointer-events-auto">
         {showUpgrade && (
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+            aria-label={t("upgrade")}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            {t("upgrade")}
+            {/* The label is dropped only on the narrowest phones so every control stays on screen. */}
+            <span className="hidden min-[360px]:inline">{t("upgrade")}</span>
           </Link>
         )}
-        <LanguageSelector compact />
-        <div className="flex items-center gap-2 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md p-1.5 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
+        {/* Phones get the globe-only selector; the drawer keeps the full one. */}
+        <div className="shrink-0 sm:hidden">
+          <LanguageSelector compact iconOnly />
+        </div>
+        <div className="hidden min-w-0 sm:block">
+          <LanguageSelector compact />
+        </div>
+        <div className="flex shrink-0 items-center gap-2 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md p-1.5 rounded-full border border-black/5 dark:border-white/5 shadow-sm">
           <button 
             className="p-2.5 text-muted-foreground hover:text-foreground hover:bg-white dark:hover:bg-zinc-800 rounded-full transition-all" 
             aria-label={t("theme")}

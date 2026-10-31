@@ -10,7 +10,8 @@ export default function EmptyState({ onStartChat, landingContent, storeLabels }:
     <div lang={locale} dir={direction} className="flex flex-col items-center w-full max-w-4xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Hero Section - Perfectly centered in the viewport */}
-      <div className="min-h-screen flex flex-col items-center justify-center w-full pb-16 md:pb-32">
+      {/* Phones start below the 64px header instead of centering, so a short screen cannot push the heading under it. */}
+      <div className="min-h-screen flex flex-col items-center justify-start pt-20 pb-16 md:justify-center md:pt-0 md:pb-32 w-full">
         <div className="text-center mb-10 flex flex-col items-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-4 bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">
             {t("heroTitle")}
