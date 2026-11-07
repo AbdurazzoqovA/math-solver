@@ -22,7 +22,7 @@ export default function PrivacyPolicyPage() {
         <h1 className="mb-8 text-3xl font-bold tracking-tight">Privacy Policy</h1>
 
         <div className="prose prose-zinc max-w-none text-muted-foreground dark:prose-invert">
-          <p className="mb-6">Effective and last updated: October 31, 2026</p>
+          <p className="mb-6">Effective and last updated: November 7, 2026</p>
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">1. Scope</h2>
           <p className="mb-4">
@@ -39,6 +39,7 @@ export default function PrivacyPolicyPage() {
             <li><strong>Payment and subscription data:</strong> If you buy a paid plan, payment is handled by Stripe. Stripe collects your payment card or other payment details, billing name, email, and billing address directly on its secure checkout and billing-portal pages. MathSolver never receives or stores full card numbers. We receive and store a Stripe customer identifier, subscription identifier, plan, price, billing period, subscription status, renewal dates, and whether you chose to cancel, so we can unlock your plan and support you. Stripe may also process your IP address and device information for fraud prevention.</li>
             <li><strong>Optional notification data:</strong> If you choose video-ready notifications, we store a device notification token, platform, and app version. The notification does not contain your math problem or solution.</li>
             <li><strong>Analytics:</strong> The website uses Google Analytics to collect product interaction data such as pages or learning features used and general device information. Mobile analytics are off by default and can be changed in the app. We do not put math content, uploaded images, email addresses, or notebook identifiers in MathSolver analytics events.</li>
+            <li><strong>Advertising:</strong> The website uses Google AdSense to show ads. Google and its advertising partners can use cookies, device and browser identifiers, IP address, and information about your visits to this and other websites to serve, personalize, limit, and measure ads. We do not send your math content, uploaded images, notebook data, or account email address to advertising partners. The mobile apps do not show ads.</li>
             <li><strong>Security and technical data:</strong> Our systems and service providers can process IP address, browser or operating-system type, app version, request timing, and device or installation identifiers used for authentication, App Check, fraud prevention, diagnostics, and service reliability.</li>
           </ul>
 
@@ -50,15 +51,19 @@ export default function PrivacyPolicyPage() {
             <li>Send a video-ready notification only after you choose to enable it.</li>
             <li>Maintain security, prevent abuse, diagnose failures, and protect reliability.</li>
             <li>Measure and improve the Service through website analytics and optional mobile analytics.</li>
+            <li>Show ads on the website to help keep the core solver free.</li>
             <li>Respond to support, privacy, and account-deletion requests.</li>
           </ul>
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">4. Service Providers and Data Sharing</h2>
           <p className="mb-4">
-            We share information only as needed with processors that operate the Service. These include the selected AI provider (Anthropic Claude, Azure OpenAI, or Google Gemini) for math processing, OCR, and quality review; Google Gemini and Azure OpenAI for visual lesson planning, narration, and quality review; Google Firebase Authentication, Cloud Firestore, Firebase Cloud Messaging, and App Check for optional accounts, private sync, notifications, and app integrity; Google Cloud Run, Cloud Tasks, and private Cloud Storage for rendering and temporary playback; Telegram for private contact-form delivery; Cloudflare Turnstile for website abuse protection; Google Analytics for website measurement and optional mobile analytics; Stripe for payment processing, subscription billing, invoices, and the self-service billing portal; and Pressroom for public blog content.
+            We share information only as needed with processors that operate the Service. These include the selected AI provider (Anthropic Claude, Azure OpenAI, or Google Gemini) for math processing, OCR, and quality review; Google Gemini and Azure OpenAI for visual lesson planning, narration, and quality review; Google Firebase Authentication, Cloud Firestore, Firebase Cloud Messaging, and App Check for optional accounts, private sync, notifications, and app integrity; Google Cloud Run, Cloud Tasks, and private Cloud Storage for rendering and temporary playback; Telegram for private contact-form delivery; Cloudflare Turnstile for website abuse protection; Google Analytics for website measurement and optional mobile analytics; Google AdSense for website advertising; Stripe for payment processing, subscription billing, invoices, and the self-service billing portal; and Pressroom for public blog content.
           </p>
           <p className="mb-4">
-            Submitted math text and images are sent to Google&apos;s AI service to process your request. Google may retain API inputs and outputs for a limited period for abuse monitoring under its applicable service terms. We do not sell personal data, use cross-app advertising trackers, or share data for targeted advertising. MathSolver has no ads.
+            Submitted math text and images are sent to the selected AI provider to process your request. AI providers may retain API inputs and outputs for a limited period for abuse monitoring under their applicable service terms. We do not sell your math content, notebook, or account data.
+          </p>
+          <p className="mb-4">
+            Google acts as an independent controller of the data it collects through its advertising cookies on the website. Its handling of that data is described in the{" "}<a className="text-foreground underline" href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">Google Privacy Policy</a> and in{" "}<a className="text-foreground underline" href="https://policies.google.com/technologies/partner-sites" rel="noopener noreferrer" target="_blank">how Google uses information from sites that use its services</a>.
           </p>
           <p className="mb-4">
             Stripe acts as our payment processor and, for fraud prevention and its own legal obligations, as an independent controller of the payment data it collects. Its handling of that data is described in the{" "}<a className="text-foreground underline" href="https://stripe.com/privacy" rel="noopener noreferrer" target="_blank">Stripe Privacy Policy</a>.
@@ -66,7 +71,10 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">5. Cookies and Similar Technologies</h2>
           <p className="mb-4">
-            The website uses local storage and cookies for core settings, optional account sessions, security, and analytics. It does not show an analytics consent popup. You can control analytics through your browser settings or privacy tools. The mobile app does not enable analytics unless you opt in.
+            The website uses local storage and cookies for core settings, optional account sessions, security, analytics, and advertising. It does not show an analytics consent popup. You can control analytics through your browser settings or privacy tools. The mobile app does not enable analytics unless you opt in.
+          </p>
+          <p className="mb-4">
+            Third-party vendors, including Google, use cookies to serve ads based on your prior visits to this website or other websites. Google&apos;s use of advertising cookies enables it and its partners to serve ads to you based on your visits to this site and/or other sites on the internet. You can opt out of personalized advertising from Google in{" "}<a className="text-foreground underline" href="https://adssettings.google.com" rel="noopener noreferrer" target="_blank">Google Ads Settings</a>, and from many other participating vendors at{" "}<a className="text-foreground underline" href="https://www.aboutads.info/choices" rel="noopener noreferrer" target="_blank">aboutads.info/choices</a>{" "}or, in Europe,{" "}<a className="text-foreground underline" href="https://www.youronlinechoices.eu" rel="noopener noreferrer" target="_blank">youronlinechoices.eu</a>. If you opt out, you may still see ads that are not personalized, based on the page you are viewing.
           </p>
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">6. Retention</h2>
@@ -76,7 +84,7 @@ export default function PrivacyPolicyPage() {
             <li>Private visual-lesson clips, captions, posters, and manifests are kept for up to 14 days and can be deleted sooner from the app.</li>
             <li>Notification registrations remain until disabled, replaced, expired, or removed with account deletion.</li>
             <li>Subscription records remain while your plan is active and are removed with your account. Stripe retains invoices and transaction records for as long as tax, accounting, and anti-fraud laws require, typically up to 7 years, even after account deletion.</li>
-            <li>Security, diagnostic, and analytics records are kept only as needed for their stated purpose and according to the relevant provider settings.</li>
+            <li>Security, diagnostic, analytics, and advertising records are kept only as needed for their stated purpose and according to the relevant provider settings.</li>
           </ul>
           <p className="mb-4">We may retain limited records when reasonably necessary to meet legal obligations, resolve disputes, prevent fraud or abuse, or protect the Service.</p>
 
@@ -92,7 +100,7 @@ export default function PrivacyPolicyPage() {
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">9. Your Choices and Rights</h2>
           <p className="mb-4">
-            You may use the core solver without an account. You can decline notifications, disable them later in system settings, opt in or out of mobile analytics, delete individual chats or private videos, and cancel a paid plan or update payment details at any time from &quot;Manage billing&quot; on the pricing page. Depending on your location, you may also have rights to access, correct, export, object to, restrict, or delete personal data. Email us to exercise a right; we may need to verify that the request relates to your account.
+            You may use the core solver without an account. You can decline notifications, disable them later in system settings, opt in or out of mobile analytics, opt out of personalized website ads as described in Section 5, delete individual chats or private videos, and cancel a paid plan or update payment details at any time from &quot;Manage billing&quot; on the pricing page. Depending on your location, you may also have rights to access, correct, export, object to, restrict, or delete personal data. Email us to exercise a right; we may need to verify that the request relates to your account.
           </p>
 
           <h2 className="mt-8 mb-4 text-xl font-semibold text-foreground">10. Account and Data Deletion</h2>
