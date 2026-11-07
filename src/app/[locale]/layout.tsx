@@ -77,6 +77,18 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={direction} suppressHydrationWarning>
       <head>
+        {/* Google AdSense. A plain tag (not next/script) so it is in the
+            server-rendered <head> where AdSense verification looks for it.
+            Its loader inserts a non-async <script> at the top of <head> before
+            hydration, and React would claim that node for any non-async script
+            it hydrates there, so keep other inline/next/script tags out of <head>. */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5558010343849231"
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
         <Script
           id="website-structured-data"
           type="application/ld+json"
@@ -88,8 +100,6 @@ export default async function RootLayout({
             ),
           }}
         />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased selection:bg-primary-300 selection:text-foreground`}>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-YG1NPYM8BS"
           strategy="afterInteractive"
