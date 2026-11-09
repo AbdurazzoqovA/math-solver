@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLearningProgress } from "@/context/LearningProgressContext";
 import type { ReviewState } from "@/lib/learning-progress";
 import { useLanguage } from "@/context/LanguageContext";
+import { readableMath } from "@/lib/readable-math";
 import {
   deleteCloudChat,
   loadCloudNotebook,
@@ -139,8 +140,11 @@ function applyCloudDeletions(
   return chats.filter((chat) => !deletions.has(chat.id));
 }
 
+// Titles are plain text (sidebar, practice-test fallback, synced notebooks),
+// so store the problem as readable math rather than raw LaTeX.
 function generateTitle(content: string): string {
-  const cleaned = content.replace(/\s+/g, " ").trim();
+  const cleaned =
+    readableMath(content.slice(0, 300)) || content.replace(/\s+/g, " ").trim();
   return cleaned.length > 50 ? cleaned.slice(0, 50) + "…" : cleaned;
 }
 

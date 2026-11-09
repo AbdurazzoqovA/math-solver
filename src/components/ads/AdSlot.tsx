@@ -28,6 +28,36 @@ declare global {
 }
 
 /**
+ * AdSense writes `height: auto !important` onto every height-constrained
+ * ancestor of a responsive unit, filled or not. Here those ancestors are the
+ * one-screen app shell whose panels scroll internally, so the override lets
+ * the sidebar's chat list stretch the whole page. Undo it whenever it appears;
+ * the ad sits inside a scrolling panel, so nothing is clipped. Returns cleanup.
+ */
+function keepAncestorHeights(ins: HTMLElement): () => void {
+  const restore = (element: HTMLElement) => {
+    if (
+      element.style.getPropertyValue("height") === "auto" &&
+      element.style.getPropertyPriority("height") === "important"
+    ) {
+      element.style.removeProperty("height");
+    }
+  };
+  const observer = new MutationObserver((records) => {
+    for (const record of records) restore(record.target as HTMLElement);
+  });
+  for (
+    let element = ins.parentElement;
+    element && element !== document.body;
+    element = element.parentElement
+  ) {
+    restore(element);
+    observer.observe(element, { attributes: true, attributeFilter: ["style"] });
+  }
+  return () => observer.disconnect();
+}
+
+/**
  * A manually placed AdSense unit. Paying subscribers never see ads, and the
  * slot renders nothing until the plan is known so a paid account never
  * flashes one. While an ad is loading, or when an ad blocker stops the
@@ -81,6 +111,9 @@ function AdUnit({
       attributeFilter: ["data-ad-status"],
     });
 
+    // Registered before the request so AdSense's ancestor edits are undone.
+    const releaseAncestors = keepAncestorHeights(ins);
+
     // StrictMode runs effects twice on one element; request the ad once.
     const requestAd = () => {
       if (pushedRef.current || ins.getAttribute("data-adsbygoogle-status")) {
@@ -112,6 +145,7 @@ function AdUnit({
     return () => {
       observer.disconnect();
       resizeObserver?.disconnect();
+      releaseAncestors();
     };
   }, []);
 

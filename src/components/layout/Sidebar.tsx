@@ -6,7 +6,8 @@ import { useState, useSyncExternalStore } from "react";
 import { BookOpen, Calculator, Clapperboard, Plus, History, PanelLeftClose, PanelLeftOpen, Trash2, Sun, Moon, GraduationCap, Sparkles } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter, usePathname } from "next/navigation";
-import { useChatContext } from "@/context/ChatContext";
+import { useChatContext, type Chat } from "@/context/ChatContext";
+import { readableMath } from "@/lib/readable-math";
 import { useUI } from "@/context/UIContext";
 import { useBilling } from "@/context/BillingContext";
 import Image from "next/image";
@@ -14,6 +15,14 @@ import Link from "next/link";
 import AccountButton from "@/components/auth/AccountButton";
 import LanguageSelector from "./LanguageSelector";
 import { trackEvent } from "@/lib/analytics";
+
+// Show the problem as readable math ("lim(x→3) …") instead of raw LaTeX. The
+// stored title is a 50-character cut that can end mid-command, so use the
+// first question when it is available.
+function chatLabel(chat: Chat): string {
+  const question = chat.messages.find((message) => message.role === "user")?.content;
+  return readableMath((question ?? chat.title).slice(0, 300)) || chat.title;
+}
 
 const subscribeToHydration = () => () => {};
 
@@ -224,9 +233,9 @@ export default function Sidebar() {
                       ? "text-foreground bg-primary-500/10 font-medium"
                       : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
-                  title={chat.title}
+                  title={chatLabel(chat)}
                 >
-                  {chat.title}
+                  {chatLabel(chat)}
                 </button>
                 <button
                   onClick={(e) => {
@@ -282,7 +291,9 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar — hidden on mobile */}
-      <aside className={`hidden md:flex h-full bg-transparent flex-col py-6 shrink-0 transition-all duration-300 ease-in-out z-20 relative ${isExpanded ? 'w-64' : 'w-20'}`}>
+      {/* max-h keeps a long chat list scrolling inside the sidebar even if a
+          third-party script ever unpins the 100dvh shell height. */}
+      <aside className={`hidden md:flex h-full max-h-[100dvh] bg-transparent flex-col py-6 shrink-0 transition-all duration-300 ease-in-out z-20 relative ${isExpanded ? 'w-64' : 'w-20'}`}>
         {sidebarContent}
       </aside>
 
