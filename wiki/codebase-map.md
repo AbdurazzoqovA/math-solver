@@ -57,7 +57,7 @@ src/
       DrawingCanvas.tsx    # hand-draw a problem → JPEG → /api/ocr (source:"drawing")
       DraggableCalculator.tsx # basic arithmetic calc (framer-motion draggable); uses new Function()
     ads/
-      AdSlot.tsx           # manual AdSense units (solution/landing/calculator/article/multiplex); free plan only, collapses when unfilled
+      AdSlot.tsx           # manual AdSense units (solution/landing/calculator/article/multiplex); free plan only, collapses when unfilled, strips AdSense's ancestor height override
     marketing/
       MobileAppLinks.tsx   # reusable tracked App Store / Google Play download buttons
     calculators/
@@ -83,7 +83,7 @@ src/
       Header.tsx           # mobile header; logo links to home
       LanguageSelector.tsx # native-name selector navigates to language URLs
       LanguageLinks.tsx    # crawlable native-name alternate homepage anchors
-      Sidebar.tsx          # home-linked brand, navigation (incl. the dofollow, UTM/ref-tagged external AI Tutor link to eduzen.ai), local-first recent chats, account control
+      Sidebar.tsx          # home-linked brand, readable-math chat titles, 100dvh-capped desktop column, navigation (incl. the dofollow, UTM/ref-tagged external AI Tutor link to eduzen.ai), local-first recent chats, account control
       SplitLayoutWrapper.tsx # resizable split view (solver | practice panel) via react-resizable-panels
     providers/
       ThemeProvider.tsx    # next-themes light/dark/system
@@ -123,6 +123,7 @@ src/
     math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
     article-ad-breaks.ts   # splits Pressroom article HTML at top-level <h2> for in-article ads
+    readable-math.ts       # LaTeX → readable Unicode text for plain-text chat titles (sidebar, stored titles)
     analytics.ts          # privacy-safe GA4 events + local return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
     mobile-apps.ts         # canonical public iOS and Android store destinations
