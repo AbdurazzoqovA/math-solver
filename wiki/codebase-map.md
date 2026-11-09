@@ -10,7 +10,7 @@ src/
     layout.tsx             # context-only persistent app state above language navigation
     not-found.tsx          # full-document fallback when locale layout never renders
     [locale]/
-      layout.tsx           # actual html/body lang+dir, shared UI shell, fonts/GA4/metadata
+      layout.tsx           # actual html/body lang+dir, shared UI shell, fonts/GA4/metadata; AdSense loader is the only <head> script; ad units are placed by components/ads/AdSlot (see [[monetization]])
       page.tsx             # 16 SSR/static solver homepages; public English is / via rewrite
       not-found.tsx        # fragment fallback within an existing locale document
       practice-tests/page.tsx # localized saved-test library; noindex, no sitemap entry
@@ -56,6 +56,8 @@ src/
       MathKeyboard.tsx     # Σ on-screen math keyboard
       DrawingCanvas.tsx    # hand-draw a problem → JPEG → /api/ocr (source:"drawing")
       DraggableCalculator.tsx # basic arithmetic calc (framer-motion draggable); uses new Function()
+    ads/
+      AdSlot.tsx           # manual AdSense units (solution/landing/calculator/article/multiplex); free plan only, collapses when unfilled
     marketing/
       MobileAppLinks.tsx   # reusable tracked App Store / Google Play download buttons
     calculators/
@@ -120,6 +122,7 @@ src/
     math-expression.ts     # safe recursive-descent expression parser used by graphing
     math-markdown.ts       # normalizes solver LaTeX without treating number-leading math as currency
     post-solution-actions.ts # step-header detection and one-tap follow-up prompts
+    article-ad-breaks.ts   # splits Pressroom article HTML at top-level <h2> for in-article ads
     analytics.ts          # privacy-safe GA4 events + local return buckets
     learning-progress.ts   # pure review scheduling, daily activity, merge/streak logic
     mobile-apps.ts         # canonical public iOS and Android store destinations
@@ -188,6 +191,7 @@ mobile_app/                  # standalone Flutter iOS/Android client; no web sou
 # root
 Dockerfile                 # standalone Next.js image for Cloud Run
 cloudbuild.yaml            # Docker build with explicit Firebase public build arguments
+public/ads.txt             # AdSense authorized seller line for pub-5558010343849231
 .gcloudignore              # excludes local caches and the independent Flutter tree from web builds
 deploy.sh                  # env-driven Cloud Build + tagged Cloud Run image deployment
 next.config.ts             # output: "standalone", React Compiler
