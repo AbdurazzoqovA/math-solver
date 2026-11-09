@@ -45,6 +45,7 @@ export function planFeatures(tier: PlanTier): string[] {
   if (tier === "plus") {
     return [
       "Everything in Free",
+      "No ads",
       "Unlimited photo, PDF & drawing scans",
       "Unlimited practice quizzes & mistake review",
       `Video lessons · ${limits.dailyVideos} a day`,

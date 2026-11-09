@@ -4,6 +4,7 @@ import type { CalculatorDefinition } from "@/lib/calculators";
 import { getRelatedCalculators } from "@/lib/calculators";
 import CalculatorExperience from "./CalculatorExperience";
 import MathFormula from "./MathFormula";
+import AdSlot from "@/components/ads/AdSlot";
 
 export default function CalculatorPage({
   calculator,
@@ -89,6 +90,7 @@ export default function CalculatorPage({
                 </p>
               </div>
             </div>
+            <AdSlot placement="calculator" spacing="mt-12" />
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-primary-200 bg-primary-50/70 dark:border-primary-900/70 dark:bg-primary-950/25">
@@ -133,6 +135,7 @@ export default function CalculatorPage({
                 </div>
               ))}
             </div>
+            <AdSlot placement="calculator" spacing="mt-12" />
           </section>
 
           <section
@@ -268,6 +271,8 @@ export default function CalculatorPage({
             mistakes, so confirm important calculations and assignment
             requirements.
           </aside>
+
+          <AdSlot placement="multiplex" />
       </div>
     </CalculatorExperience>
   );

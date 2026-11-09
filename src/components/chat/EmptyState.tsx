@@ -3,6 +3,7 @@
 import { useLanguage } from "@/context/LanguageContext";
 import HeroInput from "./HeroInput";
 import MobileAppLinks from "@/components/marketing/MobileAppLinks";
+import AdSlot from "@/components/ads/AdSlot";
 
 export default function EmptyState({ onStartChat, landingContent, storeLabels }: { onStartChat: (message: string, images?: { url: string; ocrText: string }[]) => void; landingContent: React.ReactNode; storeLabels: { appleEyebrow: string; googleEyebrow: string; ariaLabel: string } }) {
   const { locale, direction, t } = useLanguage();
@@ -36,6 +37,9 @@ export default function EmptyState({ onStartChat, landingContent, storeLabels }:
           <MobileAppLinks placement="homepage_hero" labels={storeLabels} />
         </div>
       </div>
+
+      {/* First ad sits below the fold, never next to the solver input. */}
+      <AdSlot placement="landing" spacing="mb-8" />
 
       {/* Content below the fold */}
       <div className="w-full space-y-24 pb-24">

@@ -12,6 +12,7 @@ import {
   getPosts,
   parseBlogPage,
 } from "@/lib/pressroom";
+import AdSlot from "@/components/ads/AdSlot";
 
 const POSTS_PER_PAGE = 9;
 
@@ -212,6 +213,10 @@ export default async function BlogPage({
                 Check back soon for new math guides and learning tips.
               </p>
             </div>
+          )}
+
+          {posts.length > 0 && (
+            <AdSlot placement="landing" spacing="mt-12" />
           )}
 
           {pagination.totalPages > 1 && (

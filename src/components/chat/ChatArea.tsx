@@ -4,7 +4,9 @@ import { useRef, useEffect } from "react";
 import EmptyState from "./EmptyState";
 import ChatInput from "./ChatInput";
 import MessageList, { type Message } from "./MessageList";
+import AdSlot from "@/components/ads/AdSlot";
 import { useChatContext } from "@/context/ChatContext";
+import { isActionableSolution } from "@/lib/post-solution-actions";
 
 type ChatConversationProps = {
   messages: Message[];
@@ -25,8 +27,11 @@ export function ChatConversation({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Align the end of the answer above the input overlay (scroll-mb-72), so
+  // anything rendered after it, such as the ad below a finished answer,
+  // never moves the answer when it loads.
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
   };
 
   // Scroll to top when switching chats (including New Chat → empty state)
@@ -38,12 +43,25 @@ export function ChatConversation({
     scrollToBottom();
   }, [messages, isLoading]);
 
+  // One ad, under the latest answer once it has finished streaming; never
+  // under an error reply.
+  const lastMessage = messages[messages.length - 1];
+  const solutionAdKey =
+    !isLoading &&
+    lastMessage?.role === "assistant" &&
+    isActionableSolution(lastMessage.content)
+      ? lastMessage.id
+      : null;
+
   return (
     <div className="flex flex-col h-full w-full relative">
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto w-full relative z-0">
         <div className="w-full max-w-4xl xl:max-w-5xl mx-auto px-4 md:px-8 py-24 pb-72">
           <MessageList messages={messages} isLoading={isLoading} />
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="scroll-mb-72" />
+          {solutionAdKey && (
+            <AdSlot key={solutionAdKey} placement="solution" spacing="mt-10" />
+          )}
         </div>
       </div>
 

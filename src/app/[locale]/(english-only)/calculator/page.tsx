@@ -16,6 +16,7 @@ import {
   calculatorDefinitions,
   type CalculatorCategory,
 } from "@/lib/calculators";
+import AdSlot from "@/components/ads/AdSlot";
 
 const BASE_URL = "https://math-solver.io";
 
@@ -175,7 +176,7 @@ export default function CalculatorHubPage() {
           </header>
 
           <div className="mt-16 space-y-20">
-            {calculatorCategories.map((category) => {
+            {calculatorCategories.map((category, categoryIndex) => {
               const items = calculatorDefinitions.filter(
                 (calculator) => calculator.category === category,
               );
@@ -227,6 +228,9 @@ export default function CalculatorHubPage() {
                       </Link>
                     ))}
                   </div>
+                  {(categoryIndex === 1 || categoryIndex === 4) && (
+                    <AdSlot placement="landing" spacing="mt-12" />
+                  )}
                 </section>
               );
             })}

@@ -172,6 +172,12 @@ math-field::part(menu-toggle) {
 }
 
 /* ── Pressroom rich article content ── */
+/* An article split for an in-article ad keeps its normal heading gap even
+   when the ad is not shown (prose zeroes the first child's top margin). */
+.post-body-continued > h2:first-child {
+  margin-top: 1.8666667em;
+}
+
 .post-body table {
   border-collapse: collapse;
   display: block;

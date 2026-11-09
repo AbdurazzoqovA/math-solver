@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -12,6 +13,8 @@ import {
   getPost,
   type PressroomAuthor,
 } from "@/lib/pressroom";
+import { splitArticleForAds } from "@/lib/article-ad-breaks";
+import AdSlot from "@/components/ads/AdSlot";
 
 const BASE_URL = "https://math-solver.io";
 
@@ -225,10 +228,16 @@ export default async function ArticlePage({
             </div>
           )}
 
-          <div
-            className="post-body prose prose-lg mt-10 max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-headings:tracking-tight prose-a:text-primary-600 prose-a:decoration-primary-300 hover:prose-a:text-primary-700 dark:prose-a:text-primary-400 dark:hover:prose-a:text-primary-300"
-            dangerouslySetInnerHTML={{ __html: post.contentHtml }}
-          />
+          {/* In-article ads sit between sections, never inside one. */}
+          {splitArticleForAds(post.contentHtml).map((html, index) => (
+            <Fragment key={index}>
+              {index > 0 && <AdSlot placement="article" spacing="my-10" />}
+              <div
+                className={`post-body prose prose-lg max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-headings:tracking-tight prose-a:text-primary-600 prose-a:decoration-primary-300 hover:prose-a:text-primary-700 dark:prose-a:text-primary-400 dark:hover:prose-a:text-primary-300 ${index === 0 ? "mt-10" : "post-body-continued"}`}
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            </Fragment>
+          ))}
 
           {post.author && <AuthorBox author={post.author} />}
 
@@ -249,6 +258,8 @@ export default async function ArticlePage({
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </aside>
+
+          <AdSlot placement="multiplex" spacing="mt-12" />
         </article>
       </main>
     </>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Calculator, Camera, BookOpen, LineChart, Zap, MessageCircle, ScanLine, CircleCheckBig, Clapperboard } from "lucide-react";
 import MobileAppLinks from "@/components/marketing/MobileAppLinks";
+import AdSlot from "@/components/ads/AdSlot";
 import { getLandingCopy } from "@/lib/i18n/landing";
 import type { Locale } from "@/lib/i18n/locales";
 import { aiDetectorLink } from "@/lib/i18n/external-links";
@@ -195,6 +196,8 @@ export default function SeoSections({ locale }: { locale: Locale }) {
           </div>
         </div>
       </div>
+
+      <AdSlot placement="landing" className="mx-auto max-w-5xl" spacing="mt-16" />
 
       {/* Block 5: FAQ */}
       <div className="flex justify-center mt-16">
